@@ -22,7 +22,7 @@ const DefaultLayout = ({ socketData }) => {
           <ChatPage socketData={socketData} />
         </div>
       ) : (
-        <div className="ml-0 flex min-h-screen w-full pb-14 md:ml-rail md:pb-0">
+        <div className="ml-0 flex min-h-screen flex-1 pb-14 md:ml-rail md:pb-0">
           <Fragment />
           <RightNav />
         </div>

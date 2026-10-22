@@ -192,6 +192,8 @@
   "search": {
     "title": "Tìm kiếm",
     "placeholder": "Tìm kiếm mục",
+    "clear": "Xoá nội dung",
+    "close": "Đóng tìm kiếm",
     "searchPeople": "Nhập tên người dùng"
   },
   "newFed": {

@@ -42,7 +42,9 @@ const MoreMenu = (props) => {
             <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("menu.setting")}
             </li>
-            <Language />
+            <li>
+              <Language dark />
+            </li>
             <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("moreMenu.activity")}
             </li>

@@ -74,7 +74,7 @@ const SearchBar = ({ isOpen, onClose }) => {
   return (
     <div
       ref={searchRef}
-      className="fixed bottom-14 left-0 top-0 z-[100] w-full border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]"
+      className="fixed bottom-14 left-0 top-0 z-[100] flex w-full flex-col border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]"
     >
       {/* Header */}
       <div className="sticky top-0 border-b border-ig-border bg-ig-ground px-4 pb-3 pt-3">
@@ -85,7 +85,8 @@ const SearchBar = ({ isOpen, onClose }) => {
           {onClose && (
             <button
               onClick={onClose}
-              className="text-ig-muted transition-colors hover:text-ig-text"
+              aria-label={t("search.close")}
+              className="rounded-lg p-2 text-ig-muted transition-colors hover:text-ig-text"
             >
               <X size={20} />
             </button>
@@ -97,6 +98,7 @@ const SearchBar = ({ isOpen, onClose }) => {
           </div>
           <input
             type="text"
+            aria-label={t("search.placeholder")}
             placeholder={t("search.placeholder")}
             value={searchTerm}
             onChange={handleSearch}
@@ -105,6 +107,7 @@ const SearchBar = ({ isOpen, onClose }) => {
           {searchTerm && (
             <button
               onClick={handleClearSearch}
+              aria-label={t("search.clear")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-ig-muted transition-colors hover:text-ig-text"
             >
               <X size={14} />
@@ -114,7 +117,7 @@ const SearchBar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Content */}
-      <div className="h-[calc(100vh-116px)] overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-control border-t-ig-accent"></div>
@@ -126,6 +129,7 @@ const SearchBar = ({ isOpen, onClose }) => {
                 <Link
                   key={user.id}
                   to={`${Route.friend_profile}/${user.id}`}
+                  onClick={onClose}
                   className="flex items-center px-4 py-3 transition-colors hover:bg-ig-surface"
                 >
                   <div className="relative">

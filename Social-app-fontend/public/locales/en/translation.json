@@ -200,6 +200,8 @@
   "search": {
     "title": "Search",
     "placeholder": "Search items",
+    "clear": "Clear search",
+    "close": "Close search",
     "searchPeople": "Enter username"
   },
   "newFed": {

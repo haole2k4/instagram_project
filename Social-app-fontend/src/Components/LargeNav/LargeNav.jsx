@@ -122,6 +122,7 @@ const LargeNav = () => {
           key={item.key}
           type="button"
           onClick={() => setOpenSearch((prev) => !prev)}
+          onMouseDown={(event) => event.stopPropagation()}
           aria-expanded={openSearch}
           {...props}
         >
