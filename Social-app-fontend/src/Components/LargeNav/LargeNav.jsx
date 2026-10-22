@@ -133,15 +133,20 @@ const LargeNav = () => {
 
     if (item.action === "create") {
       return (
-        <button
-          key={item.key}
-          type="button"
-          onClick={() => setShowCreateModal((prev) => !prev)}
-          aria-expanded={showCreateModal}
-          {...props}
-        >
-          {content}
-        </button>
+        <div key={item.key} className="relative">
+          <button
+            type="button"
+            onClick={() => setShowCreateModal((prev) => !prev)}
+            aria-expanded={showCreateModal}
+            {...props}
+          >
+            {content}
+          </button>
+          <MenuFormGenerate
+            showCreateModal={showCreateModal}
+            setShowCreateModal={setShowCreateModal}
+          />
+        </div>
       );
     }
 
@@ -174,7 +179,7 @@ const LargeNav = () => {
             <img src={InstagramIcon} alt="" className="h-7 w-7" />
           </Link>
 
-          <nav className="no-scrollbar flex flex-1 flex-col items-center gap-1 overflow-y-auto">
+          <nav className="flex flex-1 flex-col items-center gap-1">
             {navItems.map(renderItem)}
           </nav>
 
@@ -190,10 +195,6 @@ const LargeNav = () => {
           </button>
 
           <MoreMenu showMenu={showMenu} setShowMenu={setShowMenu} />
-          <MenuFormGenerate
-            showCreateModal={showCreateModal}
-            setShowCreateModal={setShowCreateModal}
-          />
         </div>
       </div>
 

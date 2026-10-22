@@ -8,7 +8,7 @@ const MenuFormGenerate = ({ showCreateModal, setShowCreateModal }) => {
 
   return (
     <div className="relative">
-      <div className="nav-popover fixed bottom-24 left-4 md:left-[84px]">
+      <div className="nav-popover absolute bottom-0 left-[60px]">
         <h2 className="mb-3 text-center text-base font-semibold text-ig-text">
           {t("Create New")}
         </h2>
