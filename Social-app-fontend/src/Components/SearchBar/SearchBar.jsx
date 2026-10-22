@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaSearch, FaTimes } from "react-icons/fa";
+import { Search, X } from "lucide-react";
 import { handleGetAllUser } from "../../Service/UserAPI";
 import { Link } from "react-router-dom";
 import Route from "../../Components/Routes/index";
@@ -74,40 +74,40 @@ const SearchBar = ({ isOpen, onClose }) => {
   return (
     <div
       ref={searchRef}
-      className="fixed left-[72px] top-0 z-[100] h-screen w-[397px] border-r border-ig-border bg-ig-ground"
+      className="fixed bottom-14 left-0 top-0 z-[100] w-full border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]"
     >
       {/* Header */}
       <div className="sticky top-0 border-b border-ig-border bg-ig-ground px-4 pb-3 pt-3">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[24px] font-semibold text-white">
+          <h2 className="text-[24px] font-semibold text-ig-text">
             {t("search.title")}
           </h2>
           {onClose && (
             <button
               onClick={onClose}
-              className="text-ig-muted hover:text-white transition-colors"
+              className="text-ig-muted transition-colors hover:text-ig-text"
             >
-              <FaTimes size={24} />
+              <X size={20} />
             </button>
           )}
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <FaSearch className="text-ig-faint" size={16} />
+            <Search className="text-ig-faint" size={16} />
           </div>
           <input
             type="text"
             placeholder={t("search.placeholder")}
             value={searchTerm}
             onChange={handleSearch}
-            className="w-full rounded-xl bg-ig-surface py-3 pl-10 pr-10 text-[15px] text-white placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
+            className="w-full rounded-xl bg-ig-surface py-3 pl-10 pr-10 text-[15px] text-ig-text placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
           />
           {searchTerm && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ig-muted hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ig-muted transition-colors hover:text-ig-text"
             >
-              <FaTimes size={14} />
+              <X size={14} />
             </button>
           )}
         </div>
@@ -135,11 +135,11 @@ const SearchBar = ({ isOpen, onClose }) => {
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     {user.isOnline && (
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-ig-ground bg-green-500"></div>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-ig-ground bg-ig-text"></div>
                     )}
                   </div>
                   <div className="ml-3 flex-1">
-                    <p className="text-white text-[15px] font-semibold">
+                    <p className="text-ig-text text-[15px] font-semibold">
                       {user.userNickname}
                     </p>
                     <div className="flex items-center text-ig-muted text-[13px]">
@@ -153,7 +153,7 @@ const SearchBar = ({ isOpen, onClose }) => {
             ) : (
               <div className="px-4 py-8 text-center">
                 <div className="mb-4">
-                  <FaSearch className="mx-auto text-ig-muted" size={32} />
+                  <Search className="mx-auto text-ig-muted" size={32} />
                 </div>
                 <p className="text-ig-muted text-[15px]">
                   {t("search.noResults", { term: searchTerm })}
@@ -164,7 +164,7 @@ const SearchBar = ({ isOpen, onClose }) => {
         ) : (
           <div className="px-4 py-8 text-center">
             <div className="mb-4">
-              <FaSearch className="mx-auto text-ig-muted" size={32} />
+              <Search className="mx-auto text-ig-muted" size={32} />
             </div>
             <p className="text-ig-muted text-[15px]">
               {t("search.searchPeople")}

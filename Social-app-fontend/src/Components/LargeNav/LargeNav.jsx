@@ -3,7 +3,6 @@ import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  Compass,
   Heart,
   Home,
   Menu,
@@ -48,7 +47,7 @@ const LargeNav = () => {
 
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (commentData) => {
-        if (commentData.userId != userInfo.id) {
+        if (commentData.userId !== userInfo.id) {
           setHasUnreadNotifications(true);
         }
       }
@@ -68,28 +67,29 @@ const LargeNav = () => {
 
   const navItems = useMemo(
     () => [
-      { name: t("LargeNav.home"), link: Route.default_session, Icon: Home },
-      { name: t("LargeNav.search"), action: "search", Icon: Search },
-      { name: t("LargeNav.messages"), link: Route.chat, Icon: Send },
+      { key: "home", name: t("LargeNav.home"), link: Route.default_session, Icon: Home },
+      { key: "search", name: t("LargeNav.search"), action: "search", Icon: Search },
+      { key: "messages", name: t("LargeNav.messages"), link: Route.chat, Icon: Send },
       {
+        key: "notifications",
         name: t("LargeNav.notifications"),
         link: Route.notification,
         Icon: Heart,
         hasBadge: hasUnreadNotifications,
       },
-      { name: t("LargeNav.create"), action: "create", Icon: PlusSquare },
+      { key: "create", name: t("LargeNav.create"), action: "create", Icon: PlusSquare },
       {
+        key: "profile",
         name: t("LargeNav.profile"),
         link: Route.profile,
         Icon: User,
         avatar: userInfo?.userImage,
       },
-      { name: t("LargeNav.explore"), link: Route.search, Icon: Compass },
     ],
     [t, hasUnreadNotifications, userInfo?.userImage]
   );
 
-  const handleNotificationsClick = () => setHasUnreadNotifications(false);
+  const bottomKeys = ["home", "search", "messages", "profile"];
 
   const renderIcon = ({ Icon, avatar, hasBadge }) => (
     <>
@@ -108,86 +108,97 @@ const LargeNav = () => {
     </>
   );
 
+  const renderItem = (item) => {
+    const content = renderIcon(item);
+    const props = {
+      className: "nav-icon-btn",
+      "aria-label": item.name,
+      title: item.name,
+    };
+
+    if (item.action === "search") {
+      return (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setOpenSearch((prev) => !prev)}
+          aria-expanded={openSearch}
+          {...props}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    if (item.action === "create") {
+      return (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setShowCreateModal((prev) => !prev)}
+          aria-expanded={showCreateModal}
+          {...props}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    return (
+      <NavLink
+        key={item.key}
+        to={item.link}
+        onClick={
+          item.key === "notifications"
+            ? () => setHasUnreadNotifications(false)
+            : undefined
+        }
+        {...props}
+      >
+        {content}
+      </NavLink>
+    );
+  };
+
   return (
     <>
-      <div className="flex h-screen w-[72px] flex-col items-center border-r border-ig-border bg-ig-ground py-5">
-        <Link
-          to={Route.default_session}
-          aria-label="Instagram"
-          className="mb-4 flex h-12 w-12 items-center justify-center"
-        >
-          <img src={InstagramIcon} alt="" className="h-7 w-7" />
-        </Link>
+      <div className="fixed inset-y-0 left-0 z-40 hidden md:block">
+        <div className="flex h-screen w-rail flex-col items-center border-r border-ig-border bg-ig-ground py-5">
+          <Link
+            to={Route.default_session}
+            aria-label="Instagram"
+            title="Instagram"
+            className="mb-4 flex h-12 w-12 items-center justify-center"
+          >
+            <img src={InstagramIcon} alt="" className="h-7 w-7" />
+          </Link>
 
-        <nav className="flex flex-1 flex-col items-center gap-1">
-          {navItems.map((item) => {
-            if (item.action === "search") {
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => setOpenSearch((prev) => !prev)}
-                  className="nav-icon-btn"
-                  aria-label={item.name}
-                  title={item.name}
-                  aria-expanded={openSearch}
-                >
-                  {renderIcon(item)}
-                </button>
-              );
-            }
+          <nav className="no-scrollbar flex flex-1 flex-col items-center gap-1 overflow-y-auto">
+            {navItems.map(renderItem)}
+          </nav>
 
-            if (item.action === "create") {
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => setShowCreateModal((prev) => !prev)}
-                  className="nav-icon-btn"
-                  aria-label={item.name}
-                  title={item.name}
-                >
-                  {renderIcon(item)}
-                </button>
-              );
-            }
+          <button
+            type="button"
+            onClick={() => setShowMenu((prev) => !prev)}
+            className="nav-icon-btn"
+            aria-label={t("LargeNav.more")}
+            title={t("LargeNav.more")}
+            aria-expanded={showMenu}
+          >
+            <Menu size={24} strokeWidth={1.5} aria-hidden="true" />
+          </button>
 
-            return (
-              <NavLink
-                key={item.name}
-                to={item.link}
-                onClick={
-                  item.name === t("LargeNav.notifications")
-                    ? handleNotificationsClick
-                    : undefined
-                }
-                className="nav-icon-btn"
-                aria-label={item.name}
-                title={item.name}
-              >
-                {renderIcon(item)}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <button
-          type="button"
-          onClick={() => setShowMenu((prev) => !prev)}
-          className="nav-icon-btn"
-          aria-label={t("LargeNav.more")}
-          title={t("LargeNav.more")}
-          aria-expanded={showMenu}
-        >
-          <Menu size={24} strokeWidth={1.5} aria-hidden="true" />
-        </button>
-
-        <MoreMenu showMenu={showMenu} setShowMenu={setShowMenu} />
-        <MenuFormGenerate
-          showCreateModal={showCreateModal}
-          setShowCreateModal={setShowCreateModal}
-        />
+          <MoreMenu showMenu={showMenu} setShowMenu={setShowMenu} />
+          <MenuFormGenerate
+            showCreateModal={showCreateModal}
+            setShowCreateModal={setShowCreateModal}
+          />
+        </div>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-center justify-around border-t border-ig-border bg-ig-ground px-4 md:hidden">
+        {navItems.filter((item) => bottomKeys.includes(item.key)).map(renderItem)}
+      </nav>
 
       {openSearch && (
         <SearchPanel isOpen={true} onClose={() => setOpenSearch(false)} />

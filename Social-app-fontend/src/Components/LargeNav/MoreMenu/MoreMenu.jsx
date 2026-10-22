@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Language from "./Language/Language";
 import { useTranslation } from "react-i18next";
@@ -12,14 +11,12 @@ import webSocketService from "../../../Service/WebSocketService";
 
 const MoreMenu = (props) => {
   const { showMenu, setShowMenu } = props;
-  let navi = useNavigate();
   let dispatch = useDispatch();
   const [t] = useTranslation();
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   let lang = useSelector((state) => state.app.language);
   useEffect(() => {
     setShowMenu(false);
-  }, [lang]);
+  }, [lang, setShowMenu]);
   const handleLogOut = async () => {
     try {
       let res = await UserLogOut();
@@ -40,7 +37,7 @@ const MoreMenu = (props) => {
   return (
     <div className="relative">
       {showMenu && (
-        <div className="absolute bottom-14 left-0 z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg">
+        <div className="nav-popover fixed bottom-20 left-[84px]">
           <ul className="text-sm text-ig-text">
             <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("menu.setting")}
@@ -53,7 +50,7 @@ const MoreMenu = (props) => {
           </ul>
           <button
             onClick={handleLogOut}
-            className="w-full rounded-lg p-2 text-left text-ig-like hover:bg-ig-surface"
+            className="w-full rounded-lg p-2 text-left text-ig-text hover:bg-ig-surface"
           >
             {t("moreMenu.logout")}
           </button>

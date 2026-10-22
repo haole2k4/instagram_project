@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Route from "../../../Components/Routes/index";
-import FormCreateNewsFeed from "../../../Components/NewsFeed/FormCreate/FormCreate";
 const MenuFormGenerate = ({ showCreateModal, setShowCreateModal }) => {
   const [t] = useTranslation();
 
@@ -9,7 +8,7 @@ const MenuFormGenerate = ({ showCreateModal, setShowCreateModal }) => {
 
   return (
     <div className="relative">
-      <div className="fixed bottom-24 left-[84px] z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg">
+      <div className="nav-popover fixed bottom-24 left-4 md:left-[84px]">
         <h2 className="mb-3 text-center text-base font-semibold text-ig-text">
           {t("Create New")}
         </h2>

@@ -3,14 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --ease-ui-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-ui-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  }
-
   html {
     color-scheme: dark;
-    scroll-behavior: smooth;
   }
 
   body {
@@ -30,7 +24,7 @@
 
 @layer components {
   .nav-icon-btn {
-    @apply relative flex h-12 w-12 items-center justify-center rounded-xl text-ig-muted transition-[background-color,color,transform] duration-[120ms] ease-ui-out active:scale-95;
+    @apply relative flex h-12 w-12 items-center justify-center rounded-xl text-ig-muted transition-[background-color,color,transform] duration-[120ms] ease-ui-out active:scale-[.97];
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -39,8 +33,13 @@
     }
   }
 
-  .nav-icon-btn[aria-current="page"] {
+  .nav-icon-btn[aria-current="page"],
+  .nav-icon-btn[aria-expanded="true"] {
     @apply text-ig-text;
+  }
+
+  .nav-popover {
+    @apply z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg;
   }
 }
 
@@ -66,5 +65,9 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-property: opacity, color, background-color, border-color !important;
+  }
+
+  .nav-icon-btn:active {
+    transform: none;
   }
 }
