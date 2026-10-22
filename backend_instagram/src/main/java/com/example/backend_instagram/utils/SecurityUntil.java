@@ -29,7 +29,7 @@ public class SecurityUntil {
   private static JwtEncoder jwtEncoder;
 
   public SecurityUntil(JwtEncoder jwtEncoder) {
-    this.jwtEncoder = jwtEncoder;
+    SecurityUntil.jwtEncoder = jwtEncoder;
   }
 
   public static final MacAlgorithm JWT_ALGORITHM = MacAlgorithm.HS512;
@@ -66,7 +66,7 @@ public class SecurityUntil {
       .claim("permission", listAuthority)
       .build();
 
-    return this.jwtEncoder.encode(
+    return SecurityUntil.jwtEncoder.encode(
         JwtEncoderParameters.from(JwsHeader.with(() -> "HS512").build(), claims)
       )
       .getTokenValue();
@@ -86,7 +86,7 @@ public class SecurityUntil {
       .claim("user", restLogin.getUser())
       .claim("userId", restLogin.getUser() != null ? restLogin.getUser().getId() : null)
       .build();
-    return this.jwtEncoder.encode(
+    return SecurityUntil.jwtEncoder.encode(
         JwtEncoderParameters.from(JwsHeader.with(() -> "HS512").build(), claims)
       )
       .getTokenValue();

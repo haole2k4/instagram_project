@@ -3,12 +3,9 @@ package com.example.backend_instagram.service;
 import com.example.backend_instagram.dto.follow.FollowResponseDTO;
 import com.example.backend_instagram.entity.*;
 import com.example.backend_instagram.repository.FollowRepository;
-import com.example.backend_instagram.repository.NotificationRepository;
-import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.utils.constant.CacheNames;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,9 +15,6 @@ import java.util.Optional;
 public class FollowService {
     @Autowired
     private FollowRepository followRepository;
-
-    @Autowired
-    private NotificationRepository notificationRepository;
 
     // Lấy tất cả cặp follow
     public List<Follow> getAllPairOfFollow() {
@@ -103,7 +97,7 @@ public class FollowService {
         followRepository.delete(follow);
     } 
     public void QualityFollow(Long userId) {
-        List<Follow> followers = followRepository.findByFollowingId(userId);
+        followRepository.findByFollowingId(userId);
     }
 
     public Long countFollowersOfUser(Long userId) {
