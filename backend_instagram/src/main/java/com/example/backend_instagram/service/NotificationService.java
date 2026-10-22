@@ -127,7 +127,6 @@ public class NotificationService {
                 String message = actor.getUserNickname() + " commented: " + truncateComment(commentContent, 50);
                 Notification notification = new Notification(receiver, actor, post, NotificationType.COMMENT, message);
                 notificationRepository.save(notification);
-                NotificationDTO notificationDTO = toDTO(notification);
                 logger.info("Created comment notification for user: {}, post: {}", receiver.getId(), postId);
                 publishNotificationCreated(notification, receiver.getId());
             } else {

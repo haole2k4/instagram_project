@@ -6,7 +6,6 @@ import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.repository.PostRepository;
 import com.example.backend_instagram.dto.user.UserStatsDTO;
-import com.example.backend_instagram.service.FollowService;
 import com.example.backend_instagram.utils.constant.CacheNames;
 import java.util.List;
 import java.util.Optional;

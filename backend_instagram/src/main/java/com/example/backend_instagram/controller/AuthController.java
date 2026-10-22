@@ -131,7 +131,7 @@ public class AuthController {
   @GetMapping("/auth/account")
   @ApiMessage("fetch account")
   public ResponseEntity<RestLogin.UserGetAccout> getAccount() {
-    String email = this.securityUntil.getCurrentUserLogin().isPresent()
+    String email = SecurityUntil.getCurrentUserLogin().isPresent()
       ? SecurityUntil.getCurrentUserLogin().get()
       : "";
     User currentuserDb = this.userService.handleGetUserByUserNawm(email);

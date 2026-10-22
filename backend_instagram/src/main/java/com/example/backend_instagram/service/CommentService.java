@@ -29,19 +29,16 @@ public class CommentService {
     private final PostRepository postRepository;
     private final UserService userService;
     private final NotificationService notificationService;
-    private final NotificationWebSocketService notificationWebSocketService;
     private final ObjectMapper objectMapper;
 
     public CommentService(CommentRepository commentRepository,
             PostRepository postRepository,
             UserService userService,
-            NotificationService notificationService,
-            NotificationWebSocketService notificationWebSocketService) {
+            NotificationService notificationService) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.userService = userService;
         this.notificationService = notificationService;
-        this.notificationWebSocketService = notificationWebSocketService;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -74,7 +71,6 @@ public class CommentService {
         try {
             CommentDTO commentDTO = toDTO(comment);
             commentDTO.setCommentsCount(commentsCount);
-            String message = "New comment on post " + postId + ": " + truncateComment(content, 30);
             logger.info("Broadcast comment update via STOMP: postId={}, commentId={}, content={}",
                     postId, comment.getId(), content);
         } catch (Exception e) {

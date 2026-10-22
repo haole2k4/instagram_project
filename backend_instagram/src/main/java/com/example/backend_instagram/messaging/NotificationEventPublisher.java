@@ -51,8 +51,8 @@ public class NotificationEventPublisher {
             correlation.getFuture().whenComplete((confirm, error) -> {
                 if (error != null) {
                     log.warn("Publish event {} thất bại: {}", event.eventId(), error.getMessage());
-                } else if (!confirm.isAck()) {
-                    log.warn("Broker từ chối event {}: {}", event.eventId(), confirm.getReason());
+                } else if (!confirm.ack()) {
+                    log.warn("Broker từ chối event {}: {}", event.eventId(), confirm.reason());
                 }
             });
 

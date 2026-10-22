@@ -8,7 +8,6 @@ import com.example.backend_instagram.service.UserService;
 import com.example.backend_instagram.utils.AwsS3Service;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import jakarta.validation.Valid;
-import java.rmi.server.ExportException;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;

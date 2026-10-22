@@ -1,9 +1,7 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.notification.NotificationDTO;
-import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.service.NotificationService;
-import com.example.backend_instagram.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,11 +13,9 @@ import java.util.stream.Collectors;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final UserService userService;
 
-    public NotificationController(NotificationService notificationService, UserService userService) {
+    public NotificationController(NotificationService notificationService) {
         this.notificationService = notificationService;
-        this.userService = userService;
     }
 
     @GetMapping("/all")

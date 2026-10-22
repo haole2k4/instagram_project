@@ -122,9 +122,6 @@ public class PostService {
         post.setAccess(request.getAccess());
 
         if (request.getMedia() != null && !request.getMedia().isEmpty()) {
-            for (Media oldMedia : post.getMedia()) {
-                // awsS3Service.deleteFile(oldMedia.getUrl());
-            }
             post.getMedia().clear();
 
             List<Media> mediaList = new ArrayList<>();

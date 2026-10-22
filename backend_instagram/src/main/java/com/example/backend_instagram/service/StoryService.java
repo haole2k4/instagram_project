@@ -8,7 +8,6 @@ import com.example.backend_instagram.repository.StoryRepository;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.utils.AwsS3Service;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
