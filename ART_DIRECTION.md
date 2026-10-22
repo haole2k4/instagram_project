@@ -56,7 +56,7 @@ Câu hỏi của từng màn hình: Home — "Có gì mới từ người mình 
 | Chữ phụ | `#b4b4b4` | Mô tả, trạng thái |
 | Chữ meta | `#949494` | Thời gian, số phụ, footer |
 | Nhấn | `#0095f6` | Link, Follow, nút chính, focus ring |
-| Liked | `#ff3040` | Chỉ khi người dùng đã like |
+| Liked | `#ff3040` | Trạng thái đã like và chấm thông báo chưa đọc |
 | Ngoại lệ brand | gradient Instagram | Chỉ vòng story |
 
 Màu nhấn giữ ở mức ≤ 3% pixel. Không có hue thứ hai ngoài đỏ liked và gradient story.
@@ -103,3 +103,4 @@ Cấm: entrance/scroll-reveal cho feed, shimmer skeleton, parallax, scroll-jack,
 ## Lịch sử quyết định
 
 - 2026-10-23 — Chốt hướng `true-black-flat` sau Taste Skill review; redraw shell thành icon rail, palette về xanh Instagram, typeface về system grotesk. Đổi nền `#0b1014` thành `#000`, bỏ skeleton shimmer và entrance animation so với plan đầu tiên.
+- 2026-10-23 — Làm rõ: đỏ `#ff3040` dùng cho cả chấm thông báo chưa đọc (trạng thái), không chỉ trạng thái liked.

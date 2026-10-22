@@ -1,33 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
+import {
+  Compass,
+  Heart,
+  Home,
+  Menu,
+  PlusSquare,
+  Search,
+  Send,
+  User,
+} from "lucide-react";
 
-import InstagramLogo from "../../assets/logo/instagram.png";
 import InstagramIcon from "../../assets/logo/icon.png";
-import HomeLogo from "../../assets/navlogo/home.png";
-import SearchLogo from "../../assets/navlogo/search.png";
-import MessagesLogo from "../../assets/navlogo/message.png";
-import NotificationsLogo from "../../assets/navlogo/like.png";
-import CreateLogo from "../../assets/navlogo/create.png";
-import MoreLogo from "../../assets/navlogo/more.png";
 import MoreMenu from "./MoreMenu/MoreMenu";
 import MenuFormGenerate from "./FormGenerate/FormGenerate";
 import Route from "../../Components/Routes/index";
 import SearchPanel from "../../Components/SearchBar/SearchBar";
 import notificationSocket from "../../Service/NotificationSocket";
-import {
-  fetchAllNotificationsUnread,
-  setHasUnread,
-} from "../../Service/notificationApi";
-import { da } from "date-fns/locale";
 
 const LargeNav = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [openSearch, setOpenSearch] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState([]);
   const { userInfo, accessToken } = useSelector((state) => state.login);
   const dispatch = useDispatch();
   const [t] = useTranslation();
@@ -36,44 +33,29 @@ const LargeNav = () => {
   useEffect(() => {
     if (!userInfo?.id) return;
 
-    // Khởi tạo WebSocket
     notificationSocket.init(dispatch, userInfo.id, accessToken);
 
     const unsubscribeNotifications =
       notificationSocket.subscribeToNotifications((notificationData) => {
-        console.log("New notification received:", notificationData);
-        // Hiển thị dấu chấm đỏ nếu người dùng hiện tại là receiver
         if (notificationData.userId === userInfo.id) {
           setHasUnreadNotifications(true);
-        } else {
-          console.log("Ignoring notification:", notificationData);
         }
       });
 
-    const unsubscribeLikes = notificationSocket.subscribeToLikeUpdates(
-      (notification) => {
-        console.log("New like received:", notification);
-        // if (Number(notification.receiverId) === Number(userInfo.id)) {
-        setHasUnreadNotifications(true);
-        // }
-      }
-    );
+    const unsubscribeLikes = notificationSocket.subscribeToLikeUpdates(() => {
+      setHasUnreadNotifications(true);
+    });
 
-    // Lắng nghe sự kiện bình luận mới
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (commentData) => {
-        console.log("New comment received:", commentData);
         if (commentData.userId != userInfo.id) {
           setHasUnreadNotifications(true);
         }
       }
     );
 
-    const unsubscribeFollow = notificationSocket.subscribeToFollow((data) => {
-      console.log("New follow received:", data);
-      // if (data.userId != userInfo.id) {
+    const unsubscribeFollow = notificationSocket.subscribeToFollow(() => {
       setHasUnreadNotifications(true);
-      // }
     });
 
     return () => {
@@ -84,76 +66,94 @@ const LargeNav = () => {
     };
   }, [userInfo?.id, accessToken, dispatch]);
 
-  const sidebarItems = useMemo(
+  const navItems = useMemo(
     () => [
-      { name: t("LargeNav.home"), link: Route.default_session, icon: HomeLogo },
-      { name: t("LargeNav.search"), link: Route.search, icon: SearchLogo },
-      { name: t("LargeNav.messages"), link: Route.chat, icon: MessagesLogo },
+      { name: t("LargeNav.home"), link: Route.default_session, Icon: Home },
+      { name: t("LargeNav.search"), action: "search", Icon: Search },
+      { name: t("LargeNav.messages"), link: Route.chat, Icon: Send },
       {
         name: t("LargeNav.notifications"),
         link: Route.notification,
-        icon: NotificationsLogo,
+        Icon: Heart,
         hasBadge: hasUnreadNotifications,
       },
+      { name: t("LargeNav.create"), action: "create", Icon: PlusSquare },
+      {
+        name: t("LargeNav.profile"),
+        link: Route.profile,
+        Icon: User,
+        avatar: userInfo?.userImage,
+      },
+      { name: t("LargeNav.explore"), link: Route.search, Icon: Compass },
     ],
-    [t, hasUnreadNotifications]
+    [t, hasUnreadNotifications, userInfo?.userImage]
   );
 
-  const handleShowMenu = () => {
-    setShowMenu((prev) => !prev);
-  };
+  const handleNotificationsClick = () => setHasUnreadNotifications(false);
 
-  // Xử lý khi nhấp vào Notifications để tắt dấu chấm đỏ
-  const handleNotificationsClick = async () => {
-    setHasUnreadNotifications(false);
-    try {
-      console.log("Marked all notifications as read for user:", userInfo.id);
-    } catch (error) {
-      console.error("Error marking notifications as read:", error);
-    }
-  };
+  const renderIcon = ({ Icon, avatar, hasBadge }) => (
+    <>
+      {avatar ? (
+        <img
+          src={avatar}
+          alt=""
+          className="h-6 w-6 rounded-full object-cover"
+        />
+      ) : (
+        <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
+      )}
+      {hasBadge && (
+        <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-ig-like" />
+      )}
+    </>
+  );
 
   return (
     <>
-      <div className="w-[270px] h-screen flex flex-col px-3 py-10 bg-black fixed border-r border-gray-800">
-        {/* Logo */}
-        <Link to={Route.newsfeed} className="mb-5 flex px-3">
-          <img
-            src={InstagramLogo}
-            alt="instagram logo"
-            className="w-32 h-auto hidden lg:block"
-          />
-          <img
-            src={InstagramIcon}
-            alt="instagram icon"
-            className="w-10 h-auto lg:hidden"
-          />
+      <div className="flex h-screen w-[72px] flex-col items-center border-r border-ig-border bg-ig-ground py-5">
+        <Link
+          to={Route.default_session}
+          aria-label="Instagram"
+          className="mb-4 flex h-12 w-12 items-center justify-center"
+        >
+          <img src={InstagramIcon} alt="" className="h-7 w-7" />
         </Link>
 
-        {/* Sidebar Menu */}
-        <div className="flex flex-col space-y-2">
-          {sidebarItems.map((item) => {
-            if (item.name === t("LargeNav.search")) {
+        <nav className="flex flex-1 flex-col items-center gap-1">
+          {navItems.map((item) => {
+            if (item.action === "search") {
               return (
                 <button
                   key={item.name}
+                  type="button"
                   onClick={() => setOpenSearch((prev) => !prev)}
-                  className="flex items-center gap-x-4 p-3 hover:bg-gray-800/60 rounded-md text-left relative"
+                  className="nav-icon-btn"
+                  aria-label={item.name}
+                  title={item.name}
+                  aria-expanded={openSearch}
                 >
-                  <img
-                    src={item.icon}
-                    alt={`${item.name} icon`}
-                    className="w-7 h-7"
-                  />
-                  <p className="text-lg text-white hidden lg:block">
-                    {item.name}
-                  </p>
+                  {renderIcon(item)}
+                </button>
+              );
+            }
+
+            if (item.action === "create") {
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => setShowCreateModal((prev) => !prev)}
+                  className="nav-icon-btn"
+                  aria-label={item.name}
+                  title={item.name}
+                >
+                  {renderIcon(item)}
                 </button>
               );
             }
 
             return (
-              <Link
+              <NavLink
                 key={item.name}
                 to={item.link}
                 onClick={
@@ -161,63 +161,37 @@ const LargeNav = () => {
                     ? handleNotificationsClick
                     : undefined
                 }
-                className="flex items-center gap-x-4 p-3 hover:bg-gray-800/60 rounded-md relative"
+                className="nav-icon-btn"
+                aria-label={item.name}
+                title={item.name}
               >
-                <div className="relative">
-                  <img
-                    src={item.icon}
-                    alt={`${item.name} icon`}
-                    className="w-7 h-7"
-                  />
-                  {/* Dấu chấm đỏ cho thông báo chưa đọc */}
-                  {item.hasBadge && (
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                  )}
-                </div>
-                <p className="text-lg text-white hidden lg:block">
-                  {item.name}
-                </p>
-              </Link>
+                {renderIcon(item)}
+              </NavLink>
             );
           })}
+        </nav>
 
-          {/* Search panel */}
-          {openSearch && (
-            <SearchPanel isOpen={true} onClose={() => setOpenSearch(false)} />
-          )}
+        <button
+          type="button"
+          onClick={() => setShowMenu((prev) => !prev)}
+          className="nav-icon-btn"
+          aria-label={t("LargeNav.more")}
+          title={t("LargeNav.more")}
+          aria-expanded={showMenu}
+        >
+          <Menu size={24} strokeWidth={1.5} aria-hidden="true" />
+        </button>
 
-          {/* Nút mở Modal Tạo Post và Story */}
-          <button
-            onClick={() => setShowCreateModal((prev) => !prev)}
-            className="flex items-center gap-x-4 p-3 hover:bg-gray-800/60 rounded-md text-left"
-          >
-            <img src={CreateLogo} alt="create icon" className="w-7 h-7" />
-            <p className="text-lg text-white hidden lg:block">
-              {t("LargeNav.create")}
-            </p>
-          </button>
-        </div>
-
-        {/* More Menu */}
-        <div>
-          <button
-            className="flex items-center w-full gap-x-4 p-3 hover:bg-gray-800/60 rounded-md"
-            onClick={() => setShowMenu((prev) => !prev)}
-          >
-            <img src={MoreLogo} alt="more icon" className="w-7 h-7" />
-            <p className="text-lg text-white hidden lg:block">
-              {t("LargeNav.more")}
-            </p>
-          </button>
-        </div>
-
-        {/* Hiển thị các modal */}
         <MoreMenu showMenu={showMenu} setShowMenu={setShowMenu} />
         <MenuFormGenerate
           showCreateModal={showCreateModal}
           setShowCreateModal={setShowCreateModal}
         />
       </div>
+
+      {openSearch && (
+        <SearchPanel isOpen={true} onClose={() => setOpenSearch(false)} />
+      )}
     </>
   );
 };

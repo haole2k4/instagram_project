@@ -74,10 +74,10 @@ const SearchBar = ({ isOpen, onClose }) => {
   return (
     <div
       ref={searchRef}
-      className="fixed top-0 left-[270px] h-screen w-[397px] bg-black border-r border-gray-800 z-[100]"
+      className="fixed left-[72px] top-0 z-[100] h-screen w-[397px] border-r border-ig-border bg-ig-ground"
     >
       {/* Header */}
-      <div className="sticky top-0 bg-black px-4 pt-3 pb-3 border-b border-gray-800">
+      <div className="sticky top-0 border-b border-ig-border bg-ig-ground px-4 pb-3 pt-3">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[24px] font-semibold text-white">
             {t("search.title")}
@@ -85,7 +85,7 @@ const SearchBar = ({ isOpen, onClose }) => {
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-ig-muted hover:text-white transition-colors"
             >
               <FaTimes size={24} />
             </button>
@@ -93,19 +93,19 @@ const SearchBar = ({ isOpen, onClose }) => {
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-500" size={16} />
+            <FaSearch className="text-ig-faint" size={16} />
           </div>
           <input
             type="text"
             placeholder={t("search.placeholder")}
             value={searchTerm}
             onChange={handleSearch}
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#262626] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-[15px]"
+            className="w-full rounded-xl bg-ig-surface py-3 pl-10 pr-10 text-[15px] text-white placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
           />
           {searchTerm && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-ig-muted hover:text-white transition-colors"
             >
               <FaTimes size={14} />
             </button>
@@ -117,7 +117,7 @@ const SearchBar = ({ isOpen, onClose }) => {
       <div className="h-[calc(100vh-116px)] overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-control border-t-ig-accent"></div>
           </div>
         ) : searchTerm ? (
           <div className="py-2">
@@ -126,7 +126,7 @@ const SearchBar = ({ isOpen, onClose }) => {
                 <Link
                   key={user.id}
                   to={`${Route.friend_profile}/${user.id}`}
-                  className="flex items-center px-4 py-3 hover:bg-[#121212] transition-colors"
+                  className="flex items-center px-4 py-3 transition-colors hover:bg-ig-surface"
                 >
                   <div className="relative">
                     <img
@@ -135,14 +135,14 @@ const SearchBar = ({ isOpen, onClose }) => {
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     {user.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-ig-ground bg-green-500"></div>
                     )}
                   </div>
                   <div className="ml-3 flex-1">
                     <p className="text-white text-[15px] font-semibold">
                       {user.userNickname}
                     </p>
-                    <div className="flex items-center text-gray-400 text-[13px]">
+                    <div className="flex items-center text-ig-muted text-[13px]">
                       <p>{user.userFullname}</p>
                       <span className="mx-1">•</span>
                       <p>{t("search.following")}</p>
@@ -153,9 +153,9 @@ const SearchBar = ({ isOpen, onClose }) => {
             ) : (
               <div className="px-4 py-8 text-center">
                 <div className="mb-4">
-                  <FaSearch className="mx-auto text-gray-400" size={32} />
+                  <FaSearch className="mx-auto text-ig-muted" size={32} />
                 </div>
-                <p className="text-gray-400 text-[15px]">
+                <p className="text-ig-muted text-[15px]">
                   {t("search.noResults", { term: searchTerm })}
                 </p>
               </div>
@@ -164,9 +164,9 @@ const SearchBar = ({ isOpen, onClose }) => {
         ) : (
           <div className="px-4 py-8 text-center">
             <div className="mb-4">
-              <FaSearch className="mx-auto text-gray-400" size={32} />
+              <FaSearch className="mx-auto text-ig-muted" size={32} />
             </div>
-            <p className="text-gray-400 text-[15px]">
+            <p className="text-ig-muted text-[15px]">
               {t("search.searchPeople")}
             </p>
           </div>

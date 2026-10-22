@@ -5,7 +5,9 @@
     "messages": "Messages",
     "notifications": "Notifications",
     "create": "Create",
-    "more": "More"
+    "more": "More",
+    "profile": "Profile",
+    "explore": "Explore"
   },
   "menu": {
     "setting": "Setting"

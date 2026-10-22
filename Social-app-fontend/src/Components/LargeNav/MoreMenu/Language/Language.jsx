@@ -33,25 +33,25 @@ const Language = () => {
       onMouseLeave={() => setShowDropdown(false)}
     >
       {/* Hiển thị ngôn ngữ hiện tại */}
-      <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg shadow-sm">
+      <div className="flex items-center gap-2 rounded-lg bg-ig-surface p-2">
         <img
           src={languages[languageRedux].icon}
           className="w-5 h-5"
           alt={languageRedux}
         />
-        <span className="text-sm font-medium">
+        <span className="text-sm font-medium text-ig-text">
           {languages[languageRedux].label}
         </span>
       </div>
 
       {/* Dropdown chọn ngôn ngữ */}
       {showDropdown && (
-        <ul className="absolute left-0 top-full mt-0 bg-white shadow-md rounded-md w-36 border">
+        <ul className="absolute left-0 top-full z-10 mt-1 w-36 rounded-lg border border-ig-border bg-ig-raised shadow-lg">
           {Object.entries(languages).map(([key, { label, icon }]) => (
             <li
               key={key}
-              className={`flex items-center gap-2 p-2 hover:bg-gray-200 cursor-pointer ${
-                languageRedux === key ? "bg-gray-300" : ""
+              className={`flex cursor-pointer items-center gap-2 p-2 text-ig-text hover:bg-ig-surface ${
+                languageRedux === key ? "bg-ig-surface" : ""
               }`}
               onClick={() => changeLanguageApp(key)}
             >

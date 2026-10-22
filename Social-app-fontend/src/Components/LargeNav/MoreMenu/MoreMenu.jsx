@@ -38,23 +38,22 @@ const MoreMenu = (props) => {
   };
 
   return (
-    <div className="relative w-full top-60">
+    <div className="relative">
       {showMenu && (
-        <div className="absolute bottom-12 left-0 bg-white rounded-lg shadow-lg w-56 p-2">
-          <ul className="text-black">
-            <li className="p-2 hover:bg-gray-200 cursor-pointer">
-              {" "}
+        <div className="absolute bottom-14 left-0 z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg">
+          <ul className="text-sm text-ig-text">
+            <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("menu.setting")}
             </li>
             <Language />
-            <li className="p-2 hover:bg-gray-200 cursor-pointer">
+            <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("moreMenu.activity")}
             </li>
-            <hr className="my-2" />
+            <hr className="my-2 border-ig-border" />
           </ul>
           <button
             onClick={handleLogOut}
-            className="w-full text-left p-2 hover:bg-gray-200 cursor-pointer text-red-500"
+            className="w-full rounded-lg p-2 text-left text-ig-like hover:bg-ig-surface"
           >
             {t("moreMenu.logout")}
           </button>
