@@ -1,18 +1,28 @@
 package com.example.backend_instagram.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.persistence.PrePersist;
 
 @Entity
 @Table(name = "users")
@@ -29,6 +39,7 @@ public class User {
   private String userFullname;
   private String userBday;
   private String userEmail;
+  @JsonIgnore
   private String userPassword;
   private String userPhone;
   private String userImage;
@@ -37,6 +48,7 @@ public class User {
   @Column(nullable = false)
   private boolean isOnline;
   private String socketId;
+  @JsonIgnore
   @Column(columnDefinition = "MEDIUMTEXT")
   private String refreshToken;
   @Column(name = "created_at")
@@ -45,9 +57,38 @@ public class User {
   private String createdBy;
   private String updatedBy;
 
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private UserStatus status = UserStatus.ACTIVE;
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  private Instant suspendedUntil;
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  @Enumerated(EnumType.STRING)
+  private ReasonCode statusReasonCode;
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  @Column(length = 500)
+  private String statusReason;
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  private Instant statusChangedAt;
+  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  private Long statusChangedBy;
+
+  @JsonIgnore
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+    name = "user_roles",
+    joinColumns = @JoinColumn(name = "user_id"),
+    inverseJoinColumns = @JoinColumn(name = "role_id")
+  )
+  private Set<Role> roles = new HashSet<>();
+
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
+    if (status == null) {
+      status = UserStatus.ACTIVE;
+    }
   }
 
   // Bidirectional relationships for performance optimization
@@ -65,5 +106,16 @@ public class User {
 
   public boolean getIsOnline() {
     return this.isOnline;
+  }
+
+  public boolean hasRole(RoleCode code) {
+    return roles != null && roles.stream().anyMatch(role -> role.getCode() == code);
+  }
+
+  public void addRole(Role role) {
+    if (roles == null) {
+      roles = new HashSet<>();
+    }
+    roles.add(role);
   }
 }

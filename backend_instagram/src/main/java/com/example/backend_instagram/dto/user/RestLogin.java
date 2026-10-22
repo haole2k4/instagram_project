@@ -1,5 +1,8 @@
 package com.example.backend_instagram.dto.user;
 
+import com.example.backend_instagram.entity.UserStatus;
+import java.time.Instant;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,6 +13,9 @@ import lombok.Setter;
 public class RestLogin {
   private String accessToken;
   private UserLogin user;
+  private List<String> roles;
+  private UserStatus status;
+  private Instant suspendedUntil;
 
   @Getter
   @Setter
@@ -25,9 +31,10 @@ public class RestLogin {
 
   @Getter
   @Setter
-  @AllArgsConstructor
-  @NoArgsConstructor
   public static class UserGetAccout {
     private UserLogin user;
+    private List<String> roles;
+    private UserStatus status;
+    private Instant suspendedUntil;
   }
-} 
+}

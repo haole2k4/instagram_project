@@ -43,6 +43,17 @@ public class Post {
     @Column(nullable = false)
     private String access; // "PRIVATE", "PUBLIC", "ONLY_FRIEND"
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ModerationState moderationState = ModerationState.VISIBLE;
+
+    @Enumerated(EnumType.STRING)
+    private ReasonCode moderationReasonCode;
+    @Column(length = 500)
+    private String moderationReason;
+    private LocalDateTime moderatedAt;
+    private Long moderatedBy;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

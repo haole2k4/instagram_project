@@ -7,6 +7,7 @@ import com.example.backend_instagram.service.MessageService;
 import com.example.backend_instagram.service.UserService;
 import com.example.backend_instagram.utils.SecurityUntil;
 import com.example.backend_instagram.utils.constant.ApiMessage;
+import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +48,11 @@ public class MessageController {
             @PathVariable Long user1Id,
             @PathVariable Long user2Id) throws IdInvalidException {
 
+        Long current = resolveCurrentUserId();
+        if (!current.equals(user1Id) && !current.equals(user2Id)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN",
+                    "Không thể xem cuộc trò chuyện của người khác.");
+        }
         List<MessageResponseDTO> messages = messageService.getConversation(user1Id, user2Id);
         return ResponseEntity.ok(messages);
     }
@@ -54,6 +60,7 @@ public class MessageController {
     @GetMapping("/contacts/{userId}")
     @ApiMessage("Lấy danh sách liên hệ thành công")
     public ResponseEntity<List<User>> getContacts(@PathVariable Long userId) throws IdInvalidException {
+        requireSelf(userId);
         List<User> contacts = messageService.getContacts(userId);
         return ResponseEntity.ok(contacts);
     }
@@ -62,6 +69,7 @@ public class MessageController {
     @ApiMessage("Lấy tin nhắn mới nhất thành công")
     public ResponseEntity<List<MessageResponseDTO>> getLatestMessages(@PathVariable Long userId)
             throws IdInvalidException {
+        requireSelf(userId);
         List<MessageResponseDTO> messages = messageService.getLatestMessages(userId);
         return ResponseEntity.ok(messages);
     }
@@ -70,8 +78,16 @@ public class MessageController {
     @ApiMessage("Đếm tin nhắn chưa đọc thành công")
     public ResponseEntity<Long> countUnreadMessages(@PathVariable Long userId)
             throws IdInvalidException {
+        requireSelf(userId);
         Long count = messageService.countUnreadMessages(userId);
         return ResponseEntity.ok(count);
+    }
+
+    private void requireSelf(Long userId) throws IdInvalidException {
+        if (!resolveCurrentUserId().equals(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN",
+                    "Không thể xem dữ liệu tin nhắn của người khác.");
+        }
     }
 
     private Long resolveCurrentUserId() throws IdInvalidException {

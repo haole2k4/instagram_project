@@ -5,12 +5,16 @@ import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.entity.Conversation;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.service.ChatService;
+import com.example.backend_instagram.service.CurrentUserService;
 import com.example.backend_instagram.utils.constant.ApiMessage;
+import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,16 +25,19 @@ public class ChatController {
     @Autowired
     private ChatService chatService;
 
+    @Autowired
+    private CurrentUserService currentUserService;
+
     /**
      * Lấy hoặc tạo cuộc trò chuyện giữa hai người dùng
      */
     @GetMapping("/conversation")
     @ApiMessage("Lấy hoặc tạo cuộc trò chuyện thành công")
     public ResponseEntity<Conversation> getOrCreateConversation(
-            @RequestParam Long userId,
+            @RequestParam(required = false) Long userId,
             @RequestParam Long otherUserId) throws IdInvalidException {
 
-        Conversation conversation = chatService.getOrCreateConversation(userId, otherUserId);
+        Conversation conversation = chatService.getOrCreateConversation(currentId(), otherUserId);
         return ResponseEntity.ok(conversation);
     }
 
@@ -42,14 +49,13 @@ public class ChatController {
     public ResponseEntity<Conversation> createConversation(
             @RequestBody Map<String, Long> requestBody) throws IdInvalidException {
 
-        Long userId = requestBody.get("userId");
         Long otherUserId = requestBody.get("otherUserId");
 
-        if (userId == null || otherUserId == null) {
-            throw new IdInvalidException("Thiếu userId hoặc otherUserId");
+        if (otherUserId == null) {
+            throw new IdInvalidException("Thiếu otherUserId");
         }
 
-        Conversation conversation = chatService.getOrCreateConversation(userId, otherUserId);
+        Conversation conversation = chatService.getOrCreateConversation(currentId(), otherUserId);
         return ResponseEntity.ok(conversation);
     }
 
@@ -61,7 +67,8 @@ public class ChatController {
     public ResponseEntity<List<ConversationDTO>> getConversationsForUser(
             @PathVariable Long userId) throws IdInvalidException {
 
-        List<ConversationDTO> conversations = chatService.getConversationsForUser(userId);
+        requireSelf(userId);
+        List<ConversationDTO> conversations = chatService.getConversationsForUser(currentId());
         return ResponseEntity.ok(conversations);
     }
 
@@ -76,7 +83,7 @@ public class ChatController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) throws IdInvalidException {
 
-        List<MessageResponseDTO> messages = chatService.getMessagesPaginated(conversationId, userId, page, size);
+        List<MessageResponseDTO> messages = chatService.getMessagesPaginated(conversationId, currentId(), page, size);
         return ResponseEntity.ok(messages);
     }
 
@@ -99,13 +106,14 @@ public class ChatController {
             @PathVariable Long conversationId,
             @RequestParam Long userId) throws IdInvalidException {
 
-        ConversationDTO conversation = chatService.getConversationById(conversationId, userId);
+        ConversationDTO conversation = chatService.getConversationById(conversationId, currentId());
         return ResponseEntity.ok(conversation);
     }
 
     @GetMapping("/conversationUsers/{userId}")
     public ResponseEntity<?> getConversationUsers(@PathVariable Long userId) {
-        List<User> users = chatService.getUsersWithConversation(userId);
+        requireSelf(userId);
+        List<User> users = chatService.getUsersWithConversation(currentId());
         return ResponseEntity.ok(users);
     }
 
@@ -116,11 +124,25 @@ public class ChatController {
             throws IdInvalidException {
         String groupName = (String) requestBody.get("name");
         List<?> userIdsRaw = (List<?>) requestBody.get("userIds");
-        List<Long> userIds = userIdsRaw.stream()
+        List<Long> userIds = new ArrayList<>(userIdsRaw.stream()
                 .map(id -> Long.valueOf(id.toString()))
-                .toList();
+                .toList());
+        if (!userIds.contains(currentId())) {
+            userIds.add(currentId());
+        }
         Conversation group = chatService.createGroupConversation(groupName, userIds);
         return ResponseEntity.ok(group);
+    }
+
+    private void requireSelf(Long userId) {
+        if (!currentId().equals(userId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN",
+                    "Không thể xem dữ liệu trò chuyện của người khác.");
+        }
+    }
+
+    private Long currentId() {
+        return currentUserService.requireCurrentUser().getId();
     }
 
     @PostMapping("/group/{conversationId}/add")

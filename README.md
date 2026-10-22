@@ -222,6 +222,16 @@ Compose dùng file `.env` ở thư mục gốc cho cấu hình local; không com
 - `REDIS_PORT`, `CACHE_TTL_POSTS`, `CACHE_TTL_COMMENTS`, `CACHE_TTL_USER_STATS`
 - `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`, `RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`, `MQ_ENABLED`, `MQ_NOTIFICATION_CONCURRENCY`
 
+Access token mặc định sống 30 phút, refresh token 7 ngày. Khi triển khai bản có RBAC, hãy đổi `JWT_BASE64_SECRET` để vô hiệu hoá token cũ; token phát hành trước đó không có claim `roles`.
+
+### Admin
+
+- UI: `/admin` (yêu cầu role `MODERATOR` hoặc `ADMIN`).
+- `ADMIN` xem được audit log, ban/khôi phục tài khoản; `MODERATOR` xử lý báo cáo và ẩn nội dung.
+- Seed demo tạo `admin@instagram.local` và `moderator@instagram.local`; xem `backend_instagram/seed-demo.sql`.
+- Với database đang có dữ liệu, chạy một lần `backend_instagram/migration/2026-10-admin-rbac.sql` trước khi khởi động backend. Database mới do Hibernate tạo schema rồi seed.
+- Chi tiết quyền, trạng thái và API: `ADMIN_SPEC.md`.
+
 S3 được trỏ tới LocalStack và tự tạo bucket `instagram-media`. Mặc định AWS/Gemini credentials trong môi trường Compose chỉ dành cho local; cần thay bằng secrets riêng khi triển khai thật.
 
 ## Chạy frontend ngoài Docker

@@ -38,6 +38,7 @@ public class MessageService {
     private final FollowRepository followRepository;
     private final ChatRealtimePublisher realtimePublisher;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccountStatusService accountStatusService;
 
     public MessageService(MessageRepository messageRepository,
             UserRepository userRepository,
@@ -45,7 +46,8 @@ public class MessageService {
             ConversationParticipantRepository participantRepository,
             FollowRepository followRepository,
             ChatRealtimePublisher realtimePublisher,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            AccountStatusService accountStatusService) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.conversationRepository = conversationRepository;
@@ -53,6 +55,7 @@ public class MessageService {
         this.followRepository = followRepository;
         this.realtimePublisher = realtimePublisher;
         this.eventPublisher = eventPublisher;
+        this.accountStatusService = accountStatusService;
     }
 
     /**
@@ -94,6 +97,7 @@ public class MessageService {
                 .orElseThrow(() -> new IdInvalidException("Người gửi không phải thành viên của cuộc trò chuyện"));
 
         User sender = senderParticipant.getUser();
+        accountStatusService.requireWritable(sender);
         Conversation conversation = senderParticipant.getConversation();
 
         if (Boolean.FALSE.equals(conversation.getIsGroupChat()) && participants.size() == 2) {

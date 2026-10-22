@@ -28,4 +28,15 @@ public class Comment {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ModerationState moderationState = ModerationState.VISIBLE;
+
+    @Enumerated(EnumType.STRING)
+    private ReasonCode moderationReasonCode;
+    @Column(length = 500)
+    private String moderationReason;
+    private LocalDateTime moderatedAt;
+    private Long moderatedBy;
 }

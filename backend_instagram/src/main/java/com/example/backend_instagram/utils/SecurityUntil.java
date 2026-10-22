@@ -4,7 +4,6 @@ import com.example.backend_instagram.dto.user.RestLogin;
 import com.nimbusds.jose.util.Base64;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -12,10 +11,10 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -32,7 +31,8 @@ public class SecurityUntil {
     SecurityUntil.jwtEncoder = jwtEncoder;
   }
 
-  public static final MacAlgorithm JWT_ALGORITHM = MacAlgorithm.HS512;
+  public static final org.springframework.security.oauth2.jose.jws.MacAlgorithm JWT_ALGORITHM =
+    org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS512;
 
   @Value("${tenit.jwt.base64-secret}")
   private String jwtKey;
@@ -45,16 +45,11 @@ public class SecurityUntil {
 
   public String createToken(
     String email,
-    RestLogin.UserLogin restLogin
-    
+    RestLogin.UserLogin restLogin,
+    List<String> roles
   ) {
     Instant now = Instant.now();
     Instant validity = now.plus(jwtKeyExpiration, ChronoUnit.SECONDS);
-
-    List<String> listAuthority = new ArrayList<String>();
-
-    listAuthority.add("ROLE_USER-CREATE");
-    listAuthority.add("ROLE_USER-UPDATE");
 
     JwtClaimsSet claims = JwtClaimsSet
       .builder()
@@ -63,7 +58,7 @@ public class SecurityUntil {
       .subject(email)
       .claim("user", restLogin)
       .claim("userId", restLogin != null ? restLogin.getId() : null)
-      .claim("permission", listAuthority)
+      .claim("roles", roles == null ? List.of() : roles)
       .build();
 
     return SecurityUntil.jwtEncoder.encode(
@@ -74,7 +69,8 @@ public class SecurityUntil {
 
   public String refreshToken(
     String email,
-    com.example.backend_instagram.dto.user.RestLogin restLogin
+    RestLogin restLogin,
+    List<String> roles
   ) {
     Instant now = Instant.now();
     Instant validity = now.plus(refreshToken, ChronoUnit.SECONDS);
@@ -85,6 +81,7 @@ public class SecurityUntil {
       .subject(email)
       .claim("user", restLogin.getUser())
       .claim("userId", restLogin.getUser() != null ? restLogin.getUser().getId() : null)
+      .claim("roles", roles == null ? List.of() : roles)
       .build();
     return SecurityUntil.jwtEncoder.encode(
         JwtEncoderParameters.from(JwsHeader.with(() -> "HS512").build(), claims)
@@ -114,6 +111,21 @@ public class SecurityUntil {
       return s;
     }
     return null;
+  }
+
+  public static boolean hasRole(String role) {
+    Authentication authentication = SecurityContextHolder
+      .getContext()
+      .getAuthentication();
+    if (authentication == null) {
+      return false;
+    }
+    String expected = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+    return authentication
+      .getAuthorities()
+      .stream()
+      .map(GrantedAuthority::getAuthority)
+      .anyMatch(expected::equals);
   }
 
   /**

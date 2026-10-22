@@ -89,6 +89,65 @@ Cấm: entrance/scroll-reveal cho feed, shimmer skeleton, parallax, scroll-jack,
 
 `prefers-reduced-motion`: bỏ mọi transform và di chuyển, giữ opacity/màu; smooth scroll chuyển thành `auto`; typing dots thay bằng chữ "Đang trả lời…".
 
+## Admin surface
+
+Admin là bề mặt vận hành, không phải feed. Giữ palette true-black và system grotesk; mục tiêu là đọc bảng nhanh, thao tác có chủ đích, không phải dashboard trình diễn. Spec chi tiết ở `ADMIN_SPEC.md`.
+
+### Shell
+
+- Desktop ≥1200px: sidebar 240px mở; nút thu gọn còn 64px, chỉ icon + tooltip/aria-label; nhớ trạng thái trong localStorage.
+- 768–1199px: mặc định 64px; mở rộng thành overlay 240px khi cần.
+- <768px: drawer 280px, mở bằng nút menu; đóng khi chọn route; không che nội dung khi đóng.
+- Topbar 56px: breadcrumb + page title; bên phải là trạng thái môi trường và menu tài khoản. Không thêm search toàn cục nếu backend chưa hỗ trợ.
+- Nội dung tối đa 1280px, padding 24px (mobile 16px), grid 4px.
+
+### Typography
+
+- 24px page title (đúng một h1), 16px section, 14px body/bảng, 12px meta/header.
+- Weight 400/500/600; số dùng `tabular-nums`; text dài truncate 1 dòng + title/tooltip.
+- Không uppercase tracked, không chữ dưới 11px.
+
+### Bảng dữ liệu
+
+- Header 40px, row 52px, padding ngang 16px; border-bottom `#161616`; hover `#111`; không zebra, không card shadow.
+- Sticky header; sort bằng mũi tên lucide 14px; cột số canh phải.
+- Trạng thái: chấm 6px + text, không pill nền màu. `ACTIVE` trắng, `SUSPENDED` xám `#b4b4b4` với chấm rỗng, `BANNED` `#ff3040`.
+- Hành động là text button 14px; nguy hiểm dùng `#ff3040`; icon-only phải có tooltip + aria-label.
+- Empty state nằm trong bảng, 16px, một câu + hành động nếu có.
+
+### Hành động và form
+
+- Mỗi màn hình tối đa một nút accent chính. Nút phụ viền `#2a2a2a`, nền trong.
+- Gỡ/khôi phục/khóa/ban mở modal xác nhận: một câu hậu quả, select lý do, textarea ghi chú, nút xác nhận disabled đến khi hợp lệ. Không dùng `confirm()` mặc định.
+- Label trên field, lỗi dưới field 12px; focus ring 2px `#0095f6`.
+- Toast cho kết quả; lỗi giữ modal mở và hiển thị cạnh action.
+
+### Report detail
+
+- Hai cột: nội dung 2fr, panel quyết định 1fr sticky trên desktop; mobile xếp dọc, panel thành bottom sheet.
+- Snapshot nội dung là trung tâm; metadata phụ. Panel luôn thấy action + lý do + hậu quả.
+- Lịch sử/audit nằm dưới nội dung, không giấu trong tab.
+
+### Biểu đồ
+
+- Chỉ bar/line phẳng; một series accent `#0095f6`, series phụ `#2a2a2a`; grid `#161616`; không 3D, donut, rainbow, gradient.
+- KPI: số 24/600 + label 12; không icon trang trí.
+- Không thêm thư viện chart nếu chỉ cần 1–2 biểu đồ; SVG/CSS đủ.
+
+### Trạng thái và chuyển động
+
+- Loading: bar xám phẳng đúng chiều cao row; không shimmer.
+- Empty: câu nói rõ vì sao trống ("Không có báo cáo đang mở").
+- Error: câu ngắn + "Thử lại"; không dùng toast thay cho error state.
+- Motion 120–160ms, chỉ opacity/màu; không entrance, không parallax.
+- `prefers-reduced-motion`: bỏ transform.
+
+### Cấm
+
+- Gradient, glass, glow, neon, shadow tĩnh, icon trong ô tròn tô màu.
+- Dashboard nhiều màu, chip trạng thái rực rỡ, emoji.
+- Bịa số liệu hoặc hiển thị biểu đồ khi backend không trả.
+
 ## Đã chốt — không tự ý thay đổi
 
 - Nền `#000`, accent `#0095f6`, system grotesk; không navy, không Inter.
@@ -99,7 +158,10 @@ Cấm: entrance/scroll-reveal cho feed, shimmer skeleton, parallax, scroll-jack,
 - AI chat nằm trong khung chat (`/user/chat/ai`), không có nút nổi; history ghép ở client, backend `/chat` không đổi.
 - Không thêm Reels, lưới Khám phá thật, account switcher hay link chết.
 - Ngôn ngữ mặc định là tiếng Việt; mọi label mới phải có key ở cả `vi` và `en`.
+- Admin dùng sidebar 240px mở / 64px thu gọn / drawer mobile; đây là ngoại lệ có chủ đích so với rail 72px của app.
+- Admin dùng bảng mật độ 52px, trạng thái dạng chấm + text; đỏ `#ff3040` được phép cho trạng thái `BANNED` và hành động phá hủy.
 
 ## Lịch sử quyết định
 
 - 2026-10-23 — Chốt hướng `true-black-flat` sau Taste Skill review; redraw shell thành icon rail, palette về xanh Instagram, typeface về system grotesk. Đổi nền `#0b1014` thành `#000`, bỏ skeleton shimmer và entrance animation so với plan đầu tiên.
+- 2026-10-23 — Chốt admin surface: sidebar 240/64, drawer mobile, bảng 52px, không gradient/chip màu; spec chi tiết ở `ADMIN_SPEC.md`.
