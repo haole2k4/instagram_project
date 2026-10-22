@@ -34,7 +34,6 @@ module.exports = {
           "Arial",
           "sans-serif",
         ],
-        logo: ["Brush Script MT", "cursive"],
       },
       borderRadius: {
         media: "4px",

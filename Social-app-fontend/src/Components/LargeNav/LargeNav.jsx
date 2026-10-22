@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   Heart,
   Home,
+  Instagram,
   Menu,
   PlusSquare,
   Search,
@@ -12,7 +13,6 @@ import {
   User,
 } from "lucide-react";
 
-import InstagramIcon from "../../assets/logo/icon.png";
 import MoreMenu from "./MoreMenu/MoreMenu";
 import MenuFormGenerate from "./FormGenerate/FormGenerate";
 import Route from "../../Components/Routes/index";
@@ -176,7 +176,7 @@ const LargeNav = () => {
             title="Instagram"
             className="mb-4 flex h-12 w-12 items-center justify-center"
           >
-            <img src={InstagramIcon} alt="" className="h-7 w-7" />
+            <Instagram size={24} strokeWidth={1.5} aria-hidden="true" />
           </Link>
 
           <nav className="flex flex-1 flex-col items-center gap-1">
