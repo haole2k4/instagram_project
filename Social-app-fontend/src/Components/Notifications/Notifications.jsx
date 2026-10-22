@@ -49,7 +49,11 @@ const Notification = () => {
         };
 
         setNotifications((prev) => {
-          if (prev.some((n) => n.id === enriched.id)) {
+          if (
+            (enriched.notificationId != null &&
+              prev.some((n) => n.notificationId === enriched.notificationId)) ||
+            (enriched.id != null && prev.some((n) => n.id === enriched.id))
+          ) {
             return prev;
           }
           return [enriched, ...prev];
@@ -68,6 +72,8 @@ const Notification = () => {
 
       setNotifications((prev) => {
         if (
+          (enrichedNotification.notificationId != null &&
+            prev.some((n) => n.notificationId === enrichedNotification.notificationId)) ||
           prev.some(
             (n) =>
               n.postId === enrichedNotification.postId &&

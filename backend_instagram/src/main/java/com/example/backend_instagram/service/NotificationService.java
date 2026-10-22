@@ -5,14 +5,18 @@ import com.example.backend_instagram.entity.Notification;
 import com.example.backend_instagram.entity.NotificationType;
 import com.example.backend_instagram.entity.Post;
 import com.example.backend_instagram.entity.User;
+import com.example.backend_instagram.event.NotificationCreatedEvent;
 import com.example.backend_instagram.repository.NotificationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,16 +25,19 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationWebSocketService notificationWebSocketService;
+    private final ApplicationEventPublisher eventPublisher;
     private final UserService userService;
     private final PostService postService;
     private final ObjectMapper objectMapper;
 
     public NotificationService(NotificationRepository notificationRepository,
             NotificationWebSocketService notificationWebSocketService,
+            ApplicationEventPublisher eventPublisher,
             UserService userService,
             PostService postService) {
         this.notificationRepository = notificationRepository;
         this.notificationWebSocketService = notificationWebSocketService;
+        this.eventPublisher = eventPublisher;
         this.userService = userService;
         this.postService = postService;
         this.objectMapper = new ObjectMapper();
@@ -83,7 +90,7 @@ public class NotificationService {
           NotificationDTO notificationDTO = toDTO(notification);
           logger.info("Created like notification for user: {}, post: {}, {}",
               receiver.getId(), postId, notificationDTO);
-          sendNotificationToUser(receiver.getId(), notificationDTO);
+          publishNotificationCreated(notification, receiver.getId());
       
           // Gửi like update chỉ tới receiver
           LikeUpdateDTO likeUpdateDTO = new LikeUpdateDTO(
@@ -122,7 +129,7 @@ public class NotificationService {
                 notificationRepository.save(notification);
                 NotificationDTO notificationDTO = toDTO(notification);
                 logger.info("Created comment notification for user: {}, post: {}", receiver.getId(), postId);
-                sendNotificationToUser(receiver.getId(), notificationDTO);
+                publishNotificationCreated(notification, receiver.getId());
             } else {
                 logger.debug("Skipping comment notification as actorId equals receiverId: {}", actorId);
             }
@@ -131,15 +138,16 @@ public class NotificationService {
         }
     }
 
-    private void sendNotificationToUser(Long userId, NotificationDTO notificationDTO) {
-        try {
-            notificationWebSocketService.sendNotificationToUser(userId, notificationDTO);
-            logger.info("Notification sent to user: {} via STOMP, content: {}",
-                userId, notificationDTO.getMessage());
-        } catch (Exception e) {
-            logger.error("Error sending notification via WebSocket: {}", e.getMessage(), e);
-        }
-    }    
+    private void publishNotificationCreated(Notification notification, Long recipientId) {
+        NotificationCreatedEvent event = new NotificationCreatedEvent(
+                UUID.randomUUID().toString(),
+                NotificationCreatedEvent.CURRENT_VERSION,
+                Instant.now(),
+                notification.getNotificationId(),
+                recipientId,
+                toDTO(notification));
+        eventPublisher.publishEvent(event);
+    }
     // private void broadcastLikeUpdate(Long postId, Integer likesCount, String message, String userNickname,
     //         String userImage) {
     //     socketIOServer.getBroadcastOperations()

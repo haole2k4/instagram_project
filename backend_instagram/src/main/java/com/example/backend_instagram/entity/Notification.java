@@ -42,6 +42,10 @@ public class Notification {
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
 
+    /** Thời điểm notification đã được đẩy realtime; null nghĩa là chưa đẩy. */
+    @Column(name = "pushed_at")
+    private LocalDateTime pushedAt;
+
     public  Notification() {
     }
 

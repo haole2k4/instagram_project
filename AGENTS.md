@@ -50,6 +50,12 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 ## Phát triển và kiểm tra
 
 - Backend: chạy test trong `backend_instagram/` bằng `./mvnw test` trước khi tạo PR khi có đổi code backend.
+- Test messaging (`Notification*`, `RabbitMessaging*`) dùng Testcontainers MySQL + RabbitMQ, cần Docker đang chạy. Khi chỉ sửa phần messaging, chạy targeted trước:
+  ```bash
+  cd backend_instagram
+  ./mvnw -Dtest=NotificationConsumerTest,NotificationEventPublisherTest,NotificationMessagingIntegrationTest,NotificationRetryDlqTest,RabbitMessagingFoundationTest,NotificationServiceTest test
+  ```
+  Trước khi tạo PR vẫn chạy toàn bộ `./mvnw test`.
 - Frontend: trong `Social-app-fontend/` dùng `pnpm` (có `pnpm-lock.yaml`); kiểm tra bằng `pnpm build` (và `pnpm test` nếu có test liên quan).
 - Chạy stack: `docker compose up --build -d` hoặc `make k8s-up` (xem `README.md`).
 - Đổi hành vi cache Redis, schema DB hoặc manifest `k8s/` thì cập nhật `README.md` tương ứng.

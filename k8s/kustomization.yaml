@@ -8,6 +8,7 @@ resources:
   - configmap.yaml
   - mysql.yaml
   - redis.yaml
+  - rabbitmq.yaml
   - localstack.yaml
   - backend.yaml
   - frontend.yaml

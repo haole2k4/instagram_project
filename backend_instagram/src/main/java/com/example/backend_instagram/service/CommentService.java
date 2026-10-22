@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,6 +47,7 @@ public class CommentService {
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
+    @Transactional
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheNames.COMMENTS, key = "#postId"),
             @CacheEvict(cacheNames = CacheNames.POSTS, allEntries = true)
