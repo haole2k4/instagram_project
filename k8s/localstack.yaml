@@ -41,12 +41,8 @@ spec:
           env:
             - name: SERVICES
               value: s3
-            - name: EDGE_PORT
-              value: "4566"
-            - name: DEFAULT_REGION
-              value: ap-southeast-1
-            - name: PERSISTENCE
-              value: "1"
+            - name: GATEWAY_LISTEN
+              value: 0.0.0.0:4566
           readinessProbe:
             httpGet:
               path: /_localstack/health
