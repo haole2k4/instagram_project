@@ -2,7 +2,7 @@
 
 Ứng dụng mạng xã hội gồm frontend React và backend Spring Boot. Có hai cách chạy:
 
-- **Docker Compose** (mặc định, nhanh nhất): MySQL, Redis cache, RabbitMQ, LocalStack S3, backend, seed dữ liệu demo và frontend.
+- **Docker Compose** (mặc định, nhanh nhất): MySQL, Redis cache, RabbitMQ, LocalStack S3, backend và frontend; seed dữ liệu demo chạy theo profile riêng khi cần.
 - **Kubernetes local (kind)**: cùng stack nhưng chạy trong cluster, có thể scale và dùng Ingress.
 
 Backend dùng Redis để cache các truy vấn đọc nhiều (feed, bình luận, thống kê người dùng), giúp giảm tải MySQL. RabbitMQ xử lý việc đẩy notification like/comment realtime sau khi request đã commit.
@@ -10,7 +10,7 @@ Backend dùng Redis để cache các truy vấn đọc nhiều (feed, bình lu�
 ## Yêu cầu
 
 - Docker Desktop hoặc Docker Engine với Docker Compose
-- Các cổng `3000`, `3306`, `4566`, `5672`, `6379` và `8081` chưa được ứng dụng khác sử dụng; AMQP và management UI RabbitMQ chỉ bind localhost (`5672`, `15672`)
+- Các cổng `3000`, `4566` và `8081` chưa được ứng dụng khác sử dụng. MySQL (`3306`), Redis (`6379`), AMQP (`5672`) và management UI RabbitMQ (`15672`) chỉ bind `127.0.0.1`, nên chỉ truy cập được từ máy host.
 - Riêng Kubernetes: thêm `kubectl`, `kind`, `make` và cổng `80`/`443` còn trống
 
 ## Chạy ứng dụng
@@ -24,6 +24,14 @@ docker compose ps
 
 Mở frontend tại [http://localhost:3000](http://localhost:3000). Backend API chạy tại `http://localhost:8081`; health endpoint là `http://localhost:8081/actuator/health`.
 
+Seed dữ liệu demo **không còn chạy tự động** khi `docker compose up`. Sau khi backend healthy, chạy một lần:
+
+```bash
+docker compose --profile seed up seed
+```
+
+Lệnh này chỉ nạp dữ liệu một lần rồi thoát; các bản ghi đã có được giữ nguyên nên chạy lại vẫn an toàn. Bỏ bước này nếu chỉ cần database trống.
+
 Khi chạy frontend riêng bằng `pnpm start` (không qua Docker), sao chép `Social-app-fontend/.env.example` thành `Social-app-fontend/.env`. File `.env` không được commit.
 
 Seed tạo ba tài khoản demo dùng chung mật khẩu `InstagramDemo!2026`:
@@ -35,6 +43,14 @@ Seed tạo ba tài khoản demo dùng chung mật khẩu `InstagramDemo!2026`:
 | `minh@instagram.local` | Minh Tran |
 
 Tài khoản Demo Admin dùng để đăng nhập và thử dữ liệu mẫu. Backend hiện chưa có cơ chế role superuser, nên tên tài khoản không đồng nghĩa với quyền quản trị đặc biệt.
+
+### Giới hạn tài nguyên và log
+
+`backend` và `mysql` có memory limit mặc định `1g` mỗi service để một container không chiếm hết RAM máy host. Override bằng biến môi trường trong `.env`, ví dụ `BACKEND_MEM_LIMIT=2g` hoặc `MYSQL_MEM_LIMIT=1536m`.
+
+Backend chạy với `-XX:MaxRAMPercentage=75.0`, nhưng cờ này **chỉ có tác dụng khi container có memory limit**: JVM lấy 75% của limit làm heap tối đa. Nếu bỏ `mem_limit` thì Java đọc RAM của máy host và có thể bị OOM kill.
+
+Mọi service dùng log driver `json-file` với `max-size=10m`, `max-file=3`, nên log không phình vô hạn trên đĩa.
 
 ## Lệnh thường dùng
 
@@ -52,12 +68,16 @@ docker compose exec rabbitmq rabbitmqctl list_queues name messages consumers
 
 docker compose down
 
-# Xóa cả dữ liệu MySQL, LocalStack, Redis cache và RabbitMQ để khởi tạo lại từ đầu
+# Xóa dữ liệu MySQL và RabbitMQ để khởi tạo lại từ đầu (Redis, LocalStack là dữ liệu tạm)
 
 docker compose down -v
 ```
 
-`docker compose down -v` xóa dữ liệu trong database, LocalStack, Redis cache và RabbitMQ. Seed chạy lại khi Compose khởi động; các bản ghi đã có được giữ nguyên.
+`docker compose down -v` xóa dữ liệu trong database và RabbitMQ. Redis chỉ là cache và LocalStack chỉ là S3 tạm nên cả hai không có volume và mất dữ liệu khi container dừng. Seed không tự chạy lại; dùng lệnh `docker compose --profile seed up seed` khi cần nạp lại dữ liệu demo.
+
+MySQL dùng image `8.4` (LTS). Volume `mysql_data` do MySQL 8.0 tạo trước đây không được dùng lại an toàn: chạy `docker compose down -v` một lần khi nâng cấp từ bản cũ để tạo database mới, rồi seed lại. Dữ liệu cũ trong volume sẽ mất.
+
+LocalStack community image không hỗ trợ snapshot persistence (endpoint `/_localstack/state` trả 404), nên S3 local là dữ liệu tạm: bucket `instagram-media` được tạo lại mỗi lần container khởi động bởi `localstack-init`, và `docker compose down` xoá luôn dữ liệu. Không có volume LocalStack.
 
 ## Redis cache
 
@@ -75,6 +95,8 @@ Cache được tự động xoá khi dữ liệu thay đổi (tạo/sửa/xoá b
 docker compose exec redis redis-cli --scan
 docker compose exec redis redis-cli ttl "instagram:posts::all"
 ```
+
+Redis chỉ được dùng làm cache nên chạy với `--save "" --appendonly no`: không ghi ra đĩa và không có volume. Container dừng hoặc `docker compose down` sẽ làm mất cache; dữ liệu thật vẫn nằm trong MySQL.
 
 Có thể tắt cache mà không cần sửa code bằng cách đặt `spring.cache.type=none` (ví dụ qua biến môi trường `SPRING_CACHE_TYPE=none`).
 
@@ -194,6 +216,7 @@ Backend dùng STOMP simple broker trong bộ nhớ. RabbitMQ chỉ xử lý disp
 Compose dùng file `.env` ở thư mục gốc cho cấu hình local; không commit file này. Tạo secret JWT riêng trước khi chạy bằng cách đặt `JWT_BASE64_SECRET` trong `.env`. Các biến thường dùng:
 
 - `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `DB_PORT`
+- `BACKEND_MEM_LIMIT`, `MYSQL_MEM_LIMIT` (memory limit của container, mặc định `1g`)
 - `JWT_BASE64_SECRET`, `JWT_TOKEN_VALIDITY_SECONDS`, `JWT_REFRESH_TOKEN_VALIDITY_SECONDS`
 - `GEMINI_API_KEY` để bật tính năng Gemini
 - `REDIS_PORT`, `CACHE_TTL_POSTS`, `CACHE_TTL_COMMENTS`, `CACHE_TTL_USER_STATS`
