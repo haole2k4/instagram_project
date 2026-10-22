@@ -63,5 +63,6 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 ## Phong cách làm việc
 
 - Đọc code liên quan trước khi sửa; theo convention hiện có (package `controller`/`service`/`repository`/`entity`/`dto` ở backend, cấu trúc `Pages`/`Components` ở frontend).
+- Trước khi thiết kế hoặc sửa UI, đọc `ART_DIRECTION.md` ở thư mục gốc và giữ đúng hướng thẩm mỹ đã chốt (palette, typography, layout, motion, anti-pattern).
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
 - Commit message và mô tả PR ngắn gọn, rõ ý; không ràng buộc định dạng hay ngôn ngữ.
