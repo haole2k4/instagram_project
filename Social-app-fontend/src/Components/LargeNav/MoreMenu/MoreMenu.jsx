@@ -48,7 +48,9 @@ const MoreMenu = (props) => {
             <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("moreMenu.activity")}
             </li>
-            <hr className="my-2 border-ig-border" />
+            <li aria-hidden="true">
+              <hr className="my-2 border-ig-border" />
+            </li>
           </ul>
           <button
             onClick={handleLogOut}

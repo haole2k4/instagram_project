@@ -18,7 +18,7 @@ const DefaultLayout = ({ socketData }) => {
       </div>
 
       {isChatPage ? (
-        <div className="ml-0 min-h-screen flex-1 pb-14 md:ml-rail md:pb-0">
+        <div className="ml-0 min-h-screen flex-1 md:ml-rail">
           <ChatPage socketData={socketData} />
         </div>
       ) : (
