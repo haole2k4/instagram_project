@@ -46,6 +46,24 @@ services:
       timeout: 3s
       retries: 20
 
+  rabbitmq:
+    image: rabbitmq:4.4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-instagram}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-instagram_pass}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/instagram}
+    ports:
+      # Chỉ mở AMQP và management UI trên localhost; backend kết nối qua network nội bộ.
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   backend:
     build:
       context: ./backend_instagram
@@ -73,6 +91,16 @@ services:
       CACHE_TTL_POSTS: ${CACHE_TTL_POSTS:-60}
       CACHE_TTL_COMMENTS: ${CACHE_TTL_COMMENTS:-60}
       CACHE_TTL_USER_STATS: ${CACHE_TTL_USER_STATS:-120}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-instagram}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-instagram_pass}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/instagram}
+      MQ_ENABLED: ${MQ_ENABLED:-true}
+      MQ_NOTIFICATION_CONCURRENCY: ${MQ_NOTIFICATION_CONCURRENCY:-2}
+      MQ_NOTIFICATION_MAX_ATTEMPTS: ${MQ_NOTIFICATION_MAX_ATTEMPTS:-4}
+      MQ_NOTIFICATION_RETRY_INITIAL_MS: ${MQ_NOTIFICATION_RETRY_INITIAL_MS:-1000}
+      MQ_NOTIFICATION_RETRY_MULTIPLIER: ${MQ_NOTIFICATION_RETRY_MULTIPLIER:-2}
     ports:
       - "8081:8081"
     depends_on:
@@ -81,6 +109,8 @@ services:
       redis:
         condition: service_healthy
       localstack:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
@@ -125,3 +155,4 @@ volumes:
   mysql_data:
   localstack_data:
   redis_data:
+  rabbitmq_data:

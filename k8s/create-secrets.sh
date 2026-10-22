@@ -40,6 +40,7 @@ kubectl -n "$NAMESPACE" create secret generic instagram-secrets \
   --from-literal=DB_PASSWORD="$(get_env DB_PASSWORD instagram_pass)" \
   --from-literal=JWT_BASE64_SECRET="$JWT_SECRET" \
   --from-literal=GEMINI_API_KEY="$(get_env GEMINI_API_KEY)" \
+  --from-literal=RABBITMQ_PASSWORD="$(get_env RABBITMQ_PASSWORD instagram_pass)" \
   --from-literal=ACCESS_KEY="$(get_env ACCESS_KEY test)" \
   --from-literal=SECRET_KEY="$(get_env SECRET_KEY test)" \
   --dry-run=client -o yaml | kubectl apply -f -

@@ -45,6 +45,7 @@ k8s-secrets: k8s-cluster
 
 k8s-apply:
 	kubectl kustomize --load-restrictor LoadRestrictionsNone k8s | kubectl apply -f -
+	kubectl -n $(K8S_NAMESPACE) rollout status statefulset/rabbitmq --timeout=180s
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/backend --timeout=300s
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/frontend --timeout=180s
 

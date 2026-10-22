@@ -47,7 +47,7 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
       initContainers:
-        # Chờ MySQL và Redis sẵn sàng trước khi Spring Boot khởi động
+        # Chờ MySQL, Redis và RabbitMQ sẵn sàng trước khi Spring Boot khởi động
         - name: wait-for-dependencies
           image: busybox:1.36
           command:
@@ -57,6 +57,7 @@ spec:
               set -eu
               until nc -z mysql 3306; do echo "Chờ MySQL..."; sleep 2; done
               until nc -z redis 6379; do echo "Chờ Redis..."; sleep 2; done
+              until nc -z rabbitmq 5672; do echo "Chờ RabbitMQ..."; sleep 2; done
               echo "Dependencies đã sẵn sàng."
           resources:
             requests:
@@ -91,6 +92,11 @@ spec:
                 secretKeyRef:
                   name: instagram-secrets
                   key: GEMINI_API_KEY
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: instagram-secrets
+                  key: RABBITMQ_PASSWORD
             - name: ACCESS_KEY
               valueFrom:
                 secretKeyRef:
