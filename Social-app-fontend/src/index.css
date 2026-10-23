@@ -2,6 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-::-webkit-scrollbar{
-  display: none;
+@layer base {
+  body {
+    @apply bg-ig-ground font-sans antialiased;
+  }
+
+  ::selection {
+    background-color: theme("colors.ig.accent");
+    color: theme("colors.ig.ground");
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.ig.accent");
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .nav-icon-btn {
+    @apply relative flex h-12 w-12 items-center justify-center rounded-xl text-ig-muted transition-[background-color,color,transform] duration-[120ms] ease-ui-out active:scale-[.97];
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-icon-btn:hover {
+      @apply bg-ig-surface text-ig-text;
+    }
+  }
+
+  .nav-icon-btn[aria-current="page"],
+  .nav-icon-btn[aria-expanded="true"] {
+    @apply text-ig-text;
+  }
+
+  .nav-icon-btn[aria-current="page"] img {
+    @apply ring-2 ring-ig-text ring-offset-2 ring-offset-ig-ground;
+  }
+
+  .nav-popover {
+    @apply z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Giữ opacity/màu để hiểu trạng thái, bỏ mọi di chuyển và animation. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color, border-color !important;
+  }
+
+  .nav-icon-btn:active {
+    transform: none;
+  }
 }

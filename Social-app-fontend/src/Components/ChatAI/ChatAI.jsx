@@ -41,7 +41,7 @@ const ChatAI = () => {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className="fixed bottom-20 right-5 z-30 md:bottom-5">
       {/* Icon chat nổi */}
       <div
         className="w-14 h-14 bg-blue-500 text-white rounded-full flex items-center justify-center text-3xl cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"

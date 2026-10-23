@@ -20,7 +20,7 @@ const DefaultLayout = ({ socketData }) => {
     : "";
 
   const banner = restricted ? (
-    <div className="ml-[270px] border-b border-[#2a2a2a] bg-[#111] px-4 py-2 text-[13px] text-[#b4b4b4]">
+    <div className="ml-0 border-b border-ig-raised bg-ig-surface px-4 py-2 text-[13px] text-ig-muted md:ml-rail">
       {status === "BANNED"
         ? t("restricted.banned")
         : t("restricted.suspended", { until })}
@@ -28,26 +28,25 @@ const DefaultLayout = ({ socketData }) => {
   ) : null;
 
   return (
-    <div className="flex w-full flex-col bg-black relative">
-      {banner}
-      <div className="flex w-full flex-col">
-        <div className="fixed">
-          <LeftNav />
-        </div>
-
-        {isChatPage ? (
-          <div className="flex-1 min-h-screen bg-black ml-[270px]">
-            <div className="h-full w-full">
-              <ChatPage socketData={socketData} />
-            </div>
-          </div>
-        ) : (
-          <div className="flex w-full min-h-screen bg-black ml-[270px]">
-            <Fragment />
-            <RightNav />
-          </div>
-        )}
+    <div className="relative flex min-h-screen w-full flex-col bg-ig-ground text-ig-text [color-scheme:dark]">
+      <div className="fixed inset-y-0 left-0 z-40">
+        <LeftNav />
       </div>
+
+      {banner}
+
+      {isChatPage ? (
+        <div className="ml-0 min-h-screen flex-1 md:ml-rail">
+          <ChatPage socketData={socketData} />
+        </div>
+      ) : (
+        <div className="ml-0 flex min-h-screen flex-1 pb-14 md:ml-rail md:pb-0">
+          <Fragment />
+          <RightNav />
+        </div>
+      )}
+
+      {/* Bước 5 sẽ bỏ nút nổi này khi AI chuyển vào khung chat. */}
       <ChatAI />
     </div>
   );

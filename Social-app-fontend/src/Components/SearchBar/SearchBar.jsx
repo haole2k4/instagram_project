@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaSearch, FaTimes } from "react-icons/fa";
+import { Search, X } from "lucide-react";
 import { handleGetAllUser } from "../../Service/UserAPI";
 import { Link } from "react-router-dom";
 import Route from "../../Components/Routes/index";
@@ -74,50 +74,53 @@ const SearchBar = ({ isOpen, onClose }) => {
   return (
     <div
       ref={searchRef}
-      className="fixed top-0 left-[270px] h-screen w-[397px] bg-black border-r border-gray-800 z-[100]"
+      className="fixed bottom-14 left-0 top-0 z-[100] flex w-full flex-col border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]"
     >
       {/* Header */}
-      <div className="sticky top-0 bg-black px-4 pt-3 pb-3 border-b border-gray-800">
+      <div className="sticky top-0 border-b border-ig-border bg-ig-ground px-4 pb-3 pt-3">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[24px] font-semibold text-white">
+          <h2 className="text-[24px] font-semibold text-ig-text">
             {t("search.title")}
           </h2>
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              aria-label={t("search.close")}
+              className="rounded-lg p-2 text-ig-muted transition-colors hover:text-ig-text"
             >
-              <FaTimes size={24} />
+              <X size={20} />
             </button>
           )}
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-500" size={16} />
+            <Search className="text-ig-faint" size={16} />
           </div>
           <input
             type="text"
+            aria-label={t("search.placeholder")}
             placeholder={t("search.placeholder")}
             value={searchTerm}
             onChange={handleSearch}
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#262626] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-[15px]"
+            className="w-full rounded-xl bg-ig-surface py-3 pl-10 pr-10 text-[15px] text-ig-text placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
           />
           {searchTerm && (
             <button
               onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              aria-label={t("search.clear")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ig-muted transition-colors hover:text-ig-text"
             >
-              <FaTimes size={14} />
+              <X size={14} />
             </button>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="h-[calc(100vh-116px)] overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-border border-t-ig-accent"></div>
           </div>
         ) : searchTerm ? (
           <div className="py-2">
@@ -126,7 +129,8 @@ const SearchBar = ({ isOpen, onClose }) => {
                 <Link
                   key={user.id}
                   to={`${Route.friend_profile}/${user.id}`}
-                  className="flex items-center px-4 py-3 hover:bg-[#121212] transition-colors"
+                  onClick={onClose}
+                  className="flex items-center px-4 py-3 transition-colors hover:bg-ig-surface"
                 >
                   <div className="relative">
                     <img
@@ -135,14 +139,14 @@ const SearchBar = ({ isOpen, onClose }) => {
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     {user.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-ig-ground bg-ig-text"></div>
                     )}
                   </div>
                   <div className="ml-3 flex-1">
-                    <p className="text-white text-[15px] font-semibold">
+                    <p className="text-ig-text text-[15px] font-semibold">
                       {user.userNickname}
                     </p>
-                    <div className="flex items-center text-gray-400 text-[13px]">
+                    <div className="flex items-center text-ig-muted text-[13px]">
                       <p>{user.userFullname}</p>
                       <span className="mx-1">•</span>
                       <p>{t("search.following")}</p>
@@ -153,9 +157,9 @@ const SearchBar = ({ isOpen, onClose }) => {
             ) : (
               <div className="px-4 py-8 text-center">
                 <div className="mb-4">
-                  <FaSearch className="mx-auto text-gray-400" size={32} />
+                  <Search className="mx-auto text-ig-muted" size={32} />
                 </div>
-                <p className="text-gray-400 text-[15px]">
+                <p className="text-ig-muted text-[15px]">
                   {t("search.noResults", { term: searchTerm })}
                 </p>
               </div>
@@ -164,9 +168,9 @@ const SearchBar = ({ isOpen, onClose }) => {
         ) : (
           <div className="px-4 py-8 text-center">
             <div className="mb-4">
-              <FaSearch className="mx-auto text-gray-400" size={32} />
+              <Search className="mx-auto text-ig-muted" size={32} />
             </div>
-            <p className="text-gray-400 text-[15px]">
+            <p className="text-ig-muted text-[15px]">
               {t("search.searchPeople")}
             </p>
           </div>

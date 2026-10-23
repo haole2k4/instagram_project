@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Language from "./Language/Language";
 import { useTranslation } from "react-i18next";
@@ -12,14 +11,12 @@ import webSocketService from "../../../Service/WebSocketService";
 
 const MoreMenu = (props) => {
   const { showMenu, setShowMenu } = props;
-  let navi = useNavigate();
   let dispatch = useDispatch();
   const [t] = useTranslation();
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   let lang = useSelector((state) => state.app.language);
   useEffect(() => {
     setShowMenu(false);
-  }, [lang]);
+  }, [lang, setShowMenu]);
   const handleLogOut = async () => {
     try {
       let res = await UserLogOut();
@@ -38,23 +35,26 @@ const MoreMenu = (props) => {
   };
 
   return (
-    <div className="relative w-full top-60">
+    <div className="relative">
       {showMenu && (
-        <div className="absolute bottom-12 left-0 bg-white rounded-lg shadow-lg w-56 p-2">
-          <ul className="text-black">
-            <li className="p-2 hover:bg-gray-200 cursor-pointer">
-              {" "}
+        <div className="nav-popover fixed bottom-20 left-[84px]">
+          <ul className="text-sm text-ig-text">
+            <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("menu.setting")}
             </li>
-            <Language />
-            <li className="p-2 hover:bg-gray-200 cursor-pointer">
+            <li>
+              <Language dark />
+            </li>
+            <li className="cursor-pointer rounded-lg p-2 hover:bg-ig-surface">
               {t("moreMenu.activity")}
             </li>
-            <hr className="my-2" />
+            <li aria-hidden="true">
+              <hr className="my-2 border-ig-border" />
+            </li>
           </ul>
           <button
             onClick={handleLogOut}
-            className="w-full text-left p-2 hover:bg-gray-200 cursor-pointer text-red-500"
+            className="w-full rounded-lg p-2 text-left text-ig-text hover:bg-ig-surface"
           >
             {t("moreMenu.logout")}
           </button>

@@ -942,7 +942,7 @@ const MessengerPage = () => {
 
   // Sửa lại phần render để hiển thị trang chào mừng đúng cách
   return (
-    <div className="flex h-screen bg-black w-full">
+    <div className="flex h-[calc(100dvh-3.5rem)] bg-ig-ground w-full md:h-screen">
       {/* Conversation List */}
       {/* <div className="w-1/3 border-r border-gray-700 bg-gray-900"> */}
       <div className="w-[400px] border-r border-gray-700 bg-gray-900 ">
