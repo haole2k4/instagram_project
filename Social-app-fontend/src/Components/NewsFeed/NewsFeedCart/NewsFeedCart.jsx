@@ -1,55 +1,109 @@
-import React, { useEffect, useState } from "react";
-import ModalCart from "./ModalCart/ModalCart";
+import React, { useEffect, useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import {
-  handleGetAllPostByUserId,
-  getAllPost,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  Heart,
+  Image as ImageIcon,
+  Lock,
+  MessageCircle,
+  Users,
+} from "lucide-react";
+
+import ModalCart from "./ModalCart/ModalCart";
+import {
   handleLike,
   getPostByFollowing,
   getLikedPostIdsByUser,
 } from "../../../Service/postApi";
 import { formatTime } from "../../../Utils";
-import { GrFormPrevious, GrFormNext } from "react-icons/gr";
 import notificationSocket from "../../../Service/NotificationSocket";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { getCommentsByPostId } from "../../../Service/commentApi";
-import { CiHeart } from "react-icons/ci";
-import { FaRegComment } from "react-icons/fa";
-import { BsBookmark } from "react-icons/bs";
-import { FaHeart } from "react-icons/fa";
-import { useTranslation } from "react-i18next";
+import Route from "../../../Components/Routes/index";
+import { PostCardSkeleton } from "../../Common/FlatSkeleton";
+import EmptyState from "../../Common/EmptyState";
+
+const AccessIcon = ({ access, t }) => {
+  if (access === "PUBLIC") {
+    return (
+      <span
+        title={t("newFed.public")}
+        aria-label={t("newFed.public")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Globe size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (access === "FRIENDS" || access === "ONLY_FRIEND") {
+    return (
+      <span
+        title={t("CreateNew.friends")}
+        aria-label={t("CreateNew.friends")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Users size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (access === "PRIVATE") {
+    return (
+      <span
+        title={t("newFed.private")}
+        aria-label={t("newFed.private")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Lock size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  return null;
+};
 
 const NewsFeedCart = () => {
   const [likes, setLikes] = useState({});
-  const [comments, setComments] = useState({});
-  const [newComments, setNewComments] = useState({});
+  const [poppingHearts, setPoppingHearts] = useState({});
+  const [doubleTapHeart, setDoubleTapHeart] = useState({});
+  const [expandedCaptions, setExpandedCaptions] = useState({});
   const [isOpen, setIsOpen] = useState(false);
   const [postData, setPostData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
-  const [check, setCheck] = useState(false);
   const { userInfo } = useSelector((state) => state.login);
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  // Hàm lấy danh sách ID bài viết đã thích của người dùng
-  const fetchLikedPosts = async (userId) => {
-    try {
-      const response = await getLikedPostIdsByUser(userId);
-      console.log("Liked post IDs:", response.data); // Debug
-      return response.data; // Trả về mảng ID bài viết đã thích
-    } catch (error) {
-      console.error("Error fetching liked posts:", error);
-      toast.error("Không thể tải danh sách bài viết đã thích!");
-      return []; // Trả về mảng rỗng nếu có lỗi
+  const fetchLikedPosts = useCallback(
+    async (userId) => {
+      try {
+        const response = await getLikedPostIdsByUser(userId);
+        return Array.isArray(response?.data) ? response.data : [];
+      } catch (error) {
+        console.error("Error fetching liked posts:", error);
+        return [];
+      }
+    },
+    []
+  );
+
+  const fetchPostData = useCallback(async () => {
+    if (!userInfo?.id) {
+      setIsLoading(false);
+      return;
     }
-  };
-
-  const fetchPostData = async () => {
+    setIsLoading(true);
     try {
       const postsResponse = await getPostByFollowing(userInfo.id);
-      const filteredPosts = postsResponse.data.sort(
+      const rawPosts = Array.isArray(postsResponse?.data)
+        ? postsResponse.data
+        : [];
+      const filteredPosts = [...rawPosts].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
       setPostData(filteredPosts);
@@ -60,25 +114,23 @@ const NewsFeedCart = () => {
       });
       setCurrentImageIndex(initialIndexes);
 
-      // Lấy danh sách ID bài viết đã thích và khởi tạo state likes
       const likedPostIds = await fetchLikedPosts(userInfo.id);
       const initialLikes = {};
       filteredPosts.forEach((post) => {
         initialLikes[post.id] = likedPostIds.includes(post.id);
       });
-      console.log("Initial likes:", likedPostIds); // Debug
       setLikes(initialLikes);
     } catch (error) {
       console.error("Error fetching posts:", error);
-      toast.error("Không thể tải danh sách bài viết!");
+      toast.error(t("post.fetchError"));
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [userInfo?.id, fetchLikedPosts, t]);
 
   useEffect(() => {
-    if (userInfo?.id) {
-      fetchPostData();
-    }
-  }, [userInfo?.id, check]);
+    fetchPostData();
+  }, [fetchPostData]);
 
   useEffect(() => {
     let unsubscribeLikes;
@@ -104,7 +156,6 @@ const NewsFeedCart = () => {
   useEffect(() => {
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (comment) => {
-        console.log("Received comment:", comment);
         if (comment.commentsCount != null) {
           setPostData((prev) =>
             prev.map((post) =>
@@ -121,36 +172,57 @@ const NewsFeedCart = () => {
     };
   }, [userInfo?.id, dispatch]);
 
+  const triggerHeartPop = (postId) => {
+    setPoppingHearts((prev) => ({ ...prev, [postId]: true }));
+    setTimeout(() => {
+      setPoppingHearts((prev) => ({ ...prev, [postId]: false }));
+    }, 220);
+  };
+
   const handleLikePost = async (id, likesCount) => {
     try {
       if (likes[id]) {
-        toast.info("Bạn đã thích bài viết này!");
+        triggerHeartPop(id);
         return;
       }
-      await handleLike(id, userInfo.id);
-      const newLikesCount = likesCount + 1;
+      triggerHeartPop(id);
       setLikes((prevLikes) => ({
         ...prevLikes,
         [id]: true,
       }));
+      const newLikesCount = (likesCount || 0) + 1;
       setPostData((prev) =>
         prev.map((post) =>
           post.id === id ? { ...post, likesCount: newLikesCount } : post
         )
       );
-      toast.success("Đã thích bài viết!");
+      await handleLike(id, userInfo.id);
     } catch (error) {
       console.error("Error liking post:", error);
-      if (error.response?.data?.message?.includes("đã thích")) {
-        toast.info("Bạn đã thích bài viết này!");
-      } else {
-        toast.error("Không thể thích bài viết!");
+      if (!error.response?.data?.message?.includes("đã thích")) {
+        setLikes((prevLikes) => ({
+          ...prevLikes,
+          [id]: false,
+        }));
+        setPostData((prev) =>
+          prev.map((post) =>
+            post.id === id ? { ...post, likesCount: likesCount } : post
+          )
+        );
+        toast.error(t("post.likeError"));
       }
     }
   };
 
-  const handleCommentSubmit = async (id) => {
-    console.warn("handleCommentSubmit chưa được triển khai hoàn chỉnh");
+  const handleDoubleTapMedia = (post) => {
+    setDoubleTapHeart((prev) => ({ ...prev, [post.id]: true }));
+    setTimeout(() => {
+      setDoubleTapHeart((prev) => ({ ...prev, [post.id]: false }));
+    }, 400);
+
+    if (!likes[post.id]) {
+      handleLikePost(post.id, post.likesCount);
+    }
   };
 
   const handleModelComment = (post) => {
@@ -158,21 +230,17 @@ const NewsFeedCart = () => {
     setIsOpen(true);
   };
 
-  const handleCommentChange = (id, value) => {
-    setNewComments((prev) => ({ ...prev, [id]: value }));
-  };
-
   const nextImage = (postId, totalImages) => {
     setCurrentImageIndex((prev) => ({
       ...prev,
-      [postId]: (prev[postId] + 1) % totalImages,
+      [postId]: ((prev[postId] || 0) + 1) % totalImages,
     }));
   };
 
   const prevImage = (postId, totalImages) => {
     setCurrentImageIndex((prev) => ({
       ...prev,
-      [postId]: (prev[postId] - 1 + totalImages) % totalImages,
+      [postId]: ((prev[postId] || 0) - 1 + totalImages) % totalImages,
     }));
   };
 
@@ -184,198 +252,243 @@ const NewsFeedCart = () => {
     );
   };
 
-  return (
-    <div className="flex flex-col items-center gap-6 py-6 bg-black text-white min-h-screen">
-      {postData.map((item) => (
-        <div
-          key={item.id}
-          className="w-[35vw] bg-black text-white rounded-lg overflow-hidden border border-neutral-800"
-        >
-          <div className="flex items-center px-4 py-3">
-            <img
-              src={item.user?.userImage}
-              alt={item.username}
-              className="w-10 h-10 rounded-full object-cover mr-3 border border-gray-300"
-              style={{ imageRendering: "crisp-edges" }}
-            />
-            <div className="flex flex-col w-full">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm text-white">
-                  {item.user?.userNickname}
-                </h3>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <span>{formatTime(item.createdAt, t)}</span>
-                {item?.access === "PUBLIC" && (
-                  <div className="relative group">
-                    <span
-                      title={t("newFed.public")}
-                      className="text-sm cursor-pointer"
-                    >
-                      🌍
-                    </span>
-                  </div>
-                )}
-                {item?.access === "FRIENDS" && (
-                  <div className="relative group">
-                    <span title="Chỉ bạn bè" className="text-sm cursor-pointer">
-                      👥
-                    </span>
-                  </div>
-                )}
-                {item?.access === "PRIVATE" && (
-                  <div className="relative group">
-                    <span
-                      title={t("newFed.private")}
-                      className="text-sm cursor-pointer"
-                    >
-                      🔒
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="flex w-full flex-col py-2">
+        <PostCardSkeleton />
+        <PostCardSkeleton />
+      </div>
+    );
+  }
 
-          <div className="w-full max-h-[100vh] overflow-hidden rounded-lg shadow-lg bg-black">
-            {item.media && item.media.length > 0 && (
-              <>
-                {item.media[currentImageIndex[item.id]]?.url.endsWith(
-                  ".mp4"
-                ) ? (
-                  <video
-                    className="w-full max-h-[85vh] object-contain transition duration-300 ease-in-out"
-                    style={{ imageRendering: "auto" }}
-                    src={item.media[currentImageIndex[item.id]]?.url}
-                    controls
-                    autoPlay={false}
-                    muted
-                    loading="lazy"
+  if (postData.length === 0) {
+    return (
+      <EmptyState
+        icon={ImageIcon}
+        title={t("post.emptyFeedTitle")}
+        description={t("post.emptyFeedDesc")}
+        actionLabel={t("CreateNew.createNewsfeed")}
+        onAction={() => navigate(Route.create_newsfeed)}
+      />
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-6 py-2 text-ig-text">
+      {postData.map((item) => {
+        const activeIdx = currentImageIndex[item.id] || 0;
+        const currentMedia = item.media?.[activeIdx];
+        const isVideoMedia = currentMedia?.url?.endsWith(".mp4");
+        const authorName =
+          item.user?.userNickname || item.username || t("story.user");
+        const isCaptionExpanded = Boolean(expandedCaptions[item.id]);
+        const captionText = item.title || "";
+        const isLongCaption = captionText.length > 110;
+
+        return (
+          <article
+            key={item.id}
+            className="mx-auto w-full max-w-[470px] border-b border-ig-rule pb-5"
+          >
+            {/* Header bài viết */}
+            <header className="flex items-center justify-between py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <Link
+                  to={
+                    item.user?.id
+                      ? `${Route.friend_profile}/${item.user.id}`
+                      : Route.profile
+                  }
+                  className="shrink-0"
+                >
+                  <img
+                    src={item.user?.userImage || "/default-avatar.png"}
+                    alt={authorName}
+                    className="h-9 w-9 rounded-full bg-ig-surface object-cover"
+                  />
+                </Link>
+                <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
+                  <Link
+                    to={
+                      item.user?.id
+                        ? `${Route.friend_profile}/${item.user.id}`
+                        : Route.profile
+                    }
+                    className="truncate font-semibold text-ig-text hover:opacity-85"
                   >
-                    <source
-                      src={item.media[currentImageIndex[item.id]]?.url}
-                      type="video/mp4"
-                    />
-                    Your browser does not support the video tag.
-                  </video>
+                    {authorName}
+                  </Link>
+                  <span className="text-[12px] text-ig-faint">•</span>
+                  <span className="shrink-0 text-[12px] text-ig-faint tabular-nums">
+                    {formatTime(item.createdAt, t)}
+                  </span>
+                  <AccessIcon access={item?.access} t={t} />
+                </div>
+              </div>
+            </header>
+
+            {/* Khung media 4:5 hoặc 1:1 */}
+            {item.media && item.media.length > 0 && (
+              <div
+                onDoubleClick={() => handleDoubleTapMedia(item)}
+                style={{ touchAction: "pan-y" }}
+                className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-media border border-ig-rule bg-ig-surface select-none"
+              >
+                {isVideoMedia ? (
+                  <video
+                    className="h-full w-full object-contain"
+                    src={currentMedia?.url}
+                    controls
+                    playsInline
+                    muted
+                  />
                 ) : (
                   <img
-                    className="w-full max-h-[85vh] object-contain transition duration-300 ease-in-out"
-                    style={{ imageRendering: "auto" }}
-                    src={item.media[currentImageIndex[item.id]]?.url}
-                    alt={item.caption}
+                    className="h-full w-full object-cover"
+                    src={currentMedia?.url}
+                    alt={captionText || authorName}
                     loading="lazy"
                   />
                 )}
 
+                {/* Double-tap heart overlay */}
+                {doubleTapHeart[item.id] && (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                  >
+                    <Heart
+                      size={84}
+                      strokeWidth={1.5}
+                      className="ig-double-tap-heart fill-ig-like text-ig-like"
+                    />
+                  </div>
+                )}
+
+                {/* Điều khiển carousel */}
                 {item.media.length > 1 && (
                   <>
                     <button
-                      onClick={() => prevImage(item.id, item.media.length)}
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-70 transition duration-200"
+                      type="button"
+                      aria-label={t("story.previous")}
+                      title={t("story.previous")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        prevImage(item.id, item.media.length);
+                      }}
+                      className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
                     >
-                      <GrFormPrevious size={24} />
+                      <ChevronLeft size={18} strokeWidth={1.5} />
                     </button>
                     <button
-                      onClick={() => nextImage(item.id, item.media.length)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-70 transition duration-200"
+                      type="button"
+                      aria-label={t("story.next")}
+                      title={t("story.next")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        nextImage(item.id, item.media.length);
+                      }}
+                      className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
                     >
-                      <GrFormNext size={24} />
+                      <ChevronRight size={18} strokeWidth={1.5} />
                     </button>
-                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-xs font-medium tracking-wide shadow">
-                      {currentImageIndex[item.id] + 1} / {item.media.length}
+                    <div className=" absolute right-3 top-3 rounded-control border border-ig-border bg-ig-ground/80 px-2.5 py-0.5 text-[12px] font-medium text-ig-text tabular-nums">
+                      {activeIdx + 1} / {item.media.length}
                     </div>
                   </>
                 )}
-              </>
+              </div>
             )}
-          </div>
 
-          <div className="mt-4 px-4 text-white text-sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex gap-4 text-xl">
+            {/* Thanh hành động và nội dung bài */}
+            <div className="pt-3 text-[14px]">
+              <div className="mb-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    aria-label={t("newFed.like")}
+                    title={t("newFed.like")}
+                    onClick={() => handleLikePost(item.id, item.likesCount)}
+                    className={`ig-press flex items-center justify-center ${
+                      likes[item.id]
+                        ? "text-ig-like"
+                        : "text-ig-text hover:text-ig-muted"
+                    } ${poppingHearts[item.id] ? "ig-heart-pop" : ""}`}
+                  >
+                    <Heart
+                      size={24}
+                      strokeWidth={1.5}
+                      className={likes[item.id] ? "fill-current" : ""}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("newFed.comment")}
+                    title={t("newFed.comment")}
+                    onClick={() => handleModelComment(item)}
+                    className="ig-press flex items-center justify-center text-ig-text hover:text-ig-muted"
+                  >
+                    <MessageCircle size={24} strokeWidth={1.5} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => handleLikePost(item.id, item.likesCount)}
-                  className="hover:scale-110 transition"
+                  type="button"
+                  aria-label={t("post.save")}
+                  title={t("post.save")}
+                  className="ig-press flex items-center justify-center text-ig-text hover:text-ig-muted"
                 >
-                  {likes[item.id] ? (
-                    <FaHeart className="text-3xl text-red-500" />
-                  ) : (
-                    <CiHeart className="text-3xl" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleModelComment(item)}
-                  className="hover:scale-110 transition"
-                >
-                  <FaRegComment className="text-2xl" />
+                  <Bookmark size={24} strokeWidth={1.5} />
                 </button>
               </div>
-              <button className="hover:scale-110 transition text-2xl">
-                <BsBookmark />
+
+              <p className="mb-1.5 text-[14px] font-semibold text-ig-text tabular-nums">
+                {item.likesCount || 0} {t("newFed.like")}
+              </p>
+
+              {captionText && (
+                <p className="mb-1.5 text-[14px] leading-snug text-ig-text">
+                  <span className="mr-1.5 font-semibold">{authorName}</span>
+                  {isLongCaption && !isCaptionExpanded ? (
+                    <>
+                      {captionText.slice(0, 110)}…
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedCaptions((prev) => ({
+                            ...prev,
+                            [item.id]: true,
+                          }))
+                        }
+                        className="ml-1 text-[14px] text-ig-muted hover:text-ig-text"
+                      >
+                        {t("post.seeMore")}
+                      </button>
+                    </>
+                  ) : (
+                    captionText
+                  )}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleModelComment(item)}
+                className="block text-[14px] text-ig-muted hover:text-ig-text tabular-nums"
+              >
+                {t("newFed.view")} {item.commentsCount || 0}{" "}
+                {t("newFed.comment")}
               </button>
             </div>
+          </article>
+        );
+      })}
 
-            <p className="font-semibold mb-1">
-              {item.likesCount} {t("newFed.like")}
-            </p>
-
-            <p className="mb-1 leading-snug">
-              <span className="font-semibold">{item.username}</span>{" "}
-              {item.title.length > 100 ? (
-                <>
-                  {item.title.slice(0, 100)}...
-                  <button className="text-gray-400 hover:underline ml-1">
-                    xem thêm
-                  </button>
-                </>
-              ) : (
-                item.title
-              )}
-            </p>
-
-            <button
-              onClick={() => handleModelComment(item)}
-              className="text-gray-400 text-sm hover:underline mb-2 block"
-            >
-              {t("newFed.view")} {item.commentsCount} {t("newFed.comment")}
-            </button>
-
-            <ul className="text-sm space-y-1 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent mb-2">
-              {(comments[item.id] || []).map((comment, index) => (
-                <li key={index} className="border-b border-gray-700 pb-2">
-                  <span className="font-semibold">{item.username}</span>{" "}
-                  {comment}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ))}
       <ModalCart
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         post={selectedPost}
-        comments={comments[selectedPost?.id] || []}
         onCommentAdded={handleCommentAdded}
-        onCommentSubmit={(comment) => {
-          if (selectedPost) {
-            handleCommentSubmit(selectedPost.id);
-          }
-        }}
         fetchPostData={fetchPostData}
-      />
-      <ToastContainer
-        position="top-right"
-        autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
       />
     </div>
   );

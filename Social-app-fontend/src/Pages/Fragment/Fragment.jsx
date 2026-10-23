@@ -1,13 +1,25 @@
-import { useRoutes } from "react-router-dom";
-import routes from "../../Routes/config"; // Import danh sách routes
+import { useNavigate, useRoutes } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import routes from "../../Routes/config";
+import EmptyState from "../../Components/Common/EmptyState";
+import Route from "../../Components/Routes/index";
 
 const Fragment = () => {
-  const element = useRoutes(routes); // Lấy component phù hợp với đường dẫn
+  const element = useRoutes(routes);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
-    <div className="flex-1 px-3 py-5 bg-black">
-      {element || <div className="text-white">Error!</div>}
-    </div>
+    <main className="min-w-0 flex-1 bg-ig-ground">
+      {element || (
+        <EmptyState
+          title={t("common.pageNotFoundTitle")}
+          description={t("common.pageNotFoundDesc")}
+          actionLabel={t("LargeNav.home")}
+          onAction={() => navigate(Route.default_session)}
+        />
+      )}
+    </main>
   );
 };
 

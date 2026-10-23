@@ -1,11 +1,7 @@
-import DisplaySearch from '../../Components/SearchBar/SearchBar'
+import DisplaySearch from "../../Components/SearchBar/SearchBar";
 
 const Search = () => {
-    return (
-        <>
-            <DisplaySearch />
-        </>
-    )
-}
+  return <DisplaySearch isOpen={true} standalone={true} />;
+};
 
-export default Search
+export default Search;

@@ -3,8 +3,30 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-ig-ground font-sans antialiased;
+    @apply bg-ig-ground text-ig-text font-sans antialiased;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 
   ::selection {
@@ -40,6 +62,118 @@
 
   .nav-popover {
     @apply z-50 w-56 rounded-panel border border-ig-border bg-ig-raised p-2 shadow-lg;
+    animation: igModalIn 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .ig-press {
+    @apply transition-[transform,opacity,background-color,color] duration-[120ms] ease-ui-out active:scale-[.97];
+  }
+
+  /* Ngoại lệ brand duy nhất được phép dùng gradient theo ART_DIRECTION.md */
+  .ig-ring-story {
+    background: linear-gradient(
+      45deg,
+      #f09433 0%,
+      #e6683c 25%,
+      #dc2743 50%,
+      #cc2366 75%,
+      #bc1888 100%
+    );
+  }
+
+  .story-item-avatar {
+    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .story-item-avatar:hover {
+      transform: scale(1.04);
+    }
+  }
+
+  .ig-modal-panel {
+    animation: igModalIn 200ms cubic-bezier(0.23, 1, 0.32, 1);
+    transform-origin: center;
+  }
+
+  .ig-msg-enter {
+    animation: igMessageIn 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .ig-heart-pop {
+    animation: igHeartPop 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .ig-double-tap-heart {
+    animation: igDoubleTapHeart 360ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  .ig-typing-dot {
+    animation: igTypingPulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes igModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes igMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes igHeartPop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes igDoubleTapHeart {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes igTypingPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
   }
 }
 
@@ -67,7 +201,9 @@
     transition-property: opacity, color, background-color, border-color !important;
   }
 
-  .nav-icon-btn:active {
-    transform: none;
+  .nav-icon-btn:active,
+  .ig-press:active,
+  .story-item-avatar:hover {
+    transform: none !important;
   }
 }

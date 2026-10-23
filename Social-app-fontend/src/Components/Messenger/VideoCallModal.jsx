@@ -1,11 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import {
-  FaPhoneSlash,
-  FaMicrophone,
-  FaMicrophoneSlash,
-  FaVideo,
-  FaVideoSlash,
-} from "react-icons/fa";
+import { useTranslation } from "react-i18next";
+import { Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 
 const VideoCallModal = ({
   stream,
@@ -14,32 +9,20 @@ const VideoCallModal = ({
   callAccepted,
   name,
 }) => {
+  const { t } = useTranslation();
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const [isAudioEnabled, setIsAudioEnabled] = React.useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = React.useState(true);
 
   useEffect(() => {
-    console.log("VideoCallModal - Props update:", {
-      hasLocalStream: !!stream,
-      hasRemoteStream: !!remoteStream,
-      callAccepted,
-      name,
-    });
-  }, [stream, remoteStream, callAccepted, name]);
-
-  // Handle local stream
-  useEffect(() => {
     if (stream && localVideoRef.current) {
-      console.log("Setting up local video");
       localVideoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  // Handle remote stream
   useEffect(() => {
     if (remoteStream && remoteVideoRef.current) {
-      console.log("Setting up remote video");
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
@@ -65,99 +48,102 @@ const VideoCallModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      <div className="w-full h-full relative">
-        {/* Debug Info */}
-        <div className="absolute top-2 left-2 text-white text-xs bg-black bg-opacity-50 p-2 rounded">
-          <div>Local Video: {stream?.active ? "Active" : "Not Active"}</div>
-          <div>
-            Remote Video: {remoteStream?.active ? "Active" : "Not Active"}
-          </div>
-          <div>Call Accepted: {callAccepted ? "Yes" : "No"}</div>
-          <div>Local Tracks: {stream?.getTracks().length || 0}</div>
-          <div>Remote Tracks: {remoteStream?.getTracks().length || 0}</div>
-        </div>
-
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("messenger.videoCall")}
+      className="fixed inset-0 z-50 bg-ig-ground"
+    >
+      <div className="relative h-full w-full">
         {/* Remote Video */}
         <div className="absolute inset-0">
           <video
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
           />
           {(!remoteStream || !callAccepted) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-white text-center">
-                <div className="w-20 h-20 rounded-full bg-gray-700 mx-auto mb-4 flex items-center justify-center">
-                  <FaVideo className="text-white text-2xl" />
+            <div className="absolute inset-0 flex items-center justify-center bg-ig-ground">
+              <div className="text-center text-ig-text">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-ig-border bg-ig-surface">
+                  <Video size={24} strokeWidth={1.5} />
                 </div>
-                <p>Waiting for remote video...</p>
+                <p className="text-[14px] text-ig-muted">
+                  {t("messenger.waitingForRemoteVideo")}
+                </p>
               </div>
             </div>
           )}
           {callAccepted && (
-            <div className="absolute bottom-4 left-4 text-white text-lg bg-black bg-opacity-50 px-3 py-2 rounded">
-              {name || "Remote User"}
+            <div className="absolute bottom-6 left-6 rounded-control border border-ig-border bg-ig-ground/80 px-3 py-1.5 text-[14px] text-ig-text">
+              {name || t("story.user")}
             </div>
           )}
         </div>
 
         {/* Local Video */}
-        <div className="absolute top-4 right-4 w-[300px] aspect-video bg-black rounded-lg overflow-hidden border-2 border-white shadow-lg">
+        <div className="absolute right-4 top-4 aspect-video w-56 overflow-hidden rounded-panel border border-ig-border bg-ig-surface shadow-lg md:w-72">
           <video
             ref={localVideoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
           {!stream && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-white text-center">
-                <div className="w-12 h-12 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center">
-                  <FaVideo className="text-white text-xl" />
-                </div>
-                <p className="text-sm">Camera off</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-ig-surface">
+              <div className="text-center text-ig-muted">
+                <VideoOff size={20} strokeWidth={1.5} className="mx-auto mb-1" />
+                <p className="text-[12px]">{t("messenger.cameraOff")}</p>
               </div>
             </div>
           )}
-          <div className="absolute bottom-2 left-2 text-white text-sm bg-black bg-opacity-50 px-2 py-1 rounded">
-            You
+          <div className="absolute bottom-2 left-2 rounded-control bg-ig-ground/80 px-2.5 py-0.5 text-[12px] text-ig-text">
+            {t("messenger.you")}
           </div>
         </div>
 
         {/* Controls */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
+        <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-4">
           <button
+            type="button"
             onClick={toggleAudio}
-            className={`p-4 rounded-full transition-colors ${
-              isAudioEnabled ? "bg-gray-600" : "bg-red-600"
+            aria-label={isAudioEnabled ? "Mute" : "Unmute"}
+            title={isAudioEnabled ? "Mute" : "Unmute"}
+            className={`ig-press flex h-12 w-12 items-center justify-center rounded-full border border-ig-border text-ig-text ${
+              isAudioEnabled ? "bg-ig-raised" : "bg-ig-like"
             }`}
           >
             {isAudioEnabled ? (
-              <FaMicrophone className="text-white text-xl" />
+              <Mic size={20} strokeWidth={1.5} />
             ) : (
-              <FaMicrophoneSlash className="text-white text-xl" />
+              <MicOff size={20} strokeWidth={1.5} />
             )}
           </button>
           <button
+            type="button"
             onClick={onEndCall}
-            className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-colors"
+            aria-label={t("messenger.endCall")}
+            title={t("messenger.endCall")}
+            className="ig-press flex h-12 w-12 items-center justify-center rounded-full bg-ig-like text-ig-text hover:opacity-90"
           >
-            <FaPhoneSlash className="text-2xl" />
+            <PhoneOff size={20} strokeWidth={1.5} />
           </button>
           <button
+            type="button"
             onClick={toggleVideo}
-            className={`p-4 rounded-full transition-colors ${
-              isVideoEnabled ? "bg-gray-600" : "bg-red-600"
+            aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
+            title={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
+            className={`ig-press flex h-12 w-12 items-center justify-center rounded-full border border-ig-border text-ig-text ${
+              isVideoEnabled ? "bg-ig-raised" : "bg-ig-like"
             }`}
           >
             {isVideoEnabled ? (
-              <FaVideo className="text-white text-xl" />
+              <Video size={20} strokeWidth={1.5} />
             ) : (
-              <FaVideoSlash className="text-white text-xl" />
+              <VideoOff size={20} strokeWidth={1.5} />
             )}
           </button>
         </div>

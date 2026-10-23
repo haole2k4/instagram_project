@@ -13,10 +13,17 @@ import UserDetail from "../Admin/UserDetail";
 import Content from "../Admin/Content";
 import AuditLogs from "../Admin/AuditLogs";
 import PrivateRouter from "./PrivateRoutes/PrivateRoutes";
+import { PostCardSkeleton } from "../Components/Common/FlatSkeleton";
 
 const RouterApp = () => {
   return (
-    <Suspense fallback={<div>Loading</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-dvh w-full bg-ig-ground px-4 py-8">
+          <PostCardSkeleton />
+        </div>
+      }
+    >
       <Routes>
         {/* ROUTE FOR LOGIN AND REGISTER */}
         <Route path="/login" element={<Login />} />

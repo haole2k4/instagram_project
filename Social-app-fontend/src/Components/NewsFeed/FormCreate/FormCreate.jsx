@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { handleCreatePost } from "../../../Service/postApi";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
-
-const privacyOptions = [
-  { value: "PUBLIC", label: "Công khai" },
-  { value: "ONLY_FRIEND", label: "Bạn bè" },
-  { value: "PRIVATE", label: "Chỉ mình tôi" },
-];
+import { Upload } from "lucide-react";
+import Route from "../../../Components/Routes/index";
 
 const FormNewsFeed = () => {
   const [content, setContent] = useState("");
   const [media, setMedia] = useState(null);
   const [previewMedia, setPreviewMedia] = useState(null);
   const [isVideo, setIsVideo] = useState(false);
-  const [privacy, setPrivacy] = useState(privacyOptions[0].value);
+  const [privacy, setPrivacy] = useState("PUBLIC");
   const [isLoading, setIsLoading] = useState(false);
   const { userInfo } = useSelector((state) => state.login);
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
-  // Clean up URL object khi component unmount hoặc khi media thay đổi
+  const privacyOptions = [
+    { value: "PUBLIC", label: t("CreateNew.public") },
+    { value: "ONLY_FRIEND", label: t("CreateNew.friends") },
+    { value: "PRIVATE", label: t("CreateNew.onlyMe") },
+  ];
+
   useEffect(() => {
     return () => {
       if (previewMedia) {
@@ -36,7 +39,6 @@ const FormNewsFeed = () => {
     if (file) {
       const mediaUrl = URL.createObjectURL(file);
       setPreviewMedia(mediaUrl);
-      // Kiểm tra loại file dựa trên MIME type hoặc đuôi file
       setIsVideo(file.type.startsWith("video/") || file.name.endsWith(".mp4"));
     } else {
       setPreviewMedia(null);
@@ -46,42 +48,45 @@ const FormNewsFeed = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append("title", content);
       formData.append("access", privacy);
       formData.append("status", "True");
-      formData.append("userId", userInfo.id);
+      formData.append("userId", userInfo?.id);
       if (media) formData.append("media", media);
 
       const response = await handleCreatePost(formData);
-      if (response.statusCode === 200) {
-        toast.success("Đăng bài thành công!");
+      if (response?.statusCode === 200) {
+        toast.success(t("post.createSuccess"));
         setContent("");
         setMedia(null);
         setPreviewMedia(null);
         setIsVideo(false);
-        setPrivacy(privacyOptions[0].value);
+        setPrivacy("PUBLIC");
+        navigate(Route.default_session);
       } else {
-        toast.error("Đăng bài thất bại!");
+        toast.error(t("post.createError"));
       }
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi đăng bài!");
+      toast.error(t("post.createError"));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-[600px] p-6 bg-[#0e0e0e] text-white rounded-2xl border border-gray-700 shadow-lg">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">
+    <div className="mx-auto w-full max-w-[470px] rounded-panel border border-ig-border bg-ig-surface p-6 text-ig-text">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h1 className="text-[20px] font-semibold text-ig-text">
           {t("CreateNew.createNewsfeed")}
-        </h2>
+        </h1>
         <select
-          id="privacy"
-          className="bg-[#1a1a1a] text-white border border-gray-600 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="postPrivacy"
+          aria-label={t("CreateNew.privacy")}
+          className="rounded-xl border border-ig-border bg-ig-ground px-3 py-1.5 text-[14px] text-ig-text focus:outline-none focus:ring-2 focus:ring-ig-accent"
           value={privacy}
           onChange={(e) => setPrivacy(e.target.value)}
         >
@@ -94,47 +99,52 @@ const FormNewsFeed = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <textarea
-          className="w-full h-32 bg-[#1a1a1a] border border-gray-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={t("CreateNew.caption")}
-          required
-        />
+        <div>
+          <label htmlFor="postCaption" className="sr-only">
+            {t("CreateNew.caption")}
+          </label>
+          <textarea
+            id="postCaption"
+            className="h-32 w-full rounded-xl border border-ig-border bg-ig-ground px-4 py-3 text-[14px] text-ig-text placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={t("CreateNew.caption")}
+            required
+          />
+        </div>
 
-        <button
-          type="button"
-          className="bg-blue-600 rounded-lg text-white hover:bg-blue-700 px-4 py-2 transition"
-          onClick={() => document.getElementById("fileInput").click()}
-        >
-          {t("manageUser.chooseAvatar")}{" "}
-          {/* Có thể đổi thành "Chọn ảnh hoặc video" */}
-        </button>
-        <input
-          id="fileInput"
-          type="file"
-          className="hidden"
-          accept="image/*,video/mp4" // Hỗ trợ cả ảnh và video MP4
-          onChange={handleMediaChange}
-        />
+        <div>
+          <button
+            type="button"
+            className="ig-press inline-flex items-center gap-2 rounded-control border border-ig-raised bg-ig-ground px-4 py-2 text-[14px] font-medium text-ig-text hover:bg-ig-raised"
+            onClick={() => document.getElementById("postFileInput").click()}
+          >
+            <Upload size={16} strokeWidth={1.5} aria-hidden="true" />
+            {t("CreateNew.selectMedia")}
+          </button>
+          <input
+            id="postFileInput"
+            type="file"
+            className="hidden"
+            accept="image/*,video/mp4"
+            onChange={handleMediaChange}
+          />
+        </div>
 
         {previewMedia && (
-          <div className="border rounded-md w-60 h-60 overflow-hidden">
+          <div className="overflow-hidden rounded-media border border-ig-border bg-ig-ground">
             {isVideo ? (
               <video
                 src={previewMedia}
-                className="w-full h-full object-cover"
+                className="aspect-[4/5] max-h-80 w-full object-contain"
                 controls
                 muted
-              >
-                <source src={previewMedia} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              />
             ) : (
               <img
                 src={previewMedia}
-                alt="Preview"
-                className="w-full h-full object-cover"
+                alt={t("CreateNew.media")}
+                className="aspect-[4/5] max-h-80 w-full object-cover"
               />
             )}
           </div>
@@ -142,14 +152,10 @@ const FormNewsFeed = () => {
 
         <button
           type="submit"
-          className={`w-full text-center py-2 rounded-xl font-semibold transition duration-200 ${
-            isLoading
-              ? "bg-gray-500 cursor-not-allowed"
-              : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-          }`}
+          className="ig-press w-full rounded-control bg-ig-accent py-2.5 text-center text-[14px] font-semibold text-ig-text hover:opacity-90 disabled:opacity-50"
           disabled={isLoading}
         >
-          {isLoading ? t("CreateNew.loading") : t("CreatcreateeNew.")}
+          {isLoading ? t("CreateNew.loading") : t("CreateNew.create")}
         </button>
       </form>
     </div>

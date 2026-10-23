@@ -8,6 +8,9 @@ import ControllFollower from "./ControllFlower/ControllFlower";
 import ControllFlowering from "./ControllFlower/ControllFlowering";
 import { useTranslation } from "react-i18next";
 import ModalCart from "../../NewsFeed/NewsFeedCart/ModalCart/ModalCart";
+import MoreMenu from "../../LargeNav/MoreMenu/MoreMenu";
+import EmptyState from "../../Common/EmptyState";
+import { Camera, Heart, Menu, MessageCircle } from "lucide-react";
 
 const UserProfile = () => {
   const [dataUser, setDataUser] = useState({});
@@ -18,10 +21,11 @@ const UserProfile = () => {
   const [showModalFlowering, setShowModalFlowering] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [comments, setComments] = useState({});
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const navigate = useNavigate();
   const [t] = useTranslation();
+
   useEffect(() => {
     fetchDataUser();
     fetchDataStory();
@@ -43,179 +47,206 @@ const UserProfile = () => {
   };
 
   const fetchDataPost = async () => {
-    // Tạo dữ liệu fake cho bài đăng
     let res = await handleGetAllPostByUserId(userredux.id);
     if (res.statusCode === 200 && res.data) {
       setDataPost(res.data);
     }
   };
 
+  const hasStories = Array.isArray(dataStory) && dataStory.length > 0;
+
   return (
-    <div className="bg-black text-white min-h-screen px-8 py-8">
+    <div className="mx-auto min-h-screen w-full max-w-[935px] bg-ig-ground px-4 py-6 text-ig-text md:px-8 md:py-8">
       {/* Header */}
-      <div className="flex items-center space-x-6">
-        {/* Avatar với viền gradient */}
-        <div className="w-40 h-40 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
-          <div className="w-full h-full rounded-full bg-black p-[2px]">
-            <img
-              src={
-                dataUser.avatar === null
-                  ? "https://byvn.net/Eq9z"
-                  : dataUser.avatar
-              }
-              alt="Avatar"
-              className="w-full h-full rounded-full object-cover"
-              style={{ imageRendering: "crisp-edges" }}
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+        {/* Avatar */}
+        <div className="flex items-center justify-between sm:block">
+          <div
+            className={`h-24 w-24 shrink-0 rounded-full p-[2px] md:h-36 md:w-36 ${
+              hasStories ? "ig-ring-story" : "border border-ig-border"
+            }`}
+          >
+            <div className="h-full w-full rounded-full bg-ig-ground p-[2px]">
+              <img
+                src={
+                  dataUser.avatar === null || !dataUser.avatar
+                    ? "https://byvn.net/Eq9z"
+                    : dataUser.avatar
+                }
+                alt={dataUser.username || "Avatar"}
+                className="h-full w-full rounded-full object-cover"
+              />
+            </div>
+          </div>
+
+          <div className="relative md:hidden">
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu((prev) => !prev)}
+              aria-label={t("LargeNav.more")}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-ig-border bg-ig-surface text-ig-text"
+            >
+              <Menu size={20} strokeWidth={1.5} />
+            </button>
+            <MoreMenu
+              showMenu={showMobileMenu}
+              setShowMenu={setShowMobileMenu}
+              positionClassName="absolute right-0 top-12 z-50 origin-top-right"
             />
           </div>
         </div>
 
         {/* Info */}
-        <div>
-          <div className="flex items-center space-x-4">
-            <h2 className="text-xl font-semibold">{dataUser.username}</h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="truncate text-[20px] font-semibold tracking-[-0.02em] text-ig-text">
+              {dataUser.username}
+            </h1>
             <Link
               to={`/edit-profile/${dataUser.userId}`}
-              className="bg-blue-500 px-4 py-1 rounded text-white text-sm"
+              className="ig-press rounded-lg border border-ig-border bg-ig-surface px-4 py-1.5 text-[13px] font-semibold text-ig-text hover:bg-ig-raised"
             >
               {t("userProfile.editProfile")}
             </Link>
           </div>
-          <div className="flex space-x-6 mt-2 text-l">
+          <div className="mt-4 flex flex-wrap gap-6 text-[14px] tabular-nums">
             <span>
-              <strong>{dataUser.postsCount}</strong>{" "}
-              <span className="text-sm text-[#939394]">
-                {t("userProfile.posts")}
-              </span>
+              <strong className="font-semibold text-ig-text">
+                {dataUser.postsCount ?? 0}
+              </strong>{" "}
+              <span className="text-ig-muted">{t("userProfile.posts")}</span>
             </span>
-            <span className="cursor-pointer" onClick={() => setShowModal(true)}>
-              <strong>{dataUser.followersCount}</strong>{" "}
-              <span className="text-sm text-[#939394]">
+            <button
+              type="button"
+              className="text-left hover:opacity-80"
+              onClick={() => setShowModal(true)}
+            >
+              <strong className="font-semibold text-ig-text">
+                {dataUser.followersCount ?? 0}
+              </strong>{" "}
+              <span className="text-ig-muted">
                 {t("userProfile.followers")}
               </span>
-            </span>
-            <span
-              className="cursor-pointer"
+            </button>
+            <button
+              type="button"
+              className="text-left hover:opacity-80"
               onClick={() => setShowModalFlowering(true)}
             >
-              <strong>{dataUser.followingCount}</strong>{" "}
-              <span className="text-sm text-[#939394]">
+              <strong className="font-semibold text-ig-text">
+                {dataUser.followingCount ?? 0}
+              </strong>{" "}
+              <span className="text-ig-muted">
                 {t("userProfile.following")}
               </span>
-            </span>
+            </button>
           </div>
           {dataUser.bio && (
-            <div className="mt-2 text-sm">
-              <strong>{dataUser.bio}</strong>
-            </div>
+            <p className="mt-3 max-w-[60ch] text-[14px] leading-[1.45] text-ig-text">
+              {dataUser.bio}
+            </p>
           )}
         </div>
       </div>
 
       {/* Story Highlights */}
-      <div className="flex space-x-4 mt-6 cursor-pointer">
-        {dataStory.map((item, index) => (
-          <div
-            key={index}
-            className="flex flex-col items-center text-xs"
-            onClick={() => {
-              navigate(`/user/story/${item.id}`);
-            }}
-          >
-            <img
-              src={item.url}
-              alt="Story"
-              className="w-20 h-20 rounded-full border object-cover"
-              style={{ imageRendering: "crisp-edges" }}
-            />
-            <span className="mt-1">{t("userProfile.storyHighlights")}</span>
-          </div>
-        ))}
-      </div>
+      {hasStories && (
+        <div className="mt-6 flex gap-4 overflow-x-auto pb-2">
+          {dataStory.map((item, index) => (
+            <button
+              key={item.id || index}
+              type="button"
+              className="flex shrink-0 flex-col items-center text-[12px] text-ig-text"
+              onClick={() => {
+                navigate(`/user/story/${item.id}`);
+              }}
+            >
+              <img
+                src={item.url}
+                alt=""
+                className="h-16 w-16 rounded-full border border-ig-border object-cover md:h-20 md:w-20"
+              />
+              <span className="mt-1.5 max-w-[72px] truncate text-ig-muted">
+                {t("userProfile.storyHighlights")}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
-      <div className="flex justify-center mt-6 border-t border-gray-700 pt-2">
-        <button className="mx-4 font-semibold border-b-2 border-white pb-1">
+      <div className="mt-6 flex justify-center border-t border-ig-rule">
+        <button
+          type="button"
+          className="mx-4 -mt-px border-t border-ig-text py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-text"
+        >
           {t("userProfile.posts")}
         </button>
-        <button className="mx-4 text-gray-400">
+        <button
+          type="button"
+          className="mx-4 py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-muted"
+        >
           {t("userProfile.tagged")}
         </button>
       </div>
 
       {/* Posts Grid */}
-      <div className="grid grid-cols-3 gap-2 mt-3 cursor-pointer ">
-        {dataPost?.map((item, index) =>
-          item?.media?.map((mediaItem, mediaIndex) => (
-            <div
-              key={`${index}-${mediaIndex}`}
-              className="relative group w-full h-70 overflow-hidden"
-              onClick={() => {
-                setSelectedPost(item);
-                setIsOpen(true);
-              }}
-            >
-              {mediaItem.type === "VIDEO" ? (
-                <video
-                  src={mediaItem.url}
-                  className="w-full h-full object-contain"
-                  controls
-                  autoPlay
-                  loop
-                />
-              ) : (
-                <img
-                  src={mediaItem.url || "https://via.placeholder.com/150"}
-                  className="w-full h-full object-contain"
-                  alt="Post"
-                />
-              )}
-              {/* <img
-                src={mediaItem.url}
-                alt="Post"
-                className="w-full h-full object-cover"
-                style={{ imageRendering: "crisp-edges" }}
-              /> */}
+      {!dataPost || dataPost.length === 0 ? (
+        <EmptyState icon={Camera} title={t("post.emptyFeedTitle")} />
+      ) : (
+        <div className="mt-1 grid grid-cols-3 gap-1">
+          {dataPost.map((item, index) =>
+            item?.media?.map((mediaItem, mediaIndex) => (
+              <button
+                key={`${index}-${mediaIndex}`}
+                type="button"
+                className="group relative aspect-square w-full overflow-hidden bg-ig-surface"
+                onClick={() => {
+                  setSelectedPost(item);
+                  setIsOpen(true);
+                }}
+              >
+                {mediaItem.type === "VIDEO" ? (
+                  <video
+                    src={mediaItem.url}
+                    className="h-full w-full object-cover"
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={mediaItem.url || "https://via.placeholder.com/150"}
+                    className="h-full w-full object-cover"
+                    alt=""
+                  />
+                )}
 
-              {/* Overlay hiển thị khi hover */}
-              <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-                <div className="flex gap-4 text-white text-lg font-semibold">
-                  <div className="flex items-center gap-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 fill-current"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
-                  4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 
-                  14.76 3 16.5 3 19.58 3 22 5.42 
-                  22 8.5c0 3.78-3.4 6.86-8.55 
-                  11.54L12 21.35z"
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                  <div className="flex gap-5 text-[14px] font-semibold text-ig-text tabular-nums">
+                    <div className="flex items-center gap-1.5">
+                      <Heart
+                        size={18}
+                        className="fill-current text-ig-text"
+                        aria-hidden="true"
                       />
-                    </svg>
-                    <span>{item.likesCount}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 fill-current"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M20 2H4a2 2 0 00-2 
-                  2v20l4-4h14a2 2 0 002-2V4a2 
-                  2 0 00-2-2z"
+                      <span>{item.likesCount ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MessageCircle
+                        size={18}
+                        className="fill-current text-ig-text"
+                        aria-hidden="true"
                       />
-                    </svg>
-                    <span>{item.commentsCount}</span>
+                      <span>{item.commentsCount ?? 0}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
       <ControllFollower
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -232,7 +263,6 @@ const UserProfile = () => {
         setIsOpen={setIsOpen}
         post={selectedPost}
         userredux={userredux}
-        // comments={comments[selectedPost?.id] || []}
       />
     </div>
   );

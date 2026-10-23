@@ -1,4 +1,15 @@
 {
+  "common": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "retry": "Thử lại",
+    "loading": "Đang tải...",
+    "error": "Đã xảy ra lỗi",
+    "more": "Tùy chọn khác",
+    "previous": "Trước",
+    "next": "Tiếp"
+  },
   "LargeNav": {
     "home": "Trang chủ",
     "search": "Tìm kiếm",
@@ -11,7 +22,6 @@
   "menu": {
     "setting": "Cài đặt"
   },
-
   "fromCreate": {
     "title": "Chỉnh sửa trang cá nhân",
     "name": "Tên người dùng",
@@ -20,9 +30,16 @@
     "gender": "Giới tính",
     "avata": "Ảnh đại diện",
     "bio": "Tiểu sử",
-    "update": "Cập nhật"
+    "update": "Cập nhật",
+    "usernameMin": "Tên người dùng tối thiểu 2 ký tự",
+    "usernameMax": "Tên người dùng tối đa 20 ký tự",
+    "usernameRequired": "Tên người dùng không được để trống",
+    "phoneInvalid": "Số điện thoại chỉ được chứa chữ số",
+    "phoneMin": "Số điện thoại phải có ít nhất 10 chữ số",
+    "phoneRequired": "Số điện thoại không được để trống",
+    "bioMax": "Tiểu sử tối đa 200 ký tự",
+    "genderRequired": "Vui lòng chọn giới tính"
   },
-
   "manageUser": {
     "editUser": "Chỉnh sửa người dùng",
     "addUser": "Thêm người dùng",
@@ -66,10 +83,10 @@
     "logout": "Đăng Xuất",
     "welcome": "Chào mừng bạn tới hệ thống instagram",
     "logoutSuccess": "Đăng xuất thành công!",
+    "logoutFailed": "Đăng xuất thất bại, vui lòng thử lại.",
     "logoutError": "Đăng xuất thất bại, vui lòng thử lại.",
     "logoutSystemError": "Có lỗi xảy ra khi đăng xuất."
   },
-
   "managerUser": {
     "title": "Quản Lý Người Dùng",
     "addUser": "Thêm người dùng +",
@@ -133,12 +150,17 @@
     "searchConversations": "Tìm kiếm cuộc trò chuyện",
     "searchConversationsOrFriends": "Tìm kiếm cuộc trò chuyện hoặc bạn bè",
     "searchFriends": "Tìm kiếm bạn bè",
+    "searchUsers": "Tìm kiếm người dùng...",
+    "seen": "Đã xem",
     "selectConversation": "Chọn một cuộc trò chuyện từ danh sách hoặc tìm kiếm",
     "selectMinTwoUsers": "Chọn ít nhất 2 người để tạo nhóm",
     "selectUsersToAdd": "Chọn thành viên để thêm vào nhóm",
     "selected": "Đã chọn",
     "send": "Gửi",
     "sendFirstMessage": "Hãy gửi tin nhắn đầu tiên",
+    "startChat": "Bắt đầu trò chuyện",
+    "startConversation": "Bắt đầu cuộc trò chuyện",
+    "startNewConversation": "Hoặc bắt đầu cuộc trò chuyện mới",
     "title": "Tin nhắn",
     "typeMessage": "Nhập tin nhắn...",
     "unblockUser": "Bỏ chặn người dùng",
@@ -151,13 +173,104 @@
     "videoCall": "Gọi video",
     "welcomeToChat": "Chào mừng đến với tin nhắn",
     "yesterday": "Hôm qua",
-    "you": "bạn"
+    "you": "bạn",
+    "incomingCall": "Cuộc gọi video đến",
+    "accept": "Chấp nhận",
+    "decline": "Từ chối",
+    "endCall": "Kết thúc cuộc gọi",
+    "mute": "Tắt tiếng",
+    "unmute": "Bật tiếng",
+    "turnOffCamera": "Tắt camera",
+    "turnOnCamera": "Bật camera"
+  },
+  "aiChat": {
+    "title": "Trợ lý AI",
+    "subtitle": "Hỏi đáp trực tiếp trong khung chat",
+    "welcomeTitle": "Trò chuyện cùng AI",
+    "welcomeDescription": "Đặt câu hỏi, nhờ gợi ý chú thích bài viết hoặc tìm ý tưởng mới.",
+    "placeholder": "Hỏi AI bất cứ điều gì...",
+    "typing": "Đang trả lời…",
+    "clearHistory": "Xóa đoạn chat",
+    "errorResponse": "Không thể nhận phản hồi từ AI lúc này. Vui lòng thử lại."
+  },
+  "story": {
+    "yourStory": "Tin của bạn",
+    "addStory": "Tạo tin",
+    "pause": "Tạm dừng",
+    "play": "Tiếp tục",
+    "mute": "Tắt âm",
+    "unmute": "Bật âm",
+    "deleteTitle": "Xóa tin này?",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa tin này không? Hành động này không thể hoàn tác.",
+    "deleteSuccess": "Đã xóa tin thành công",
+    "deleteError": "Xóa tin thất bại",
+    "notFound": "Không tìm thấy tin này",
+    "empty": "Chưa có tin nào",
+    "createSuccess": "Đã đăng tin thành công",
+    "createError": "Không thể tạo tin, vui lòng thử lại",
+    "uploadMedia": "Vui lòng chọn ảnh hoặc video cho tin của bạn"
+  },
+  "post": {
+    "like": "Thích",
+    "unlike": "Bỏ thích",
+    "comment": "Bình luận",
+    "share": "Chia sẻ",
+    "save": "Lưu bài viết",
+    "addComment": "Thêm bình luận...",
+    "postComment": "Đăng",
+    "reply": "Trả lời",
+    "replyingTo": "Đang trả lời @{{username}}",
+    "deletePost": "Xóa bài viết",
+    "deleteConfirmTitle": "Xóa bài viết?",
+    "deleteConfirmMessage": "Bạn có chắc chắn muốn xóa bài viết này không?",
+    "deleteSuccess": "Đã xóa bài viết",
+    "deleteError": "Không thể xóa bài viết",
+    "privacyPublic": "Công khai",
+    "privacyFriends": "Bạn bè",
+    "privacyPrivate": "Chỉ mình tôi",
+    "moreText": "xem thêm",
+    "lessText": "thu gọn",
+    "emptyFeedTitle": "Chưa có bài viết nào",
+    "emptyFeedDescription": "Khi bạn hoặc người bạn theo dõi đăng bài viết, chúng sẽ xuất hiện tại đây.",
+    "loadErrorTitle": "Không thể tải bảng tin",
+    "loadErrorDescription": "Đã xảy ra sự cố khi tải bài viết. Vui lòng thử lại.",
+    "noComments": "Chưa có bình luận nào.",
+    "options": "Tùy chọn bài viết"
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "empty": "Chưa có thông báo nào"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "fullname": "Tên đầy đủ",
+    "username": "Tên người dùng",
+    "noAccount": "Bạn chưa có tài khoản?",
+    "haveAccount": "Bạn đã có tài khoản?",
+    "registerSubtitle": "Đăng ký để xem ảnh và video từ bạn bè.",
+    "loginSuccess": "Đăng nhập thành công",
+    "registerSuccess": "Đăng ký tài khoản thành công!",
+    "emailInvalid": "Email không đúng định dạng",
+    "emailRequired": "Email không được bỏ trống",
+    "passwordMin": "Tối thiểu 8 ký tự",
+    "passwordMax": "Tối đa 12 ký tự",
+    "passwordRequired": "Mật khẩu là bắt buộc",
+    "fullnameInvalid": "Tên đầy đủ chỉ được chứa chữ cái",
+    "fullnameRequired": "Tên đầy đủ không được bỏ trống",
+    "usernameInvalid": "Tên người dùng từ 4-16 ký tự, bắt đầu bằng chữ cái, chỉ chứa chữ, số hoặc dấu gạch dưới",
+    "usernameRequired": "Tên người dùng không được bỏ trống",
+    "genericError": "Có lỗi xảy ra, vui lòng thử lại!",
+    "networkError": "Lỗi kết nối, vui lòng thử lại sau."
   },
   "moreMenu": {
     "activity": "Hoạt động của bạn",
     "report": "Báo cáo sự cố",
     "switchAccount": "Chuyển tài khoản",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "admin": "Trang quản trị"
   },
   "userProfile": {
     "editProfile": "Chỉnh sửa trang cá nhân",
@@ -174,7 +287,8 @@
     "followers": "Người theo dõi",
     "seeAll": "Xem tất cả",
     "suggestedForYou": "Đề xuất cho bạn",
-    "follow": "Theo dõi"
+    "follow": "Theo dõi",
+    "noSuggestions": "Chưa có gợi ý mới"
   },
   "CreateNew": {
     "title": "Tạo mới",
@@ -187,14 +301,17 @@
     "image": "Hình ảnh",
     "loading": "Đang đăng...",
     "create": "Đăng bài",
-    "createPost": "Tạo bài viết"
+    "createPost": "Tạo bài viết",
+    "selectMedia": "Chọn ảnh hoặc video từ thiết bị"
   },
   "search": {
     "title": "Tìm kiếm",
-    "placeholder": "Tìm kiếm mục",
+    "placeholder": "Tìm kiếm người dùng",
     "clear": "Xoá nội dung",
     "close": "Đóng tìm kiếm",
-    "searchPeople": "Nhập tên người dùng"
+    "searchPeople": "Nhập tên người dùng",
+    "emptyPrompt": "Nhập tên hoặc tên người dùng để tìm kiếm.",
+    "noResults": "Không tìm thấy người dùng phù hợp."
   },
   "newFed": {
     "phut": "Phút trước",
