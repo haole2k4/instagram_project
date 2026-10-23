@@ -120,7 +120,7 @@ const SearchBar = ({ isOpen, onClose }) => {
       <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-control border-t-ig-accent"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-border border-t-ig-accent"></div>
           </div>
         ) : searchTerm ? (
           <div className="py-2">

@@ -12,7 +12,7 @@ const DefaultLayout = ({ socketData }) => {
   const isChatPage = location.pathname.includes("/chat");
 
   return (
-    <div className="relative flex min-h-screen w-full bg-ig-ground">
+    <div className="relative flex min-h-screen w-full bg-ig-ground text-ig-text [color-scheme:dark]">
       <div className="fixed inset-y-0 left-0 z-40">
         <LeftNav />
       </div>

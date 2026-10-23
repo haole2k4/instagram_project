@@ -3,12 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    color-scheme: dark;
-  }
-
   body {
-    @apply bg-ig-ground font-sans text-ig-text antialiased;
+    @apply bg-ig-ground font-sans antialiased;
   }
 
   ::selection {
@@ -36,6 +32,10 @@
   .nav-icon-btn[aria-current="page"],
   .nav-icon-btn[aria-expanded="true"] {
     @apply text-ig-text;
+  }
+
+  .nav-icon-btn[aria-current="page"] img {
+    @apply ring-2 ring-ig-text ring-offset-2 ring-offset-ig-ground;
   }
 
   .nav-popover {

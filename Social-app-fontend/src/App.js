@@ -17,7 +17,7 @@ function App() {
         <Route 
           path="/*"
           element={
-            <div className="w-full min-h-screen bg-ig-ground">
+            <div className="w-full min-h-screen bg-white">
               <RouterApp />
             </div>
           }

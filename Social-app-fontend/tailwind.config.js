@@ -16,7 +16,6 @@ module.exports = {
           raised: "#2a2a2a",
           border: "#1a1a1a",
           rule: "#161616",
-          control: "#444444",
           text: "#ffffff",
           muted: "#b4b4b4",
           faint: "#949494",
@@ -34,6 +33,7 @@ module.exports = {
           "Arial",
           "sans-serif",
         ],
+        logo: ["Brush Script MT", "cursive"],
       },
       borderRadius: {
         media: "4px",
