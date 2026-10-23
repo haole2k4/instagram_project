@@ -5,15 +5,18 @@ import reportWebVitals from "./reportWebVitals";
 import App from "./App";
 import { Provider } from "react-redux";
 import store from "./Redux/store";
-import i18n from "./Utils/i88n";
+import { i18nReady } from "./Utils/i88n";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <App />
-    </Provider>
-  </React.StrictMode>
-);
+// Chờ bản dịch tải xong để không nháy key thô khi vừa F5.
+i18nReady.finally(() => {
+  root.render(
+    <React.StrictMode>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </React.StrictMode>
+  );
+});
 
 reportWebVitals();

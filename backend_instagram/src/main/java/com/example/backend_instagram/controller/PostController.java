@@ -43,13 +43,13 @@ public class PostController {
 
   @PostMapping(consumes = "multipart/form-data")
   public ResponseEntity<Post> createPost(
-    @RequestParam("title") String title,
-    @RequestParam("media") List<MultipartFile> media,
-    @RequestParam("status") String status,
-    @RequestParam("access") String access
+    @RequestParam(value = "title", required = false) String title,
+    @RequestParam(value = "media", required = false) List<MultipartFile> media,
+    @RequestParam(value = "status", required = false, defaultValue = "True") String status,
+    @RequestParam(value = "access", required = false, defaultValue = "PUBLIC") String access
   ) {
     CreatePostRequest request = new CreatePostRequest();
-    request.setTitle(title);
+    request.setTitle(title != null ? title : "");
     request.setMedia(media);
     request.setStatus(status);
     request.setAccess(access);

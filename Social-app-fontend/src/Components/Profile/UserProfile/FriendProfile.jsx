@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { handleGetUserById } from "../../../Service/UserAPI";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  handleGetUserById,
+  handleGetFollowersByUser,
+  handlePostFollower,
+  handlePostUnfollower,
+} from "../../../Service/UserAPI";
 import { handleGetAllPostByUserId } from "../../../Service/postApi";
 import { getAllStoryByUserId } from "../../../Service/storyApi";
 import { useNavigate, useParams } from "react-router-dom";
@@ -7,45 +13,142 @@ import { useTranslation } from "react-i18next";
 import ModalCart from "../../NewsFeed/NewsFeedCart/ModalCart/ModalCart";
 import EmptyState from "../../Common/EmptyState";
 import { Camera, Heart, MessageCircle } from "lucide-react";
+import { getOrCreateConversation } from "../../../Redux/Reducer/chatSlice";
+import { useWebSocket } from "../../../Utils/configCallVideo/websocket";
 
 const FriendProfile = () => {
   const { id } = useParams();
   const [dataUser, setDataUser] = useState({});
   const [dataStory, setDataStory] = useState([]);
   const [dataPost, setDataPost] = useState([]);
-  const [t] = useTranslation();
-  const navigate = useNavigate();
+  const [isFollowing, setIsFollowing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.login?.userInfo);
+  const { sendFollowNotification } = useWebSocket();
 
   useEffect(() => {
     fectDataUserbyId();
     fectDataStory();
     fectDataPost();
-  }, [id]);
+    checkFollowingStatus();
+  }, [id, currentUser?.id]);
 
   const fectDataUserbyId = async () => {
-    let res = await handleGetUserById(id);
-    if (res.statusCode === 200 && res.data) {
-      setDataUser(res.data);
+    try {
+      const res = await handleGetUserById(id);
+      if (res?.statusCode === 200 && res.data) {
+        setDataUser(res.data);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const fectDataStory = async () => {
-    let res = await getAllStoryByUserId(id);
-    if (res.statusCode === 200 && res.data) {
-      setDataStory(res.data);
+    try {
+      const res = await getAllStoryByUserId(id);
+      if (res?.statusCode === 200 && res.data) {
+        setDataStory(res.data);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const fectDataPost = async () => {
-    let res = await handleGetAllPostByUserId(id);
-    if (res.statusCode === 200 && res.data) {
-      setDataPost(res.data);
+    try {
+      const res = await handleGetAllPostByUserId(id);
+      if (res?.statusCode === 200 && res.data) {
+        setDataPost(res.data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const checkFollowingStatus = async () => {
+    if (!currentUser?.id || !id) return;
+    try {
+      const res = await handleGetFollowersByUser(id);
+      const list = Array.isArray(res?.data) ? res.data : [];
+      const isF = list.some(
+        (f) =>
+          String(f.follower?.id || f.followerId || f.id) ===
+          String(currentUser.id)
+      );
+      setIsFollowing(isF);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleToggleFollow = async () => {
+    if (!currentUser?.id) {
+      navigate("/login");
+      return;
+    }
+    const targetId = Number(id);
+    const currId = Number(currentUser.id);
+
+    try {
+      if (isFollowing) {
+        setIsFollowing(false);
+        setDataUser((prev) => ({
+          ...prev,
+          followersCount: Math.max(0, (prev.followersCount || 1) - 1),
+        }));
+        await handlePostUnfollower(currId, targetId);
+      } else {
+        setIsFollowing(true);
+        setDataUser((prev) => ({
+          ...prev,
+          followersCount: (prev.followersCount || 0) + 1,
+        }));
+        await handlePostFollower(currId, targetId);
+        if (sendFollowNotification) {
+          sendFollowNotification({ toUserId: String(targetId) });
+        }
+      }
+    } catch (e) {
+      console.error("Follow toggle failed:", e);
+      checkFollowingStatus();
+    }
+  };
+
+  const handleMessageUser = async () => {
+    if (!currentUser?.id) {
+      navigate("/login");
+      return;
+    }
+    try {
+      const resultAction = await dispatch(
+        getOrCreateConversation({
+          userId: currentUser.id,
+          otherUserId: id,
+        })
+      );
+      if (
+        getOrCreateConversation.fulfilled.match(resultAction) &&
+        resultAction.payload?.id
+      ) {
+        navigate(`/user/chat/${resultAction.payload.id}`);
+      } else {
+        navigate("/user/chat");
+      }
+    } catch (err) {
+      navigate("/user/chat");
     }
   };
 
   const hasStories = Array.isArray(dataStory) && dataStory.length > 0;
+  const postsCount = Array.isArray(dataPost)
+    ? dataPost.length
+    : dataUser.postsCount ?? 0;
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-[935px] bg-ig-ground px-4 py-6 text-ig-text md:px-8 md:py-8">
@@ -59,25 +162,50 @@ const FriendProfile = () => {
           <div className="h-full w-full rounded-full bg-ig-ground p-[2px]">
             <img
               src={
-                dataUser.avatar === null || !dataUser.avatar
-                  ? "https://byvn.net/Eq9z"
-                  : dataUser.avatar
+                dataUser.avatar || dataUser.userImage || "/default-avatar.png"
               }
               alt={dataUser.username || "Avatar"}
               className="h-full w-full rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "/default-avatar.png";
+              }}
             />
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="truncate text-[20px] font-semibold tracking-[-0.02em] text-ig-text">
-              {dataUser.username}
+              {dataUser.username || dataUser.userNickname || dataUser.nikName}
             </h1>
+            {currentUser?.id && String(currentUser.id) !== String(id) && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleFollow}
+                  className={`rounded-lg px-4 py-1.5 text-[14px] font-semibold transition-opacity active:scale-[.97] ${
+                    isFollowing
+                      ? "border border-ig-border bg-ig-surface text-ig-text hover:bg-ig-raised"
+                      : "bg-ig-accent text-ig-text hover:opacity-90"
+                  }`}
+                >
+                  {isFollowing
+                    ? t("userProfile.following")
+                    : t("userProfile.follow")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMessageUser}
+                  className="rounded-lg border border-ig-border bg-ig-surface px-4 py-1.5 text-[14px] font-semibold text-ig-text transition-colors hover:bg-ig-raised active:scale-[.97]"
+                >
+                  {t("userProfile.message")}
+                </button>
+              </div>
+            )}
           </div>
           <div className="mt-3 flex flex-wrap gap-6 text-[14px] tabular-nums">
             <span>
               <strong className="font-semibold text-ig-text">
-                {dataUser.postsCount ?? 0}
+                {postsCount}
               </strong>{" "}
               <span className="text-ig-muted">{t("userProfile.posts")}</span>
             </span>
@@ -147,15 +275,19 @@ const FriendProfile = () => {
         </button>
       </div>
 
-      {/* Posts Grid */}
+      {/* Posts Grid: 1 bài = 1 ô */}
       {!dataPost || dataPost.length === 0 ? (
         <EmptyState icon={Camera} title={t("post.emptyFeedTitle")} />
       ) : (
         <div className="mt-1 grid grid-cols-3 gap-1">
-          {dataPost.map((item, index) =>
-            item?.media?.map((mediaItem, mediaIndex) => (
+          {dataPost.map((item) => {
+            const primaryMedia = item?.media?.[0];
+            const isVideo =
+              primaryMedia?.type === "VIDEO" ||
+              primaryMedia?.url?.endsWith(".mp4");
+            return (
               <button
-                key={`${index}-${mediaIndex}`}
+                key={item.id}
                 type="button"
                 className="group relative aspect-square w-full overflow-hidden bg-ig-surface"
                 onClick={() => {
@@ -163,11 +295,23 @@ const FriendProfile = () => {
                   setIsOpen(true);
                 }}
               >
-                <img
-                  src={mediaItem.url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+                {isVideo ? (
+                  <video
+                    src={primaryMedia?.url}
+                    className="h-full w-full object-cover"
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={
+                      primaryMedia?.url ||
+                      "https://via.placeholder.com/150"
+                    }
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                )}
 
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                   <div className="flex gap-5 text-[14px] font-semibold text-ig-text tabular-nums">
@@ -190,8 +334,8 @@ const FriendProfile = () => {
                   </div>
                 </div>
               </button>
-            ))
-          )}
+            );
+          })}
         </div>
       )}
 

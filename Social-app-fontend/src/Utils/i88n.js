@@ -4,7 +4,7 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import Backend from "i18next-http-backend";
 
 const persistedLanguage = localStorage.getItem("language") || "vi";
-i18n
+export const i18nReady = i18n
   .use(Backend)
   .use(LanguageDetector)
   .use(initReactI18next)

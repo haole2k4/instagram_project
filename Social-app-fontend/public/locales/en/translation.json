@@ -8,7 +8,10 @@
     "error": "Something went wrong",
     "more": "More options",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "submitting": "Submitting...",
+    "pageNotFoundTitle": "Page not found",
+    "pageNotFoundDesc": "The page you are looking for does not exist or has moved."
   },
   "LargeNav": {
     "home": "Home",
@@ -185,7 +188,14 @@
     "mute": "Mute",
     "unmute": "Unmute",
     "turnOffCamera": "Turn off camera",
-    "turnOnCamera": "Turn on camera"
+    "turnOnCamera": "Turn on camera",
+    "createNewConversation": "Create new conversation",
+    "acceptCall": "Accept call",
+    "rejectCall": "Decline call",
+    "incomingVideoCall": "Incoming video call",
+    "cameraOff": "Camera off",
+    "voiceCall": "Voice call",
+    "waitingForRemoteVideo": "Waiting for remote video"
   },
   "aiChat": {
     "title": "AI Assistant",
@@ -195,7 +205,15 @@
     "placeholder": "Ask AI anything...",
     "typing": "Replying…",
     "clearHistory": "Clear chat",
-    "errorResponse": "Could not reach AI right now. Please try again."
+    "errorResponse": "Could not reach AI right now. Please try again.",
+    "emptyTitle": "What do you need to ask?",
+    "emptyDesc": "Ask questions, get caption ideas or explore new ones.",
+    "prompt1": "Suggest a caption for a beach photo",
+    "prompt2": "How to take better phone photos",
+    "prompt3": "Content ideas for this week",
+    "clear": "Clear chat",
+    "error": "Could not reach AI right now. Please try again.",
+    "replying": "Replying…"
   },
   "story": {
     "yourStory": "Your story",
@@ -212,7 +230,30 @@
     "empty": "No stories yet",
     "createSuccess": "Story published",
     "createError": "Could not create story, please try again",
-    "uploadMedia": "Please select an image or video for your story"
+    "uploadMedia": "Please select an image or video for your story",
+    "sectionLabel": "Stories",
+    "createTitle": "Create story",
+    "selectFile": "Select file",
+    "close": "Close",
+    "confirmDeleteBtn": "Delete",
+    "confirmDeleteTitle": "Delete this story?",
+    "confirmDeleteDesc": "Are you sure you want to delete this story? This action cannot be undone.",
+    "deleteStory": "Delete story",
+    "hoursAgo": "{{count}}h ago",
+    "minutesAgo": "{{count}}m ago",
+    "justNow": "Just now",
+    "invalidFileType": "Only images or videos are supported",
+    "next": "Next",
+    "previous": "Previous",
+    "options": "Options",
+    "pleaseSelectMedia": "Please select an image or video",
+    "replyPlaceholder": "Send message...",
+    "replySent": "Reply sent",
+    "sendReply": "Send",
+    "user": "User",
+    "viewerTitle": "Story viewer",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right"
   },
   "post": {
     "like": "Like",
@@ -239,11 +280,31 @@
     "loadErrorTitle": "Could not load feed",
     "loadErrorDescription": "Something went wrong while loading posts. Please try again.",
     "noComments": "No comments yet.",
-    "options": "Post options"
+    "options": "Post options",
+    "seeMore": "more",
+    "commentPlaceholder": "Add a comment...",
+    "commentError": "Could not post comment",
+    "confirmDeletePost": "Are you sure you want to delete this post?",
+    "createError": "Could not publish post",
+    "createSuccess": "Post published",
+    "fetchError": "Could not load feed",
+    "likeError": "Could not like post",
+    "emptyFeedDesc": "When you or people you follow share posts, they will appear here.",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "goToPost": "Go to post",
+    "saved": "Saved",
+    "unsave": "Unsave"
   },
   "notifications": {
     "title": "Notifications",
-    "empty": "No notifications yet"
+    "empty": "No notifications yet",
+    "all": "All",
+    "comments": "Comments",
+    "likes": "Likes",
+    "follows": "Follows",
+    "today": "Today",
+    "earlier": "Earlier"
   },
   "auth": {
     "login": "Log in",
@@ -284,7 +345,10 @@
     "tagged": "Tagged",
     "storyHighlights": "Story Highlights",
     "followers": "Followers",
-    "following": "Following"
+    "following": "Following",
+    "message": "Message",
+    "follow": "Follow",
+    "unfollow": "Unfollow"
   },
   "RecommentUser": {
     "title": "Suggested Users",
@@ -306,7 +370,16 @@
     "loading": "Publishing...",
     "create": "Share",
     "createPost": "Create Post",
-    "selectMedia": "Select photo or video from your device"
+    "selectMedia": "Select photo or video from your device",
+    "public": "Public",
+    "friends": "Friends",
+    "onlyMe": "Only me",
+    "media": "Photo or video",
+    "privacy": "Privacy",
+    "dropHint": "Drag photos and videos here",
+    "selectFromComputer": "Select from computer",
+    "postTab": "Post",
+    "storyTab": "Story"
   },
   "search": {
     "title": "Search",
@@ -315,7 +388,8 @@
     "close": "Close search",
     "searchPeople": "Enter username",
     "emptyPrompt": "Type a name or username to search.",
-    "noResults": "No matching users found."
+    "noResults": "No matching users found.",
+    "tryDifferentKeyword": "Try a different keyword."
   },
   "newFed": {
     "phut": "minutes ago",

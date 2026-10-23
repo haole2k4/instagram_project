@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Heart, Instagram, PlusSquare } from "lucide-react";
 import NewsFeed from "../../Pages/NewsFeed/index";
 import Stories from "../../Pages/Stories/index";
-import MenuFormGenerate from "../../Components/LargeNav/FormGenerate/FormGenerate";
+import CreatePostModal from "../../Components/CreateModal/CreatePostModal";
 import Route from "../../Components/Routes/index";
 
 const Home = () => {
@@ -29,7 +29,7 @@ const Home = () => {
           <div className="relative">
             <button
               type="button"
-              onClick={() => setShowMobileCreate((prev) => !prev)}
+              onClick={() => setShowMobileCreate(true)}
               aria-expanded={showMobileCreate}
               aria-label={t("LargeNav.create")}
               title={t("LargeNav.create")}
@@ -37,10 +37,9 @@ const Home = () => {
             >
               <PlusSquare size={22} strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <MenuFormGenerate
-              showCreateModal={showMobileCreate}
-              setShowCreateModal={setShowMobileCreate}
-              positionClassName="right-0 top-11 origin-top-right"
+            <CreatePostModal
+              isOpen={showMobileCreate}
+              onClose={() => setShowMobileCreate(false)}
             />
           </div>
 

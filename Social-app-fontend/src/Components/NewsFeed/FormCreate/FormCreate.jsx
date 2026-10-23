@@ -52,14 +52,18 @@ const FormNewsFeed = () => {
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.append("title", content);
-      formData.append("access", privacy);
+      formData.append("title", content || "");
+      formData.append("access", privacy || "PUBLIC");
       formData.append("status", "True");
-      formData.append("userId", userInfo?.id);
-      if (media) formData.append("media", media);
+      if (userInfo?.id) {
+        formData.append("userId", userInfo.id);
+      }
+      if (media) {
+        formData.append("media", media);
+      }
 
       const response = await handleCreatePost(formData);
-      if (response?.statusCode === 200) {
+      if (response && (response.id || response.statusCode === 200 || response.status === 200 || response.data?.id)) {
         toast.success(t("post.createSuccess"));
         setContent("");
         setMedia(null);

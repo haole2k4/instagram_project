@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import notificationSocket from "../../Service/NotificationSocket";
 import { fetchAllNotificationsbyUser } from "../../Service/notificationApi";
 import { useDispatch, useSelector } from "react-redux";
 import { formatTime } from "../../Utils";
 import { useTranslation } from "react-i18next";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { RowListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";
 
-const Notification = () => {
+const Notification = ({ isOpen = true, onClose, standalone = false }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { userInfo } = useSelector((state) => state.login);
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const panelRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const fetchData = async () => {
       if (!userInfo?.id) {
         setLoading(false);
@@ -33,10 +36,34 @@ const Notification = () => {
     };
 
     fetchData();
-  }, [userInfo?.id]);
+  }, [userInfo?.id, isOpen]);
 
   useEffect(() => {
-    if (!userInfo?.id) return;
+    if (!isOpen || standalone || !onClose) return;
+
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose, standalone]);
+
+  useEffect(() => {
+    if (!userInfo?.id || !isOpen) return;
 
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (data) => {
@@ -110,15 +137,37 @@ const Notification = () => {
       unsubscribeLikes();
       unsubscribeFollow();
     };
-  }, [userInfo?.id, dispatch]);
+  }, [userInfo?.id, isOpen, dispatch]);
+
+  if (!isOpen) return null;
+
+  const containerClass = standalone
+    ? "mx-auto min-h-screen w-full max-w-[600px] bg-ig-ground px-4 py-6 text-ig-text"
+    : "fixed bottom-14 left-0 top-0 z-[100] flex w-full flex-col border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px] animate-in shadow-2xl";
+
+  const HeadingTag = standalone ? "h1" : "h2";
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[600px] bg-ig-ground px-4 py-6 text-ig-text">
-      <h1 className="mb-4 border-b border-ig-rule pb-3 text-[20px] font-semibold tracking-[-0.02em] text-ig-text">
-        {t("notifications.title")}
-      </h1>
+    <div ref={panelRef} className={containerClass}>
+      <div className="sticky top-0 z-10 border-b border-ig-border bg-ig-ground px-4 py-3.5">
+        <div className="flex items-center justify-between">
+          <HeadingTag className="text-[24px] font-semibold tracking-[-0.02em] text-ig-text">
+            {t("notifications.title")}
+          </HeadingTag>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close") || "Close"}
+              className="rounded-lg p-2 text-ig-muted transition-colors hover:text-ig-text"
+            >
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+      </div>
 
-      <div className="divide-y divide-ig-rule">
+      <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-ig-rule">
         {loading ? (
           <RowListSkeleton count={6} />
         ) : notifications.length === 0 ? (
@@ -130,15 +179,18 @@ const Notification = () => {
           notifications.map((notification, index) => (
             <div
               key={notification.notificationId || notification.id || index}
-              className="flex min-h-[60px] items-center gap-3 px-2 py-3 transition-colors duration-150 hover:bg-ig-surface"
+              className="flex min-h-[60px] items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-ig-surface"
             >
               <img
                 src={
                   notification.senderAvatar ||
-                  "https://cdn.kona-blue.com/upload/kona-blue_com/post/images/2024/09/18/457/avatar-mac-dinh-1.jpg"
+                  "/default-avatar.png"
                 }
                 alt=""
                 className="h-11 w-11 shrink-0 rounded-full border border-ig-border object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
               />
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] leading-[1.4] text-ig-text">

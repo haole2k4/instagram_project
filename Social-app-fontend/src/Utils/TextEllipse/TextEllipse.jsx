@@ -1,6 +1,6 @@
 import React from "react";
 
-const TextEllipse = ({ username = "", maxLength = 10, viewed = false }) => {
+const TextEllipse = ({ username = "", maxLength = 14, viewed = false }) => {
   const safeName = String(username || "");
   const usernameEllipse =
     safeName.length > maxLength
@@ -9,9 +9,10 @@ const TextEllipse = ({ username = "", maxLength = 10, viewed = false }) => {
 
   return (
     <p
-      className={`mt-1.5 max-w-[68px] truncate text-center text-[12px] leading-tight ${
+      className={`mt-1.5 max-w-[74px] truncate text-center text-[12px] leading-tight ${
         viewed ? "text-ig-muted" : "text-ig-text"
       }`}
+      title={safeName}
     >
       {usernameEllipse}
     </p>

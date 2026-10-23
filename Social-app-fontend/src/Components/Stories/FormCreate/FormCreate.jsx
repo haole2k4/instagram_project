@@ -62,7 +62,7 @@ const FormCreateStory = () => {
     setIsSubmitting(true);
     try {
       const response = await createStory(formData);
-      if (response?.statusCode === 200) {
+      if (response && (response.id || response.statusCode === 200 || response.status === 200 || response.data?.id)) {
         toast.success(t("story.createSuccess"));
         setFile(null);
         setPreviewUrl(null);

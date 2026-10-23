@@ -273,7 +273,7 @@ const MessageList = ({
                       >
                         <div
                           title={formatMessageTime(msg.createdAt)}
-                          className={`relative max-w-[75%] break-words rounded-panel px-3.5 py-2 text-[14px] leading-snug ${
+                          className={`relative max-w-[75%] break-words rounded-panel px-3.5 py-2 text-[14px] leading-5 ${
                             isSentByCurrentUser
                               ? "bg-ig-accent text-ig-text"
                               : "border border-ig-border bg-ig-surface text-ig-text"

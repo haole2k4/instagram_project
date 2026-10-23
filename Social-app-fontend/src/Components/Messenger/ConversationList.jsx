@@ -201,29 +201,31 @@ const ConversationList = ({
       </div>
 
       {/* Hàng ghim Trợ lý AI (/user/chat/ai) */}
-      <Link
-        to={Route.chat_ai}
-        className={`flex h-16 shrink-0 items-center gap-3 border-b border-ig-rule px-4 transition-colors ${
-          isAIChatActive ? "bg-ig-surface" : "hover:bg-ig-surface/60"
-        }`}
-      >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
-          <Sparkles size={18} strokeWidth={1.5} aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between">
-            <p className="truncate text-[14px] font-semibold text-ig-text">
-              {t("aiChat.title")}
+      <div className="px-2 pt-2">
+        <Link
+          to={Route.chat_ai}
+          className={`flex h-16 shrink-0 items-center gap-3 rounded-xl px-3 transition-colors ${
+            isAIChatActive ? "bg-ig-surface text-ig-text" : "text-ig-text hover:bg-ig-surface/60"
+          }`}
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+            <Sparkles size={18} strokeWidth={1.5} aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <p className="truncate text-[14px] font-semibold text-ig-text">
+                {t("aiChat.title")}
+              </p>
+            </div>
+            <p className="truncate text-[12px] text-ig-muted">
+              {t("aiChat.subtitle")}
             </p>
           </div>
-          <p className="truncate text-[12px] text-ig-muted">
-            {t("aiChat.subtitle")}
-          </p>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
       {/* Danh sách cuộc trò chuyện */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-2 py-1">
         {loading ? (
           <RowListSkeleton count={5} rowHeight="h-16" />
         ) : filteredConversations.length === 0 &&
@@ -233,7 +235,7 @@ const ConversationList = ({
             description={t("messenger.selectConversation")}
           />
         ) : (
-          <>
+          <div className="flex flex-col gap-1">
             {filteredConversations.map((conversation) => {
               const displayInfo = getConversationDisplay(conversation);
               const isActive =
@@ -245,8 +247,8 @@ const ConversationList = ({
                   type="button"
                   key={conversation.id}
                   onClick={() => onSelectConversation(conversation)}
-                  className={`flex h-16 w-full items-center border-b border-ig-rule px-4 text-left transition-colors ${
-                    isActive ? "bg-ig-surface" : "hover:bg-ig-surface/60"
+                  className={`flex h-16 w-full items-center rounded-xl px-3 text-left transition-colors ${
+                    isActive ? "bg-ig-surface text-ig-text" : "text-ig-text hover:bg-ig-surface/60"
                   }`}
                 >
                   {/* Avatar */}
@@ -337,7 +339,7 @@ const ConversationList = ({
                     <button
                       type="button"
                       key={user.id}
-                      className="flex h-16 w-full items-center px-4 text-left transition-colors hover:bg-ig-surface"
+                      className="flex h-16 w-full items-center rounded-xl px-3 text-left transition-colors hover:bg-ig-surface/60"
                       onClick={() =>
                         onStartNewChatWithUser &&
                         onStartNewChatWithUser(user.id)
@@ -365,7 +367,7 @@ const ConversationList = ({
                   ))}
                 </div>
               )}
-          </>
+          </div>
         )}
       </div>
     </div>

@@ -8,7 +8,10 @@
     "error": "Đã xảy ra lỗi",
     "more": "Tùy chọn khác",
     "previous": "Trước",
-    "next": "Tiếp"
+    "next": "Tiếp",
+    "submitting": "Đang gửi...",
+    "pageNotFoundTitle": "Không tìm thấy trang",
+    "pageNotFoundDesc": "Trang bạn tìm không tồn tại hoặc đã bị di chuyển."
   },
   "LargeNav": {
     "home": "Trang chủ",
@@ -181,7 +184,14 @@
     "mute": "Tắt tiếng",
     "unmute": "Bật tiếng",
     "turnOffCamera": "Tắt camera",
-    "turnOnCamera": "Bật camera"
+    "turnOnCamera": "Bật camera",
+    "createNewConversation": "Tạo cuộc trò chuyện mới",
+    "acceptCall": "Chấp nhận cuộc gọi",
+    "rejectCall": "Từ chối cuộc gọi",
+    "incomingVideoCall": "Cuộc gọi video đến",
+    "cameraOff": "Camera đang tắt",
+    "voiceCall": "Gọi thoại",
+    "waitingForRemoteVideo": "Đang chờ video từ đối phương"
   },
   "aiChat": {
     "title": "Trợ lý AI",
@@ -191,7 +201,15 @@
     "placeholder": "Hỏi AI bất cứ điều gì...",
     "typing": "Đang trả lời…",
     "clearHistory": "Xóa đoạn chat",
-    "errorResponse": "Không thể nhận phản hồi từ AI lúc này. Vui lòng thử lại."
+    "errorResponse": "Không thể nhận phản hồi từ AI lúc này. Vui lòng thử lại.",
+    "emptyTitle": "Bạn cần hỏi gì?",
+    "emptyDesc": "Đặt câu hỏi, nhờ gợi ý chú thích hoặc tìm ý tưởng mới.",
+    "prompt1": "Gợi ý chú thích cho ảnh đi biển",
+    "prompt2": "Cách chụp ảnh đẹp bằng điện thoại",
+    "prompt3": "Ý tưởng nội dung cho tuần này",
+    "clear": "Xóa đoạn chat",
+    "error": "Không thể nhận phản hồi từ AI lúc này. Vui lòng thử lại.",
+    "replying": "Đang trả lời…"
   },
   "story": {
     "yourStory": "Tin của bạn",
@@ -208,7 +226,30 @@
     "empty": "Chưa có tin nào",
     "createSuccess": "Đã đăng tin thành công",
     "createError": "Không thể tạo tin, vui lòng thử lại",
-    "uploadMedia": "Vui lòng chọn ảnh hoặc video cho tin của bạn"
+    "uploadMedia": "Vui lòng chọn ảnh hoặc video cho tin của bạn",
+    "sectionLabel": "Tin",
+    "createTitle": "Tạo tin",
+    "selectFile": "Chọn tệp",
+    "close": "Đóng",
+    "confirmDeleteBtn": "Xóa",
+    "confirmDeleteTitle": "Xóa tin này?",
+    "confirmDeleteDesc": "Bạn có chắc muốn xóa tin này? Hành động này không thể hoàn tác.",
+    "deleteStory": "Xóa tin",
+    "hoursAgo": "{{count}} giờ trước",
+    "minutesAgo": "{{count}} phút trước",
+    "justNow": "Vừa xong",
+    "invalidFileType": "Chỉ hỗ trợ ảnh hoặc video",
+    "next": "Tiếp",
+    "previous": "Trước",
+    "options": "Tùy chọn",
+    "pleaseSelectMedia": "Vui lòng chọn ảnh hoặc video",
+    "replyPlaceholder": "Gửi tin nhắn...",
+    "replySent": "Đã gửi phản hồi",
+    "sendReply": "Gửi",
+    "user": "Người dùng",
+    "viewerTitle": "Xem tin",
+    "scrollLeft": "Cuộn sang trái",
+    "scrollRight": "Cuộn sang phải"
   },
   "post": {
     "like": "Thích",
@@ -235,11 +276,31 @@
     "loadErrorTitle": "Không thể tải bảng tin",
     "loadErrorDescription": "Đã xảy ra sự cố khi tải bài viết. Vui lòng thử lại.",
     "noComments": "Chưa có bình luận nào.",
-    "options": "Tùy chọn bài viết"
+    "options": "Tùy chọn bài viết",
+    "seeMore": "xem thêm",
+    "commentPlaceholder": "Thêm bình luận...",
+    "commentError": "Không thể gửi bình luận",
+    "confirmDeletePost": "Bạn có chắc muốn xóa bài viết này?",
+    "createError": "Không thể đăng bài viết",
+    "createSuccess": "Đã đăng bài viết",
+    "fetchError": "Không thể tải bảng tin",
+    "likeError": "Không thể thích bài viết",
+    "emptyFeedDesc": "Khi bạn hoặc người bạn theo dõi đăng bài viết, chúng sẽ xuất hiện tại đây.",
+    "copyLink": "Sao chép liên kết",
+    "linkCopied": "Đã sao chép liên kết",
+    "goToPost": "Đi tới bài viết",
+    "saved": "Đã lưu",
+    "unsave": "Bỏ lưu"
   },
   "notifications": {
     "title": "Thông báo",
-    "empty": "Chưa có thông báo nào"
+    "empty": "Chưa có thông báo nào",
+    "all": "Tất cả",
+    "comments": "Bình luận",
+    "likes": "Lượt thích",
+    "follows": "Theo dõi",
+    "today": "Hôm nay",
+    "earlier": "Trước đó"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -280,7 +341,10 @@
     "tagged": "Được gắn thẻ",
     "storyHighlights": "Tin nổi bật",
     "followers": "Người theo dõi",
-    "following": "Đang theo dõi"
+    "following": "Đang theo dõi",
+    "message": "Nhắn tin",
+    "follow": "Theo dõi",
+    "unfollow": "Bỏ theo dõi"
   },
   "RecommentUser": {
     "title": "Người dùng được đề xuất",
@@ -302,7 +366,16 @@
     "loading": "Đang đăng...",
     "create": "Đăng bài",
     "createPost": "Tạo bài viết",
-    "selectMedia": "Chọn ảnh hoặc video từ thiết bị"
+    "selectMedia": "Chọn ảnh hoặc video từ thiết bị",
+    "public": "Công khai",
+    "friends": "Bạn bè",
+    "onlyMe": "Chỉ mình tôi",
+    "media": "Ảnh hoặc video",
+    "privacy": "Quyền riêng tư",
+    "dropHint": "Kéo ảnh và video vào đây",
+    "selectFromComputer": "Chọn từ máy tính",
+    "postTab": "Bài viết",
+    "storyTab": "Tin"
   },
   "search": {
     "title": "Tìm kiếm",
@@ -311,7 +384,8 @@
     "close": "Đóng tìm kiếm",
     "searchPeople": "Nhập tên người dùng",
     "emptyPrompt": "Nhập tên hoặc tên người dùng để tìm kiếm.",
-    "noResults": "Không tìm thấy người dùng phù hợp."
+    "noResults": "Không tìm thấy người dùng phù hợp.",
+    "tryDifferentKeyword": "Thử từ khóa khác."
   },
   "newFed": {
     "phut": "Phút trước",
