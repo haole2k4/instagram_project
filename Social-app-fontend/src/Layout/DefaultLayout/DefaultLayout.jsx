@@ -12,25 +12,23 @@ const DefaultLayout = ({ socketData }) => {
   const isChatPage = location.pathname.includes("/chat");
 
   return (
-    <div className="flex w-full bg-black relative">
-      <div className="fixed">
+    <div className="relative flex min-h-screen w-full bg-ig-ground text-ig-text [color-scheme:dark]">
+      <div className="fixed inset-y-0 left-0 z-40">
         <LeftNav />
       </div>
 
       {isChatPage ? (
-        // Nếu là trang chat, hiển thị ChatPage với kích thước lớn hơn
-        <div className="flex-1 min-h-screen bg-black ml-[270px]">
-          <div className="h-full w-full">
-            <ChatPage socketData={socketData} />
-          </div>
+        <div className="ml-0 min-h-screen flex-1 md:ml-rail">
+          <ChatPage socketData={socketData} />
         </div>
       ) : (
-        // Nếu không phải trang chat, hiển thị Fragment và RightNav như bình thường
-        <div className="flex w-full min-h-screen bg-black ml-[270px]">
+        <div className="ml-0 flex min-h-screen flex-1 pb-14 md:ml-rail md:pb-0">
           <Fragment />
           <RightNav />
         </div>
       )}
+
+      {/* Bước 5 sẽ bỏ nút nổi này khi AI chuyển vào khung chat. */}
       <ChatAI />
     </div>
   );
