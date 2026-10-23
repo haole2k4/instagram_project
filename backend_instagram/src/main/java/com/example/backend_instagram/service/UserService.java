@@ -20,12 +20,19 @@ public class UserService {
   private final UserRepository userRepository;
   private final PostRepository postRepository;
   private final FollowService followService;
+  private final AccountStatusService accountStatusService;
 
   @Autowired
-  public UserService(UserRepository userRepository, PostRepository postRepository, FollowService followService) {
+  public UserService(
+    UserRepository userRepository,
+    PostRepository postRepository,
+    FollowService followService,
+    AccountStatusService accountStatusService
+  ) {
     this.userRepository = userRepository;
     this.postRepository = postRepository;
     this.followService = followService;
+    this.accountStatusService = accountStatusService;
   }
 
   @CacheEvict(cacheNames = CacheNames.USER_STATS, allEntries = true)
@@ -38,7 +45,11 @@ public class UserService {
   }
 
   public List<User> getAllUser() {
-    return this.userRepository.findAll();
+    return this.userRepository
+      .findAll()
+      .stream()
+      .filter(user -> !accountStatusService.isRestricted(user))
+      .toList();
   }
 
   public boolean isEmailExist(String email) {
@@ -75,12 +86,13 @@ public class UserService {
   public User handleUpdateUser(User user) {
     User userUPdate = this.fetchUserById(user.getId());
 
-    if (userUPdate != null) {
-      userUPdate.setUserNickname(user.getUserNickname());
-      userUPdate.setUserBio(user.getUserBio());
-      userUPdate.setUserPhone(user.getUserPhone());
-      userUPdate.setUserImage(user.getUserImage());
+    if (userUPdate == null) {
+      return null;
     }
+    userUPdate.setUserNickname(user.getUserNickname());
+    userUPdate.setUserBio(user.getUserBio());
+    userUPdate.setUserPhone(user.getUserPhone());
+    userUPdate.setUserImage(user.getUserImage());
     return this.userRepository.save(userUPdate);
   }
 
@@ -128,6 +140,13 @@ public class UserService {
   @Cacheable(cacheNames = CacheNames.USER_STATS, key = "#userId")
   public UserStatsDTO getUserStats(Long userId) {
     User user = fetchUserById(userId);
+    if (user == null) {
+      throw new com.example.backend_instagram.utils.error.ApiException(
+        org.springframework.http.HttpStatus.NOT_FOUND,
+        "USER_NOT_FOUND",
+        "Người dùng không tồn tại."
+      );
+    }
     Long followersCount = followService.countFollowersOfUser(userId);
     Long followingCount = followService.countFollowingOfUser(userId);
     Long postsCount = postRepository.countByUserId(userId);

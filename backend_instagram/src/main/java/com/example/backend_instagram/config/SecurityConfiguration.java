@@ -4,7 +4,7 @@ import com.example.backend_instagram.utils.SecurityUntil;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.util.Base64;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec; 
+import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,14 +42,16 @@ public class SecurityConfiguration {
     return new BCryptPasswordEncoder();
   }
 
-   @Bean
-    public AuthenticationManager authenticationManager(
-            UserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return new ProviderManager(provider);
-    }
+  @Bean
+  public AuthenticationManager authenticationManager(
+    UserDetailsService userDetailsService,
+    PasswordEncoder passwordEncoder
+  ) {
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+    provider.setPasswordEncoder(passwordEncoder);
+    return new ProviderManager(provider);
+  }
+
   @Bean
   public SecurityFilterChain filterChain(
     HttpSecurity http,
@@ -60,29 +62,34 @@ public class SecurityConfiguration {
       .cors(Customizer.withDefaults())
       .authorizeHttpRequests(authz ->
         authz
-          .requestMatchers("/test", "/api/v1/auth/login" ,"/api/v1/user","/api/v1/auth/register")
-          .permitAll() // 🔹 Cho phép truy cập không cần xác thực
-          .requestMatchers("/actuator/health/**")
+          .requestMatchers(
+            "/test",
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/actuator/health/**",
+            "/ws/**",
+            "/ws-native/**"
+          )
           .permitAll()
-          // .anyRequest().authenticated()
-          .requestMatchers("/api/v1/messages/**").authenticated()
-          .requestMatchers("/ws/**", "/ws-native/**").permitAll()
-          // STOMP CONNECT được xác thực bằng StompAuthChannelInterceptor.
+          .requestMatchers("/api/v1/admin/**")
+          .hasAnyRole("MODERATOR", "ADMIN")
           .anyRequest()
-          .authenticated() // 🔹 Các request khác phải đăng nhập
+          .authenticated()
       )
       .sessionManagement(session ->
-        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS) // 🔹 Không sử dụng session
+        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
       )
       .exceptionHandling(exceptions ->
         exceptions
-          .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint()) //401
+          .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
           .accessDeniedHandler(new BearerTokenAccessDeniedHandler())
-      ) // 403
-      .oauth2ResourceServer(aouth2 ->
-        aouth2.jwt(Customizer.withDefaults()).authenticationEntryPoint(caep)
       )
-      .formLogin(f -> f.disable()); //Tắt chức năng form login
+      .oauth2ResourceServer(oauth2 ->
+        oauth2
+          .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+          .authenticationEntryPoint(caep)
+      )
+      .formLogin(f -> f.disable());
 
     return http.build();
   }
@@ -118,16 +125,13 @@ public class SecurityConfiguration {
     };
   }
 
-  @Bean
-  public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-    grantedAuthoritiesConverter.setAuthorityPrefix("");
-    grantedAuthoritiesConverter.setAuthoritiesClaimName("permission");
-    JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(
-      grantedAuthoritiesConverter
-    );
+  private JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+    authoritiesConverter.setAuthorityPrefix("ROLE_");
+    authoritiesConverter.setAuthoritiesClaimName("roles");
 
-    return jwtAuthenticationConverter;
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+    return converter;
   }
 }

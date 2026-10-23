@@ -4,7 +4,9 @@ import com.example.backend_instagram.dto.follow.FollowResponseDTO;
 import com.example.backend_instagram.entity.*;
 import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.utils.constant.CacheNames;
+import com.example.backend_instagram.utils.error.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -15,6 +17,9 @@ import java.util.Optional;
 public class FollowService {
     @Autowired
     private FollowRepository followRepository;
+
+    @Autowired
+    private AccountStatusService accountStatusService;
 
     // Lấy tất cả cặp follow
     public List<Follow> getAllPairOfFollow() {
@@ -34,6 +39,16 @@ public class FollowService {
 
     @CacheEvict(cacheNames = CacheNames.USER_STATS, allEntries = true)
     public FollowResponseDTO createFollow(User currUser, User followedUser) {
+        if (currUser == null || followedUser == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
+        }
+        if (currUser.getId().equals(followedUser.getId())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Không thể tự theo dõi mình.");
+        }
+        accountStatusService.requireWritable(currUser);
+        if (accountStatusService.isRestricted(followedUser)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
+        }
         Follow follow = new Follow();
         follow.setId(new FollowId(currUser.getId(), followedUser.getId()));
         follow.setFollower(currUser);
@@ -83,6 +98,10 @@ public class FollowService {
 
     @CacheEvict(cacheNames = CacheNames.USER_STATS, allEntries = true)
     public void unfollow(User currUser, User followedUser) {
+        if (currUser == null || followedUser == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
+        }
+        accountStatusService.requireWritable(currUser);
         // Tìm bản ghi follow từ currUser đến followedUser
         Follow follow = followRepository.findByFollowerAndFollowing(currUser, followedUser)
                 .orElseThrow(() -> new RuntimeException("Follow relationship does not exist"));

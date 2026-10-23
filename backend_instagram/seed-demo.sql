@@ -1,12 +1,23 @@
 -- Run after the Spring application has created/updated its tables:
 -- mysql -h 127.0.0.1 -P 3306 -u instagram_user -p backend_instagram < seed-demo.sql
 -- Demo password for all seeded accounts: InstagramDemo!2026
--- The current application has no role column/authorization; admin is a demo login, not a privileged account.
+-- Roles:
+--   admin@instagram.local     USER + ADMIN
+--   moderator@instagram.local USER + MODERATOR
+--   linh/minh                 USER
+
+INSERT INTO roles (code) VALUES ('USER'), ('MODERATOR'), ('ADMIN')
+ON DUPLICATE KEY UPDATE code = VALUES(code);
 
 INSERT INTO users (user_nickname, user_fullname, user_email, user_password, user_image, user_bio, is_online, created_at)
 SELECT 'admin', 'Demo Admin', 'admin@instagram.local', '$2a$10$QPRY62IaT8vmj/idabOVhu4QrjX8hlOq5clVknvFkQZL8AaKRrqe.',
        'https://i.pravatar.cc/300?img=12', 'Demo account for local testing', 0, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE user_email = 'admin@instagram.local');
+
+INSERT INTO users (user_nickname, user_fullname, user_email, user_password, user_image, user_bio, is_online, created_at)
+SELECT 'moderator_demo', 'Demo Moderator', 'moderator@instagram.local', '$2a$10$QPRY62IaT8vmj/idabOVhu4QrjX8hlOq5clVknvFkQZL8AaKRrqe.',
+       'https://i.pravatar.cc/300?img=5', 'Demo moderation account', 0, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE user_email = 'moderator@instagram.local');
 
 INSERT INTO users (user_nickname, user_fullname, user_email, user_password, user_image, user_bio, is_online, created_at)
 SELECT 'linh_demo', 'Linh Nguyen', 'linh@instagram.local', '$2a$10$QPRY62IaT8vmj/idabOVhu4QrjX8hlOq5clVknvFkQZL8AaKRrqe.',
@@ -17,6 +28,17 @@ INSERT INTO users (user_nickname, user_fullname, user_email, user_password, user
 SELECT 'minh_demo', 'Minh Tran', 'minh@instagram.local', '$2a$10$QPRY62IaT8vmj/idabOVhu4QrjX8hlOq5clVknvFkQZL8AaKRrqe.',
        'https://i.pravatar.cc/300?img=33', 'Weekend photographer', 0, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE user_email = 'minh@instagram.local');
+
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u CROSS JOIN roles r WHERE r.code = 'USER';
+
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u CROSS JOIN roles r
+WHERE r.code = 'ADMIN' AND u.user_email = 'admin@instagram.local';
+
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM users u CROSS JOIN roles r
+WHERE r.code = 'MODERATOR' AND u.user_email = 'moderator@instagram.local';
 
 INSERT INTO posts (title, user_id, created_at, likes_count, comments_count, status, access)
 SELECT 'A quiet morning in Saigon', u.id, NOW() - INTERVAL 2 HOUR, 1, 1, 'True', 'PUBLIC'
@@ -118,3 +140,37 @@ SELECT c.id, u.id, 'Nice to meet you here!', NOW(), 0
 FROM conversations c CROSS JOIN users u
 WHERE c.name = 'Demo chat' AND u.user_email = 'linh@instagram.local'
 AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content = 'Nice to meet you here!');
+
+INSERT INTO reports (reporter_id, target_type, target_id, reason_code, note, status, created_at)
+SELECT reporter.id, 'POST', p.id, 'SPAM', 'Looks like spam to me.', 'OPEN', NOW() - INTERVAL 3 HOUR
+FROM users reporter CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE reporter.user_email = 'minh@instagram.local'
+AND owner.user_email = 'admin@instagram.local'
+AND p.title = 'A quiet morning in Saigon'
+AND NOT EXISTS (
+  SELECT 1 FROM reports r WHERE r.reporter_id = reporter.id
+  AND r.target_type = 'POST' AND r.target_id = p.id
+);
+
+INSERT INTO reports (reporter_id, target_type, target_id, reason_code, note, status, assignee_id, claimed_at, created_at)
+SELECT reporter.id, 'COMMENT', c.id, 'HARASSMENT', 'Demo claimed report.', 'CLAIMED', mod.id, NOW() - INTERVAL 1 HOUR, NOW() - INTERVAL 5 HOUR
+FROM users reporter CROSS JOIN comments c
+JOIN posts p ON p.id = c.post_id
+JOIN users commenter ON commenter.id = c.user_id
+CROSS JOIN users mod
+WHERE reporter.user_email = 'admin@instagram.local'
+AND commenter.user_email = 'admin@instagram.local'
+AND mod.user_email = 'moderator@instagram.local'
+AND c.content = 'Adding this place to my list!'
+AND NOT EXISTS (
+  SELECT 1 FROM reports r WHERE r.reporter_id = reporter.id
+  AND r.target_type = 'COMMENT' AND r.target_id = c.id
+);
+
+INSERT INTO audit_logs (actor_id, actor_label, action, target_type, target_id, reason_code, reason_text, metadata, created_at)
+SELECT u.id, CONCAT(u.user_nickname, '#', u.id), 'ROLE_BOOTSTRAP', 'USER', u.id, 'SEED', 'Seeded demo roles', JSON_OBJECT('roles', JSON_ARRAY('USER', 'ADMIN')), NOW()
+FROM users u
+WHERE u.user_email = 'admin@instagram.local'
+AND NOT EXISTS (
+  SELECT 1 FROM audit_logs a WHERE a.action = 'ROLE_BOOTSTRAP' AND a.target_id = u.id
+);

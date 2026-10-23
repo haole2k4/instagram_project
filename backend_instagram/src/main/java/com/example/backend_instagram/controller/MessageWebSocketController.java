@@ -1,6 +1,9 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.message.ChatSendRequest;
+import com.example.backend_instagram.entity.User;
+import com.example.backend_instagram.repository.UserRepository;
+import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.ChatRealtimePublisher;
 import com.example.backend_instagram.service.MessageService;
 import com.example.backend_instagram.utils.error.IdInvalidException;
@@ -25,11 +28,17 @@ public class MessageWebSocketController {
 
     private final MessageService messageService;
     private final ChatRealtimePublisher realtimePublisher;
+    private final UserRepository userRepository;
+    private final AccountStatusService accountStatusService;
 
     public MessageWebSocketController(MessageService messageService,
-            ChatRealtimePublisher realtimePublisher) {
+            ChatRealtimePublisher realtimePublisher,
+            UserRepository userRepository,
+            AccountStatusService accountStatusService) {
         this.messageService = messageService;
         this.realtimePublisher = realtimePublisher;
+        this.userRepository = userRepository;
+        this.accountStatusService = accountStatusService;
     }
 
     /**
@@ -57,7 +66,7 @@ public class MessageWebSocketController {
     public void forwardVideoCall(@DestinationVariable Long toUserId,
             @Payload Map<String, Object> payload,
             Principal principal) {
-        Long fromUserId = currentUserId(principal);
+        Long fromUserId = writableUserId(principal);
         if (toUserId == null || toUserId.equals(fromUserId) || payload == null) {
             return;
         }
@@ -78,7 +87,7 @@ public class MessageWebSocketController {
     public void forwardNotification(@DestinationVariable Long toUserId,
             @Payload Map<String, Object> payload,
             Principal principal) {
-        Long fromUserId = currentUserId(principal);
+        Long fromUserId = writableUserId(principal);
         if (toUserId == null || toUserId.equals(fromUserId) || payload == null) {
             return;
         }
@@ -102,6 +111,14 @@ public class MessageWebSocketController {
         } catch (NumberFormatException ignored) {
             log.warn("Unable to resolve userId from STOMP principal");
         }
+    }
+
+    private Long writableUserId(Principal principal) {
+        Long userId = currentUserId(principal);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MessagingException("User not found"));
+        accountStatusService.requireWritable(user);
+        return userId;
     }
 
     private Long currentUserId(Principal principal) {

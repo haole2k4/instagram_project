@@ -71,9 +71,15 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, Long userId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
+        if (notification.getUser() == null || !notification.getUser().getId().equals(userId)) {
+            throw new com.example.backend_instagram.utils.error.ApiException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "Không thể thay đổi thông báo của người khác.");
+        }
         notification.setRead(true);
         notificationRepository.save(notification);
     }
@@ -137,6 +143,21 @@ public class NotificationService {
         }
     }
 
+    public void createModerationNotification(User receiver, User actor, String message) {
+        try {
+            Notification notification = new Notification(
+                    receiver,
+                    actor,
+                    null,
+                    NotificationType.MODERATION,
+                    message);
+            notificationRepository.save(notification);
+            publishNotificationCreated(notification, receiver.getId());
+        } catch (Exception e) {
+            logger.error("Error creating moderation notification: {}", e.getMessage(), e);
+        }
+    }
+
     private void publishNotificationCreated(Notification notification, Long recipientId) {
         NotificationCreatedEvent event = new NotificationCreatedEvent(
                 UUID.randomUUID().toString(),
@@ -158,11 +179,13 @@ public class NotificationService {
     private NotificationDTO toDTO(Notification notification) {
         NotificationDTO dto = new NotificationDTO();
         dto.setNotificationId(notification.getNotificationId());
-        dto.setUserId(notification.getUser().getId());
-        dto.setActorId(notification.getActor().getId());
-        dto.setActorNickname(notification.getActor().getUserNickname());
-        dto.setUserImage(notification.getActor().getUserImage());
-        dto.setPostId(notification.getPost().getId());
+        dto.setUserId(notification.getUser() == null ? null : notification.getUser().getId());
+        dto.setActorId(notification.getActor() == null ? null : notification.getActor().getId());
+        dto.setActorNickname(
+                notification.getActor() == null ? null : notification.getActor().getUserNickname());
+        dto.setUserImage(
+                notification.getActor() == null ? null : notification.getActor().getUserImage());
+        dto.setPostId(notification.getPost() == null ? null : notification.getPost().getId());
         dto.setType(notification.getType().name());
         dto.setMessage(notification.getMessage());
         dto.setRead(notification.isRead());

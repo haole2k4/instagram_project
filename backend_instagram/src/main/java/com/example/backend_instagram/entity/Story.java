@@ -31,6 +31,17 @@ public class Story {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ModerationState moderationState = ModerationState.VISIBLE;
+
+    @Enumerated(EnumType.STRING)
+    private ReasonCode moderationReasonCode;
+    @Column(length = 500)
+    private String moderationReason;
+    private LocalDateTime moderatedAt;
+    private Long moderatedBy;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

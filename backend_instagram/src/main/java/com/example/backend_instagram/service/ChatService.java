@@ -44,7 +44,10 @@ public class ChatService {
     private MessageService messageService;
 
     @Autowired
-    private FollowRepository followRepository; 
+    private FollowRepository followRepository;
+
+    @Autowired
+    private AccountStatusService accountStatusService;
 
     /**
      * Lấy hoặc tạo mới cuộc trò chuyện giữa hai người dùng
@@ -59,6 +62,7 @@ public class ChatService {
                 .orElseThrow(() -> new IdInvalidException("Người dùng không tồn tại: " + userId));
         User otherUser = userRepository.findById(otherUserId)
                 .orElseThrow(() -> new IdInvalidException("Người dùng không tồn tại: " + otherUserId));
+        accountStatusService.requireWritable(user);
 
         Optional<Follow> followOpt = followRepository.findByFollowerAndFollowing(user, otherUser);
         Optional<Follow> reverseFollowOpt = followRepository.findByFollowerAndFollowing(otherUser, user);

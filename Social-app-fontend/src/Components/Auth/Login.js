@@ -43,12 +43,18 @@ const Login = () => {
           userLoginData({
             user: res.data.user,
             accessToken: res.data.accessToken,
+            roles: res.data.roles,
+            status: res.data.status,
+            suspendedUntil: res.data.suspendedUntil,
           })
         );
 
+        const isStaff =
+          res.data.roles?.includes("ADMIN") ||
+          res.data.roles?.includes("MODERATOR");
         setTimeout(() => {
-          usenavi("/user/home");
-        }, 3000);
+          usenavi(isStaff ? "/admin" : "/user/home");
+        }, 1200);
       }
     } catch (error) {
       if (error.response && error.response.data) {
