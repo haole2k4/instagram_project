@@ -79,6 +79,9 @@ public class PostService {
     List<Media> mediaList = new ArrayList<>();
     if (request.getMedia() != null) {
       for (MultipartFile file : request.getMedia()) {
+        if (file == null || file.isEmpty()) {
+          continue;
+        }
         try {
           String originalFilename = file.getOriginalFilename();
           String extension = originalFilename == null || !originalFilename.contains(".")

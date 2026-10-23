@@ -68,16 +68,19 @@ const Stories = () => {
             className="flex shrink-0 flex-col items-center justify-center"
             aria-label={t("story.createTitle")}
           >
-            <div className="story-item-avatar relative flex h-16 w-16 items-center justify-center rounded-full border border-ig-raised bg-ig-surface p-[2px]">
-              {userInfo?.userImage ? (
-                <img
-                  src={userInfo.userImage}
-                  alt={userInfo.userNickname || ""}
-                  className="h-full w-full rounded-full object-cover opacity-80"
-                />
-              ) : (
-                <Plus size={20} strokeWidth={1.5} className="text-ig-text" />
-              )}
+            <div className="story-item-avatar relative flex h-[74px] w-[74px] items-center justify-center rounded-full border border-ig-raised bg-ig-surface p-[2px]">
+              <img
+                src={
+                  userInfo?.avatar ||
+                  userInfo?.userImage ||
+                  "/default-avatar.png"
+                }
+                alt={userInfo?.userNickname || ""}
+                className="h-full w-full rounded-full object-cover opacity-80"
+                onError={(e) => {
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
+              />
               <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-ig-ground bg-ig-accent text-ig-text">
                 <Plus size={12} strokeWidth={2} aria-hidden="true" />
               </span>
@@ -95,7 +98,7 @@ const Stories = () => {
                 className="flex shrink-0 flex-col items-center justify-center"
               >
                 <div
-                  className={`story-item-avatar h-16 w-16 rounded-full p-[2px] ${
+                  className={`story-item-avatar h-[74px] w-[74px] rounded-full p-[2px] ${
                     isViewed
                       ? "border border-ig-raised bg-transparent opacity-65"
                       : "ig-ring-story"
@@ -103,9 +106,16 @@ const Stories = () => {
                 >
                   <div className="h-full w-full rounded-full bg-ig-ground p-[2px]">
                     <img
-                      src={item.user?.userImage || "/default-avatar.png"}
+                      src={
+                        item.user?.avatar ||
+                        item.user?.userImage ||
+                        "/default-avatar.png"
+                      }
                       alt={nickname}
                       className="h-full w-full rounded-full bg-ig-surface object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-avatar.png";
+                      }}
                     />
                   </div>
                 </div>

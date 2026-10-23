@@ -69,12 +69,13 @@ const UserProfile = () => {
             <div className="h-full w-full rounded-full bg-ig-ground p-[2px]">
               <img
                 src={
-                  dataUser.avatar === null || !dataUser.avatar
-                    ? "https://byvn.net/Eq9z"
-                    : dataUser.avatar
+                  dataUser.avatar || dataUser.userImage || "/default-avatar.png"
                 }
                 alt={dataUser.username || "Avatar"}
                 className="h-full w-full rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
               />
             </div>
           </div>
@@ -112,7 +113,7 @@ const UserProfile = () => {
           <div className="mt-4 flex flex-wrap gap-6 text-[14px] tabular-nums">
             <span>
               <strong className="font-semibold text-ig-text">
-                {dataUser.postsCount ?? 0}
+                {Array.isArray(dataPost) ? dataPost.length : (dataUser.postsCount ?? 0)}
               </strong>{" "}
               <span className="text-ig-muted">{t("userProfile.posts")}</span>
             </span>
@@ -190,15 +191,19 @@ const UserProfile = () => {
         </button>
       </div>
 
-      {/* Posts Grid */}
+      {/* Posts Grid: 1 bài = 1 ô */}
       {!dataPost || dataPost.length === 0 ? (
         <EmptyState icon={Camera} title={t("post.emptyFeedTitle")} />
       ) : (
         <div className="mt-1 grid grid-cols-3 gap-1">
-          {dataPost.map((item, index) =>
-            item?.media?.map((mediaItem, mediaIndex) => (
+          {dataPost.map((item) => {
+            const primaryMedia = item?.media?.[0];
+            const isVideo =
+              primaryMedia?.type === "VIDEO" ||
+              primaryMedia?.url?.endsWith(".mp4");
+            return (
               <button
-                key={`${index}-${mediaIndex}`}
+                key={item.id}
                 type="button"
                 className="group relative aspect-square w-full overflow-hidden bg-ig-surface"
                 onClick={() => {
@@ -206,16 +211,19 @@ const UserProfile = () => {
                   setIsOpen(true);
                 }}
               >
-                {mediaItem.type === "VIDEO" ? (
+                {isVideo ? (
                   <video
-                    src={mediaItem.url}
+                    src={primaryMedia?.url}
                     className="h-full w-full object-cover"
                     muted
                     playsInline
                   />
                 ) : (
                   <img
-                    src={mediaItem.url || "https://via.placeholder.com/150"}
+                    src={
+                      primaryMedia?.url ||
+                      "https://via.placeholder.com/150"
+                    }
                     className="h-full w-full object-cover"
                     alt=""
                   />
@@ -242,8 +250,8 @@ const UserProfile = () => {
                   </div>
                 </div>
               </button>
-            ))
-          )}
+            );
+          })}
         </div>
       )}
 
