@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import Route from "../../Components/Routes/index";
-import { FaCircle } from "react-icons/fa";
 import {
   handleGetAllUser,
   handleGetFollowersByUser,
@@ -10,186 +9,227 @@ import {
 } from "../../Service/UserAPI";
 import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import { useTranslation } from "react-i18next";
-import { set } from "lodash";
+import { RowListSkeleton } from "../Common/FlatSkeleton";
 
 const RecommendUser = () => {
   const [userList, setUserList] = useState([]);
   const [listOfFollowers, setListOfFollowers] = useState([]);
   const [followedUsers, setFollowedUsers] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
   const userApp = useSelector((state) => state.login);
   const { sendFollowNotification } = useWebSocket();
   const [t] = useTranslation();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const currentUserId = userApp.userInfo?.id;
+  const currentUserAvatar =
+    userApp.userInfo?.userImage ||
+    userApp.userInfo?.avatar ||
+    "/default-avatar.png";
+  const currentUserNickname =
+    userApp.userInfo?.userNickname || userApp.userInfo?.nikName || "";
+  const currentUserFullname = userApp.userInfo?.userFullname || "";
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!currentUserId) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     try {
-      const usersResponse = await handleGetAllUser();
-      const followersResponse = await handleGetFollowersByUser(
-        userApp.userInfo.id
-      );
+      const [usersResponse, followersResponse] = await Promise.all([
+        handleGetAllUser(),
+        handleGetFollowersByUser(currentUserId),
+      ]);
 
-      const allUsers = usersResponse.data;
-      const followers = followersResponse.data;
+      const allUsers = Array.isArray(usersResponse?.data)
+        ? usersResponse.data
+        : [];
+      const followers = Array.isArray(followersResponse?.data)
+        ? followersResponse.data
+        : [];
       setListOfFollowers(followers);
 
-      const followerIds = followers.map((item) => item.follower.id);
+      const followerIds = followers
+        .map((item) => item.follower?.id)
+        .filter(Boolean);
       const filteredUsers = allUsers.filter(
-        (user) =>
-          user.id !== userApp.userInfo.id && !followerIds.includes(user.id)
+        (user) => user.id !== currentUserId && !followerIds.includes(user.id)
       );
 
       setUserList(filteredUsers);
     } catch (error) {
-      console.error("Lỗi khi fetch data:", error);
+      console.error("Error fetching recommended users:", error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAddFollow = async (followedId) => {
-    // Thêm người dùng vào danh sách đã follow ngay lập tức
     setFollowedUsers((prev) => new Set([...prev, followedId]));
 
     try {
-      const response = await handlePostFollower(
-        userApp.userInfo.id,
-        followedId
-      );
+      const response = await handlePostFollower(currentUserId, followedId);
 
       if (response.statusCode === 201 || response.statusCode === 200) {
         sendFollowNotification({ toUserId: String(followedId) });
-        // Sau khi follow thành công, cập nhật lại danh sách
-        const followersResponse = await handleGetFollowersByUser(
-          userApp.userInfo.id
+        const followersResponse = await handleGetFollowersByUser(currentUserId);
+        setListOfFollowers(
+          Array.isArray(followersResponse?.data) ? followersResponse.data : []
         );
-        setListOfFollowers(followersResponse.data);
       }
     } catch (error) {
-      // Nếu có lỗi, xóa người dùng khỏi danh sách đã follow
       setFollowedUsers((prev) => {
         const newSet = new Set(prev);
         newSet.delete(followedId);
         return newSet;
       });
-      console.error("Lỗi khi follow:", error);
+      console.error("Error following user:", error);
     }
   };
 
   return (
-    <div className="lg:w-[20vw] w-full h-[80vh] p-3 mt-5 bg-black shadow-md border border-gray-800 rounded-md">
-      <p className="text-white font-semibold mb-2">
-        {t("RecommentUser.title")}
-      </p>
+    <aside
+      aria-label={t("RecommentUser.suggestedForYou")}
+      className="sticky top-6 hidden w-[320px] shrink-0 self-start bg-ig-ground text-ig-text xl:block"
+    >
+      {/* Tài khoản hiện tại (không lộ email) */}
       <Link
         to={Route.profile}
-        className="w-full flex items-center gap-x-4 p-3 hover:bg-gray-800/60 rounded-md group"
+        className="flex h-14 items-center gap-3 rounded-lg px-2 transition-colors hover:bg-ig-surface"
       >
         <img
-          src={userApp.userInfo?.avatar || ""}
-          alt="Profile img"
-          className="w-10 h-10 rounded-full object-cover"
-          style={{ imageRendering: "crisp-edges" }}
+          src={currentUserAvatar}
+          alt={currentUserNickname}
+          className="h-11 w-11 shrink-0 rounded-full bg-ig-surface object-cover"
         />
-        <div className="flex flex-col">
-          <p className="text-white font-semibold">
-            {userApp.userInfo?.nikName}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-ig-text">
+            {currentUserNickname}
           </p>
-          <p className="text-white text-sm">{userApp.userInfo?.email}</p>
+          {currentUserFullname && (
+            <p className="truncate text-[12px] text-ig-muted">
+              {currentUserFullname}
+            </p>
+          )}
         </div>
       </Link>
 
-      {/* Danh sách followers */}
-      <div className="mt-4">
-        {listOfFollowers.length > 0 && (
-          <div className="flex justify-between px-3 mb-2">
-            <p className="text-gray-500 font-bold text-sm">
-              {t("RecommentUser.followers")}
-            </p>
-            <p className="text-white text-sm cursor-pointer hover:underline">
-              {t("RecommentUser.seeAll")}
-            </p>
-          </div>
-        )}
-        <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-          {listOfFollowers.map((item) => (
-            <Link
-              key={item.follower.id}
-              to={`${Route.friend_profile}/${item.follower.id}`}
-              className="w-full flex items-center justify-between p-3 hover:bg-gray-900 rounded-md group"
-            >
-              <div className="flex items-center gap-x-2">
-                <img
-                  src={item.follower.userImage}
-                  alt={item.follower.userNickname}
-                  className="w-8 h-8 rounded-full"
-                />
-                <p className="text-white">{item.follower.userNickname}</p>
-              </div>
-              {!item.friend && !followedUsers.has(item.follower.id) && (
-                <button
-                  className="text-blue-400 text-sm hover:text-blue-600 font-medium"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddFollow(item.follower.id);
-                  }}
-                >
-                  {t("RecommentUser.follow")}
-                </button>
-              )}
-            </Link>
-          ))}
+      {isLoading ? (
+        <div className="mt-6">
+          <RowListSkeleton count={4} rowHeight="h-14" />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Danh sách người theo dõi */}
+          {listOfFollowers.length > 0 && (
+            <section className="mt-6">
+              <h2 className="mb-2 px-2 text-[14px] font-semibold text-ig-muted">
+                {t("RecommentUser.followers")}
+              </h2>
+              <div className="flex flex-col">
+                {listOfFollowers.slice(0, 5).map((item) => {
+                  const follower = item.follower;
+                  if (!follower) return null;
+                  return (
+                    <Link
+                      key={follower.id}
+                      to={`${Route.friend_profile}/${follower.id}`}
+                      className="flex h-14 items-center justify-between rounded-lg px-2 transition-colors hover:bg-ig-surface"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <img
+                          src={follower.userImage || "/default-avatar.png"}
+                          alt={follower.userNickname || ""}
+                          className="h-9 w-9 shrink-0 rounded-full bg-ig-surface object-cover"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-[14px] font-semibold text-ig-text">
+                            {follower.userNickname}
+                          </p>
+                          {follower.userFullname && (
+                            <p className="truncate text-[12px] text-ig-muted">
+                              {follower.userFullname}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {!item.friend && !followedUsers.has(follower.id) && (
+                        <button
+                          type="button"
+                          className="ig-press shrink-0 text-[12px] font-semibold text-ig-accent hover:opacity-85"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleAddFollow(follower.id);
+                          }}
+                        >
+                          {t("RecommentUser.follow")}
+                        </button>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-      {/* Danh sách gợi ý người dùng */}
-      <div className="mt-5">
-        {userList.length > 0 && (
-          <div className="flex justify-between px-3 mb-2">
-            <p className="text-gray-500 font-bold text-sm">
+          {/* Danh sách gợi ý cho bạn */}
+          <section className="mt-6">
+            <h2 className="mb-2 px-2 text-[14px] font-semibold text-ig-muted">
               {t("RecommentUser.suggestedForYou")}
-            </p>
-            <p className="text-white text-sm cursor-pointer hover:underline">
-              {t("RecommentUser.seeAll")}
-            </p>
-          </div>
-        )}
-        <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-          {userList.map((item) => (
-            <Link
-              key={item.id}
-              to={`${Route.friend_profile}/${item.id}`}
-              className="w-full flex items-center justify-between p-3 hover:bg-gray-900 rounded-md group"
-            >
-              <div className="flex items-center gap-x-4">
-                <img
-                  src={
-                    item.userImage === null
-                      ? "https://byvn.net/Eq9z"
-                      : item.userImage
-                  }
-                  alt={item.userNickname}
-                  className="w-8 h-8 rounded-full object-cover"
-                  style={{ imageRendering: "crisp-edges" }}
-                />
-                <p className="text-white">{item.userNickname}</p>
+            </h2>
+            {userList.length === 0 ? (
+              <p className="px-2 py-3 text-[12px] text-ig-faint">
+                {t("RecommentUser.noSuggestions")}
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {userList.slice(0, 6).map((item) => (
+                  <Link
+                    key={item.id}
+                    to={`${Route.friend_profile}/${item.id}`}
+                    className="flex h-14 items-center justify-between rounded-lg px-2 transition-colors hover:bg-ig-surface"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <img
+                        src={item.userImage || "/default-avatar.png"}
+                        alt={item.userNickname || ""}
+                        className="h-9 w-9 shrink-0 rounded-full bg-ig-surface object-cover"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-semibold text-ig-text">
+                          {item.userNickname}
+                        </p>
+                        {item.userFullname && (
+                          <p className="truncate text-[12px] text-ig-muted">
+                            {item.userFullname}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {!followedUsers.has(item.id) && (
+                      <button
+                        type="button"
+                        className="ig-press shrink-0 text-[12px] font-semibold text-ig-accent hover:opacity-85"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleAddFollow(item.id);
+                        }}
+                      >
+                        {t("RecommentUser.follow")}
+                      </button>
+                    )}
+                  </Link>
+                ))}
               </div>
-              {!followedUsers.has(item.id) && (
-                <button
-                  className="text-blue-400 text-sm hover:text-blue-600 font-medium"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAddFollow(item.id);
-                  }}
-                >
-                  {t("RecommentUser.follow")}
-                </button>
-              )}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
+            )}
+          </section>
+        </>
+      )}
+    </aside>
   );
 };
 

@@ -1,6 +1,14 @@
-// import không đổi
-import React, { useState, useEffect } from "react";
-import { GrFormPrevious, GrFormNext } from "react-icons/gr";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  Lock,
+  MoreHorizontal,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import {
   getCommentsByPostId,
   addComment,
@@ -10,6 +18,44 @@ import notificationSocket from "../../../../Service/NotificationSocket";
 import { useTranslation } from "react-i18next";
 import { handleUpdateStatus } from "../../../../Service/postApi";
 import { toast } from "react-toastify";
+import { formatTime } from "../../../../Utils";
+
+const AccessIcon = ({ access, t }) => {
+  if (access === "PUBLIC") {
+    return (
+      <span
+        title={t("newFed.public")}
+        aria-label={t("newFed.public")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Globe size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (access === "FRIENDS" || access === "ONLY_FRIEND") {
+    return (
+      <span
+        title={t("CreateNew.friends")}
+        aria-label={t("CreateNew.friends")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Users size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (access === "PRIVATE") {
+    return (
+      <span
+        title={t("newFed.private")}
+        aria-label={t("newFed.private")}
+        className="inline-flex items-center text-ig-faint"
+      >
+        <Lock size={13} strokeWidth={1.5} aria-hidden="true" />
+      </span>
+    );
+  }
+  return null;
+};
 
 const ModalCart = ({
   isOpen,
@@ -22,18 +68,24 @@ const ModalCart = ({
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [likes, setLikes] = useState(post?.likesCount || 0);
-  const [commentsCount, setCommentsCount] = useState(post?.commentsCount || 0);
-  const userredux = useSelector((state) => state.login.userInfo);
+  const [showMenu, setShowMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [showMenu, setShowMenu] = useState(false);
+  const commentInputRef = useRef(null);
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+    setShowMenu(false);
+    setConfirmDelete(false);
+  }, [post?.id, isOpen]);
+
   useEffect(() => {
     if (!isOpen || !post?.id || !userInfo?.id) return;
     const fetchComments = async () => {
       try {
         const response = await getCommentsByPostId(post.id);
-        setComments(response.data || []);
+        setComments(Array.isArray(response?.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching comments:", error);
       }
@@ -42,7 +94,7 @@ const ModalCart = ({
   }, [isOpen, post?.id, userInfo?.id]);
 
   useEffect(() => {
-    // notificationSocket.init(dispatch, userInfo.id);
+    if (!post?.id) return;
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (comment) => {
         if (comment.postId === post.id) {
@@ -50,8 +102,7 @@ const ModalCart = ({
             if (prev.some((c) => c.id === comment.id)) return prev;
             return [comment, ...prev];
           });
-          if (comment.commentsCount != null) {
-            setCommentsCount(comment.commentsCount);
+          if (comment.commentsCount != null && onCommentAdded) {
             onCommentAdded(post.id, comment.commentsCount);
           }
         }
@@ -60,240 +111,303 @@ const ModalCart = ({
     return () => {
       unsubscribeComments();
     };
-  }, [userInfo?.id, dispatch, post?.id]);
+  }, [userInfo?.id, dispatch, post?.id, onCommentAdded]);
 
-  const handleLike = () => setLikes((prev) => prev + 1);
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        if (confirmDelete) setConfirmDelete(false);
+        else if (showMenu) setShowMenu(false);
+        else setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, setIsOpen, confirmDelete, showMenu]);
+
   const handleCommentSubmit = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !post?.id) return;
     try {
-      await addComment(post.id, userInfo.id, newComment);
+      await addComment(post.id, userInfo.id, newComment.trim());
       const response = await getCommentsByPostId(post.id);
-      setComments(response.data || []);
-      onCommentAdded(post.id, response.data[0].commentsCount);
+      const list = Array.isArray(response?.data) ? response.data : [];
+      setComments(list);
+      if (onCommentAdded && list.length > 0) {
+        onCommentAdded(post.id, list[0].commentsCount ?? list.length);
+      }
       setNewComment("");
     } catch (error) {
       console.error("Error adding comment:", error);
+      toast.error(t("post.commentError"));
     }
   };
 
   const nextImage = () => {
+    if (!post?.media?.length) return;
     setCurrentImageIndex((prev) => (prev + 1) % post.media.length);
   };
+
   const prevImage = () => {
+    if (!post?.media?.length) return;
     setCurrentImageIndex((prev) =>
       prev === 0 ? post.media.length - 1 : prev - 1
     );
   };
-  const formatTimeAgo = (date) => {
-    const now = new Date();
-    const commentDate = new Date(date);
-    const diffInSeconds = Math.floor((now - commentDate) / 1000);
 
-    if (diffInSeconds < 60) return `${diffInSeconds} giây`;
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ`;
-    if (diffInSeconds < 604800)
-      return `${Math.floor(diffInSeconds / 86400)} ngày`;
-    return `${Math.floor(diffInSeconds / 604800)} tuần`;
+  const handleReplyClick = (nickname) => {
+    const prefix = `@${nickname} `;
+    setNewComment((prev) => (prev.startsWith(prefix) ? prev : `${prefix}${prev}`));
+    commentInputRef.current?.focus();
   };
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
 
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  const handleDeletePost = async (post) => {
-    const data = {
-      id: post.id,
-      status: "False",
-    };
-    const response = await handleUpdateStatus(data);
-    if (response && response.statusCode === 200) {
-      fetchPostData();
-      setIsOpen(false);
-      toast.success("Xóa bài viết thành công");
+  const handleDeletePost = async () => {
+    if (!post?.id) return;
+    try {
+      const response = await handleUpdateStatus({
+        id: post.id,
+        status: "False",
+      });
+      if (response && response.statusCode === 200) {
+        if (fetchPostData) fetchPostData();
+        setIsOpen(false);
+        toast.success(t("post.deleteSuccess"));
+      }
+    } catch (error) {
+      console.error("Delete post error:", error);
+      toast.error(t("post.deleteError"));
     }
   };
-  if (!isOpen) return null;
+
+  if (!isOpen || !post) return null;
+
+  const currentMedia = post.media?.[currentImageIndex];
+  const isVideoMedia =
+    currentMedia?.type === "VIDEO" || currentMedia?.url?.endsWith(".mp4");
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black bg-opacity-80">
-      <div className="relative flex w-[90%] max-w-5xl h-[85vh] bg-black rounded-xl overflow-hidden border border-gray-700 shadow-lg">
-        {/* Image/Video Section */}
-        <div className="w-1/2 bg-black relative">
-          {post?.media?.[currentImageIndex]?.type === "VIDEO" ? (
+    <div
+      onClick={() => setIsOpen(false)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ig-ground/85 p-4"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("newFed.comment")}
+        onClick={(e) => e.stopPropagation()}
+        className="ig-modal-panel relative flex h-[85dvh] w-full max-w-5xl flex-col overflow-hidden rounded-panel border border-ig-border bg-ig-ground shadow-lg md:flex-row"
+      >
+        {/* Vùng ảnh/video */}
+        <div className="relative flex h-1/2 w-full items-center justify-center bg-ig-ground md:h-full md:w-1/2 border-b md:border-b-0 md:border-r border-ig-border">
+          {isVideoMedia ? (
             <video
-              src={post?.media?.[currentImageIndex]?.url}
-              className="w-full h-full object-contain"
+              src={currentMedia?.url}
+              className="h-full w-full object-contain"
               controls
               autoPlay
               loop
             />
           ) : (
             <img
-              src={
-                post?.media?.[currentImageIndex]?.url ||
-                "https://via.placeholder.com/150"
-              }
-              className="w-full h-full object-contain"
-              alt="Post"
+              src={currentMedia?.url || "/default-avatar.png"}
+              className="h-full w-full object-contain"
+              alt={post.title || ""}
             />
           )}
-          {post?.media?.length > 1 && (
+          {post.media?.length > 1 && (
             <>
               <button
+                type="button"
+                aria-label={t("story.previous")}
+                title={t("story.previous")}
                 onClick={prevImage}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black/60 p-2 rounded-full text-white hover:bg-black/80"
+                className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
               >
-                <GrFormPrevious size={24} />
+                <ChevronLeft size={18} strokeWidth={1.5} />
               </button>
               <button
+                type="button"
+                aria-label={t("story.next")}
+                title={t("story.next")}
                 onClick={nextImage}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black/60 p-2 rounded-full text-white hover:bg-black/80"
+                className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
               >
-                <GrFormNext size={24} />
+                <ChevronRight size={18} strokeWidth={1.5} />
               </button>
-              <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 text-xs text-white bg-black/50 px-3 py-1 rounded-full">
-                {currentImageIndex + 1}/{post.media.length}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-control border border-ig-border bg-ig-ground/80 px-2.5 py-0.5 text-[12px] text-ig-text tabular-nums">
+                {currentImageIndex + 1} / {post.media.length}
               </div>
             </>
           )}
         </div>
 
-        {/* Comment Section */}
-        <div className="w-1/2 flex flex-col justify-between p-4 bg-black text-white overflow-hidden">
+        {/* Vùng bình luận */}
+        <div className="flex h-1/2 w-full flex-col justify-between bg-ig-ground text-ig-text md:h-full md:w-1/2">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4 px-2">
-            {/* Avatar + Nickname + Time + Access */}
-            <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-between border-b border-ig-rule px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
               <img
-                src={post?.user?.userImage || "https://via.placeholder.com/150"}
-                className="w-10 h-10 rounded-full border-2 border-pink-500 object-cover"
-                alt="User"
+                src={post.user?.userImage || "/default-avatar.png"}
+                className="h-9 w-9 shrink-0 rounded-full bg-ig-surface object-cover"
+                alt={post.user?.userNickname || ""}
               />
-              <div className="flex flex-col">
-                <p className="text-sm font-medium text-white">
-                  {post?.user?.userNickname || "Unknown"}
+              <div className="min-w-0">
+                <p className="truncate text-[14px] font-semibold text-ig-text">
+                  {post.user?.userNickname || t("story.user")}
                 </p>
-                <div className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
-                  <span>
-                    {new Date(post?.createdAt).toLocaleString("vi-VN")}
-                  </span>
-
-                  {post?.access === "PUBLIC" && (
-                    <div className="relative group">
-                      <span title={t("newFed.public")} className="text-sm">
-                        🌍
-                      </span>
-                    </div>
-                  )}
-                  {post?.access === "FRIENDS" && (
-                    <div className="relative group">
-                      <span title="Chỉ bạn bè" className="text-sm">
-                        👥
-                      </span>
-                    </div>
-                  )}
-                  {post?.access === "PRIVATE" && (
-                    <div className="relative group">
-                      <span title={t("newFed.private")} className="text-sm">
-                        🔒
-                      </span>
-                    </div>
-                  )}
+                <div className="flex items-center gap-1.5 text-[12px] text-ig-faint tabular-nums">
+                  <span>{formatTime(post.createdAt, t)}</span>
+                  <AccessIcon access={post?.access} t={t} />
                 </div>
               </div>
             </div>
 
-            {/* Actions: ... and ✖ */}
-            <div className="flex items-center gap-2">
-              {userredux?.id === post.user?.id ? (
-                <div
-                  className="text-xl cursor-pointer text-gray-400 hover:text-white"
-                  onClick={() => setShowMenu(!showMenu)}
-                >
-                  ...
-                </div>
-              ) : (
-                ""
-              )}
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-white transition text-xl"
-              >
-                ✖
-              </button>
-              {showMenu && (
-                <ul className="absolute top-14 right-0 w-40 bg-neutral-800 border border-neutral-700 rounded-md shadow-md overflow-hidden text-sm z-50">
-                  <li
-                    className="px-4 py-2 hover:bg-neutral-700 cursor-pointer"
-                    onClick={() => handleDeletePost(post)}
+            <div className="flex items-center gap-1">
+              {userInfo?.id === post.user?.id && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label={t("story.options")}
+                    title={t("story.options")}
+                    aria-expanded={showMenu}
+                    onClick={() => setShowMenu((prev) => !prev)}
+                    className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
                   >
-                    Xóa bài viết
-                  </li>
-                  <li className="px-4 py-2 hover:bg-neutral-700 cursor-pointer">
-                    Chỉnh sửa đối tượng
-                  </li>
-                </ul>
+                    <MoreHorizontal size={18} strokeWidth={1.5} />
+                  </button>
+                  {showMenu && (
+                    <div className="ig-modal-panel absolute right-0 top-10 z-50 w-44 rounded-panel border border-ig-border bg-ig-raised p-1.5 shadow-lg">
+                      {!confirmDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(true)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[14px] font-medium text-ig-like hover:bg-ig-surface"
+                        >
+                          <Trash2 size={16} strokeWidth={1.5} />
+                          {t("post.deletePost")}
+                        </button>
+                      ) : (
+                        <div className="p-2">
+                          <p className="mb-2 text-[12px] text-ig-muted">
+                            {t("post.confirmDeletePost")}
+                          </p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDelete(false)}
+                              className="rounded-control px-2.5 py-1 text-[12px] text-ig-muted hover:text-ig-text"
+                            >
+                              {t("CreateNew.cancel")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDeletePost}
+                              className="ig-press rounded-control bg-ig-like px-2.5 py-1 text-[12px] font-semibold text-ig-text"
+                            >
+                              {t("story.confirmDeleteBtn")}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
+
+              <button
+                type="button"
+                aria-label={t("story.close")}
+                title={t("story.close")}
+                onClick={() => setIsOpen(false)}
+                className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
+              >
+                <X size={18} strokeWidth={1.5} />
+              </button>
             </div>
           </div>
 
-          {/* Caption */}
+          {/* Danh sách bình luận */}
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            {post.title && (
+              <div className="mb-4 flex items-start gap-3 border-b border-ig-rule pb-3">
+                <img
+                  src={post.user?.userImage || "/default-avatar.png"}
+                  className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover"
+                  alt={post.user?.userNickname || ""}
+                />
+                <div className="min-w-0 flex-1 text-[14px]">
+                  <span className="mr-2 font-semibold text-ig-text">
+                    {post.user?.userNickname}
+                  </span>
+                  <span className="text-ig-text">{post.title}</span>
+                </div>
+              </div>
+            )}
 
-          {/* Comment List */}
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
             {comments.length === 0 ? (
-              <p className="text-sm text-gray-500">Chưa có bình luận nào</p>
+              <p className="py-8 text-center text-[14px] text-ig-muted">
+                {t("post.noComments")}
+              </p>
             ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="flex items-start gap-2 mb-4">
-                  <img
-                    src={comment.userImage || "https://via.placeholder.com/150"}
-                    className="w-8 h-8 rounded-full object-cover border border-gray-600"
-                    alt="User"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <p className="font-medium text-white text-sm">
-                        {comment.userNickname}
+              <div className="space-y-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex items-start gap-3">
+                    <img
+                      src={comment.userImage || "/default-avatar.png"}
+                      className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover"
+                      alt={comment.userNickname || ""}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] leading-snug">
+                        <span className="mr-2 font-semibold text-ig-text">
+                          {comment.userNickname}
+                        </span>
+                        <span className="text-ig-text">{comment.content}</span>
                       </p>
-                      <p className="text-gray-300 text-sm">{comment.content}</p>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-sm text-gray-500">
-                        {formatTimeAgo(comment.createdAt)}
-                      </p>
-                      <button className="text-xs text-gray-500 hover:text-gray-300">
-                        Trả lời
-                      </button>
+                      <div className="mt-1 flex items-center gap-3 text-[12px] text-ig-faint tabular-nums">
+                        <span>{formatTime(comment.createdAt, t)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleReplyClick(comment.userNickname)}
+                          className="font-medium text-ig-muted hover:text-ig-text"
+                        >
+                          {t("post.reply")}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Add Comment */}
-          <div className="mt-3 flex items-center border-t border-gray-600 pt-3">
+          {/* Ô thêm bình luận */}
+          <div className="flex items-center gap-2 border-t border-ig-rule px-4 py-3">
             <input
+              ref={commentInputRef}
               type="text"
-              placeholder="Viết bình luận..."
-              className="flex-1 bg-transparent text-sm px-3 py-2 outline-none"
+              aria-label={t("post.commentPlaceholder")}
+              placeholder={t("post.commentPlaceholder")}
+              className="flex-1 bg-transparent py-1.5 text-[14px] text-ig-text placeholder-ig-faint focus:outline-none"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCommentSubmit();
+              }}
             />
             <button
-              className="ml-3 px-4 py-1.5 bg-pink-600 rounded text-white text-sm hover:bg-pink-700 transition"
+              type="button"
+              disabled={!newComment.trim()}
+              className="ig-press text-[14px] font-semibold text-ig-accent hover:opacity-85 disabled:opacity-40"
               onClick={handleCommentSubmit}
             >
-              Đăng
+              {t("post.postComment")}
             </button>
           </div>
         </div>

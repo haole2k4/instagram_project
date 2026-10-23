@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import {
-  handleGetAllFollower,
-  handleGetAllFollowing,
-} from "../../../../Service/Folower";
+import { handleGetAllFollowing } from "../../../../Service/Folower";
+import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 export default function ControllFlowering({ isOpening, onClosing, id }) {
   const [dataFollowering, setDataFollowering] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (isOpening) {
       fectDataFollowering();
@@ -15,9 +17,19 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
     }
 
     return () => document.body.classList.remove("overflow-hidden");
-  }, [isOpening]);
+  }, [isOpening, id]);
+
+  useEffect(() => {
+    if (!isOpening) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClosing?.();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpening, onClosing]);
 
   const fectDataFollowering = async () => {
+    if (!id) return;
     let res = await handleGetAllFollowing(id);
     if (res.statusCode === 200 && res.data) {
       setDataFollowering(res.data);
@@ -26,77 +38,82 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
 
   if (!isOpening) return null;
 
+  const filtered = dataFollowering.filter((user) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      user.following?.userNickname?.toLowerCase().includes(q) ||
+      user.following?.userFullname?.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <>
-      {/* Nền mờ */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+      onClick={onClosing}
+    >
       <div
-        className="fixed inset-0 bg-black bg-opacity-60 z-40"
-        onClick={onClosing} // Click nền để đóng
-      ></div>
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("userProfile.following")}
+        onClick={(e) => e.stopPropagation()}
+        className="ig-modal-panel w-full max-w-[400px] overflow-hidden rounded-xl border border-ig-border bg-ig-surface text-ig-text"
+      >
+        <div className="flex items-center justify-between border-b border-ig-rule px-4 py-3">
+          <h2 className="text-[16px] font-semibold">
+            {t("userProfile.following")}
+          </h2>
+          <button
+            type="button"
+            aria-label={t("common.close")}
+            className="text-ig-muted hover:text-ig-text"
+            onClick={onClosing}
+          >
+            <X size={20} strokeWidth={1.5} />
+          </button>
+        </div>
 
-      {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-900 rounded-xl p-4 w-[400px] z-50 max-h-[90vh] overflow-y-auto">
-        {/* Nội dung */}
-        <div className="bg-zinc-900 text-white w-full max-w-md rounded-xl overflow-hidden shadow-lg">
-          {/* Header */}
-          <div className="flex justify-between items-center px-4 py-3 border-b border-gray-700">
-            <h2 className="font-semibold text-lg">Đang theo dõi</h2>
-            <button
-              className="text-2xl font-light hover:text-gray-300"
-              onClick={onClosing}
+        <div className="px-4 py-2.5">
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t("search.placeholder")}
+            className="h-9 w-full rounded-lg border border-ig-border bg-ig-ground px-3 text-[14px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+          />
+        </div>
+
+        <div className="max-h-80 overflow-y-auto divide-y divide-ig-rule">
+          {filtered.map((user, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between px-4 py-3 hover:bg-ig-raised"
             >
-              &times;
-            </button>
-          </div>
-
-          {/* Search */}
-          <div className="px-4 py-2">
-            <input
-              type="text"
-              placeholder="Tìm kiếm"
-              className="w-full p-2 rounded bg-zinc-800 text-white placeholder-gray-400 outline-none"
-            />
-          </div>
-
-          {/* Danh sách */}
-          <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700">
-            {dataFollowering.map((user, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between px-4 py-3 hover:bg-zinc-800 transition"
-              >
-                <div className="flex items-center space-x-3">
-                  <img
-                    src={
-                      user.following?.userImage ||
-                      "https://via.placeholder.com/40"
-                    }
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {user.following?.userNickname}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {user.following?.userFullname}
-                    </p>
-                  </div>
+              <div className="flex min-w-0 items-center gap-3">
+                <img
+                  src={
+                    user.following?.userImage ||
+                    "https://via.placeholder.com/40"
+                  }
+                  alt=""
+                  className="h-10 w-10 shrink-0 rounded-full object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-semibold text-ig-text">
+                    {user.following?.userNickname}
+                  </p>
+                  <p className="truncate text-[12px] text-ig-muted">
+                    {user.following?.userFullname}
+                  </p>
                 </div>
-                <button
-                  className={`px-3 py-1 text-sm rounded font-medium ${
-                    user.isFollowing
-                      ? "bg-zinc-700 text-white cursor-default"
-                      : "bg-zinc-700 text-white hover:bg-blue-600"
-                  }`}
-                >
-                  {user.isFollowing ? "Đang theo dõi" : "Đang theo dõi"}
-                </button>
               </div>
-            ))}
-          </div>
+              <span className="shrink-0 rounded-lg border border-ig-border bg-ig-surface px-3 py-1.5 text-[13px] font-medium text-ig-muted">
+                {t("userProfile.following")}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

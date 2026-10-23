@@ -3,35 +3,35 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
+import { Instagram } from "lucide-react";
 import { userRegister } from "../../Service/AuthApi";
 
-const userSchema = yup.object().shape({
-  email: yup
-    .string()
-    .email("Email không đúng định dạng")
-    .required("Email không được bỏ trống"),
-  password: yup
-    .string()
-    .min(8, "Tối thiểu 8 ký tự")
-    .max(12, "Tối đa 12 ký tự")
-    .required("Mật khẩu là bắt buộc"),
-  fullname: yup
-    .string()
-    .matches(/^[A-Za-zÀ-ỹ\s]+$/, "Tên đầy đủ chỉ được chứa chữ cái")
-    .required("Tên đầy đủ không được bỏ trống"),
-
-  username: yup
-    .string()
-    .matches(
-      /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/,
-      "Tên người dùng từ 4-16 ký tự, bắt đầu bằng chữ cái, chỉ chứa chữ, số hoặc dấu gạch dưới"
-    )
-    .required("Tên người dùng không được bỏ trống"),
-});
-
 const Register = () => {
-  let navi = useNavigate();
+  const navi = useNavigate();
+  const { t } = useTranslation();
+
+  const userSchema = yup.object().shape({
+    email: yup
+      .string()
+      .email(t("auth.emailInvalid"))
+      .required(t("auth.emailRequired")),
+    password: yup
+      .string()
+      .min(8, t("auth.passwordMin"))
+      .max(12, t("auth.passwordMax"))
+      .required(t("auth.passwordRequired")),
+    fullname: yup
+      .string()
+      .matches(/^[A-Za-zÀ-ỹ\s]+$/, t("auth.fullnameInvalid"))
+      .required(t("auth.fullnameRequired")),
+    username: yup
+      .string()
+      .matches(/^[a-zA-Z][a-zA-Z0-9_]{3,15}$/, t("auth.usernameInvalid"))
+      .required(t("auth.usernameRequired")),
+  });
+
   const {
     register,
     handleSubmit,
@@ -44,105 +44,113 @@ const Register = () => {
   const handleRegister = async (data) => {
     try {
       let res = await userRegister(data);
-      console.log("Response:", res);
-
       if (res && res.statusCode === 201) {
-        toast.success("Đăng kí tài khoản thành công!");
+        toast.success(t("auth.registerSuccess"));
         setTimeout(() => {
           navi("/login");
-        }, 3000);
+        }, 1500);
       }
     } catch (error) {
       if (error.response && error.response.data) {
-        toast.error(
-          error.response.data.error || "Có lỗi xảy ra, vui lòng thử lại!"
-        );
+        toast.error(error.response.data.error || t("auth.genericError"));
       } else {
-        toast.error("Lỗi kết nối, vui lòng thử lại sau.");
+        toast.error(t("auth.networkError"));
       }
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96 text-center">
-        <h1 className="text-4xl font-logo mb-2">Instagram</h1>
-        <p className="text-gray-600 text-sm mb-4">
-          Đăng ký để xem ảnh và video từ bạn bè.
+    <div className="flex min-h-screen flex-col items-center justify-center bg-ig-ground px-4 text-ig-text">
+      <div className="w-full max-w-[384px] rounded-xl border border-ig-border bg-ig-surface p-8 text-center">
+        <div className="mb-2 flex items-center justify-center gap-2.5">
+          <Instagram size={24} strokeWidth={1.5} aria-hidden="true" />
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em]">
+            Instagram
+          </h1>
+        </div>
+        <p className="mb-6 text-[13px] text-ig-muted">
+          {t("auth.registerSubtitle")}
         </p>
 
-        <div className="relative flex items-center my-4">
-          <hr className="w-full border-gray-300" />
-          <span className="absolute inset-x-0 text-gray-400 bg-white px-2 text-sm mx-auto">
-            HOẶC
-          </span>
-        </div>
+        <form
+          className="space-y-3.5"
+          onSubmit={handleSubmit(handleRegister)}
+          noValidate
+        >
+          <div>
+            <input
+              type="email"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              placeholder={t("auth.email")}
+              {...register("email")}
+            />
+            {errors.email && (
+              <span className="mt-1 block text-left text-[12px] text-ig-like">
+                {errors.email.message}
+              </span>
+            )}
+          </div>
 
-        <form className="space-y-3" onSubmit={handleSubmit(handleRegister)}>
-          <input
-            type="text"
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none transition"
-            placeholder="Số di động hoặc email"
-            {...register("email")}
-          />
-          {errors.email && (
-            <span className="text-red-600 text-sm mt-1 block text-left">
-              {errors.email.message}
-            </span>
-          )}
+          <div>
+            <input
+              type="password"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              placeholder={t("auth.password")}
+              {...register("password")}
+            />
+            {errors.password && (
+              <span className="mt-1 block text-left text-[12px] text-ig-like">
+                {errors.password.message}
+              </span>
+            )}
+          </div>
 
-          <input
-            type="password"
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none transition"
-            placeholder="Mật khẩu"
-            {...register("password")}
-          />
-          {errors.password && (
-            <span className="text-red-600 text-sm mt-1 block text-left">
-              {errors.password.message}
-            </span>
-          )}
+          <div>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              placeholder={t("auth.fullname")}
+              {...register("fullname")}
+            />
+            {errors.fullname && (
+              <span className="mt-1 block text-left text-[12px] text-ig-like">
+                {errors.fullname.message}
+              </span>
+            )}
+          </div>
 
-          <input
-            type="text"
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none transition"
-            placeholder="Tên đầy đủ"
-            {...register("fullname")}
-          />
-          {errors.fullname && (
-            <span className="text-red-600 text-sm mt-1 block text-left">
-              {errors.fullname.message}
-            </span>
-          )}
+          <div>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              placeholder={t("auth.username")}
+              {...register("username")}
+            />
+            {errors.username && (
+              <span className="mt-1 block text-left text-[12px] text-ig-like">
+                {errors.username.message}
+              </span>
+            )}
+          </div>
 
-          <input
-            type="text"
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 outline-none transition"
-            placeholder="Tên người dùng"
-            {...register("username")}
-          />
-          {errors.username && (
-            <span className="text-red-600 text-sm mt-1 block text-left">
-              {errors.username.message}
-            </span>
-          )}
-
-          <button className="w-full bg-blue-500 text-white font-semibold py-3 rounded-lg hover:bg-blue-600 transition">
-            Đăng ký
+          <button
+            type="submit"
+            className="ig-press w-full rounded-lg bg-ig-accent py-2.5 text-[14px] font-semibold text-white hover:opacity-90"
+          >
+            {t("auth.register")}
           </button>
         </form>
       </div>
 
-      <div className="bg-white mt-4 p-4 border border-gray-300 rounded-lg text-center w-96">
-        Bạn có tài khoản?{" "}
+      <div className="mt-3 w-full max-w-[384px] rounded-xl border border-ig-border bg-ig-surface p-4 text-center text-[14px] text-ig-muted">
+        {t("auth.haveAccount")}{" "}
         <Link
           to="/login"
-          className="text-blue-600 font-semibold hover:underline"
+          className="font-semibold text-ig-accent hover:underline"
         >
-          Đăng nhập
+          {t("auth.login")}
         </Link>
       </div>
-      <ToastContainer position="top-right" autoClose={5000} />
     </div>
   );
 };

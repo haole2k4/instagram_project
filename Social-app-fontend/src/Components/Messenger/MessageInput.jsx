@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FaSmile, FaHeart } from 'react-icons/fa';
-import Picker from 'emoji-picker-react';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Heart, Smile } from "lucide-react";
+import Picker from "emoji-picker-react";
 
-const MessageInput = ({ value, onChange, onSend, inputRef, isBlocked, onFocus }) => {
+const MessageInput = ({
+  value,
+  onChange,
+  onSend,
+  inputRef,
+  isBlocked,
+  onFocus,
+}) => {
   const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey && !isBlocked) {
       e.preventDefault();
       onSend();
@@ -21,59 +28,61 @@ const MessageInput = ({ value, onChange, onSend, inputRef, isBlocked, onFocus })
   };
 
   const handleSendHeart = () => {
-    onSend("❤️");
+    onSend("♥");
   };
 
   return (
-    <div className="p-3 bg-black">
+    <div className="border-t border-ig-border bg-ig-ground p-3">
       {isBlocked ? (
-        <div className="bg-gray-800 p-3 rounded-lg text-center text-white">
+        <div className="rounded-panel border border-ig-border bg-ig-surface p-3 text-center text-[14px] text-ig-muted">
           {t("messenger.blockedMessage")}
         </div>
       ) : (
-        <div className="relative flex items-center bg-black rounded-full px-1 border border-gray-700">
-          {/* Emoji picker */}
+        <div className="relative flex items-center rounded-control border border-ig-border bg-ig-surface px-2 py-1">
           <button
             type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="text-gray-400 hover:text-gray-200 transition-colors p-2"
+            aria-label="Emoji"
+            title="Emoji"
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className="ig-press flex h-9 w-9 items-center justify-center rounded-full text-ig-muted hover:text-ig-text"
           >
-            <FaSmile size={18} />
+            <Smile size={18} strokeWidth={1.5} aria-hidden="true" />
           </button>
           {showEmojiPicker && (
-            <div className="absolute bottom-14 left-0 z-10 bg-black">
-              <Picker onEmojiClick={handleEmojiClick} />
+            <div className="ig-modal-panel absolute bottom-14 left-0 z-20 overflow-hidden rounded-panel border border-ig-border bg-ig-raised shadow-lg">
+              <Picker onEmojiClick={handleEmojiClick} theme="dark" />
             </div>
           )}
 
-          {/* Message input */}
           <textarea
             ref={inputRef}
             value={value}
+            aria-label={t("messenger.typeMessage")}
             onChange={onChange}
-            onKeyPress={handleKeyPress}
-            placeholder={t('messenger.typeMessage')}
-            className="flex-1 bg-transparent outline-none resize-none px-3 h-10 max-h-10 overflow-y-auto py-2 text-white"
+            onKeyDown={handleKeyDown}
+            placeholder={t("messenger.typeMessage")}
+            className="max-h-10 h-9 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-1.5 text-[14px] text-ig-text placeholder-ig-faint focus:outline-none"
             rows={1}
-            onFocus={onFocus} // <-- thêm dòng này
+            onFocus={onFocus}
           />
 
-          {/* Send button or heart button */}
           {value.trim() ? (
             <button
               type="button"
               onClick={() => onSend()}
-              className="text-gray-400 hover:text-blue-500 active:text-white px-4 py-2 rounded-full font-semibold transition-colors"
+              className="ig-press rounded-control px-3.5 py-1.5 text-[14px] font-semibold text-ig-accent hover:opacity-85"
             >
-              {t('messenger.send')}
+              {t("messenger.send")}
             </button>
           ) : (
             <button
               type="button"
+              aria-label={t("newFed.like")}
+              title={t("newFed.like")}
               onClick={handleSendHeart}
-              className="text-gray-400 hover:text-red-500 active:text-red-600 px-4 py-2 rounded-full transition-colors"
+              className="ig-press flex h-9 w-9 items-center justify-center rounded-full text-ig-muted hover:text-ig-like"
             >
-              <FaHeart size={22} />
+              <Heart size={20} strokeWidth={1.5} aria-hidden="true" />
             </button>
           )}
         </div>

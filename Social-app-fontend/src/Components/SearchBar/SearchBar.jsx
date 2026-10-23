@@ -4,62 +4,72 @@ import { handleGetAllUser } from "../../Service/UserAPI";
 import { Link } from "react-router-dom";
 import Route from "../../Components/Routes/index";
 import { useTranslation } from "react-i18next";
+import { RowListSkeleton } from "../Common/FlatSkeleton";
+import EmptyState from "../Common/EmptyState";
 
-const SearchBar = ({ isOpen, onClose }) => {
+const SearchBar = ({ isOpen = true, onClose, standalone = false }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [originalUsers, setOriginalUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const searchRef = useRef(null); 
+  const searchRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
         const response = await handleGetAllUser();
-        setOriginalUsers(response.data);
+        setOriginalUsers(Array.isArray(response?.data) ? response.data : []);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching users:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUsers();
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen || standalone || !onClose) return;
+
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         onClose();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, standalone]);
 
   const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
+    const value = e.target.value;
     setSearchTerm(value);
+    const normalized = value.toLowerCase().trim();
 
-    if (value.trim() === "") {
+    if (!normalized) {
       setFilteredUsers([]);
       return;
     }
 
     const filtered = originalUsers.filter(
       (user) =>
-        user.userNickname.toLowerCase().includes(value) ||
-        user.userFullname.toLowerCase().includes(value)
+        (user.userNickname || "").toLowerCase().includes(normalized) ||
+        (user.userFullname || "").toLowerCase().includes(normalized)
     );
     setFilteredUsers(filtered);
   };
@@ -71,30 +81,34 @@ const SearchBar = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const containerClass = standalone
+    ? "mx-auto flex w-full max-w-[630px] flex-col rounded-panel border border-ig-border bg-ig-ground"
+    : "fixed bottom-14 left-0 top-0 z-[100] flex w-full flex-col border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]";
+
+  const HeadingTag = standalone ? "h1" : "h2";
+
   return (
-    <div
-      ref={searchRef}
-      className="fixed bottom-14 left-0 top-0 z-[100] flex w-full flex-col border-r border-ig-border bg-ig-ground md:bottom-0 md:left-rail md:w-[397px]"
-    >
-      {/* Header */}
+    <div ref={searchRef} className={containerClass}>
       <div className="sticky top-0 border-b border-ig-border bg-ig-ground px-4 pb-3 pt-3">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[24px] font-semibold text-ig-text">
+        <div className="mb-4 flex items-center justify-between">
+          <HeadingTag className="text-[24px] font-semibold text-ig-text">
             {t("search.title")}
-          </h2>
+          </HeadingTag>
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
               aria-label={t("search.close")}
+              title={t("search.close")}
               className="rounded-lg p-2 text-ig-muted transition-colors hover:text-ig-text"
             >
-              <X size={20} />
+              <X size={20} strokeWidth={1.5} />
             </button>
           )}
         </div>
         <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Search className="text-ig-faint" size={16} />
+          <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <Search className="text-ig-faint" size={16} strokeWidth={1.5} />
           </div>
           <input
             type="text"
@@ -102,78 +116,71 @@ const SearchBar = ({ isOpen, onClose }) => {
             placeholder={t("search.placeholder")}
             value={searchTerm}
             onChange={handleSearch}
-            className="w-full rounded-xl bg-ig-surface py-3 pl-10 pr-10 text-[15px] text-ig-text placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
+            className="w-full rounded-xl bg-ig-surface py-2.5 pl-10 pr-10 text-[14px] text-ig-text placeholder-ig-faint focus:outline-none focus:ring-2 focus:ring-ig-accent"
           />
           {searchTerm && (
             <button
+              type="button"
               onClick={handleClearSearch}
               aria-label={t("search.clear")}
+              title={t("search.clear")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-ig-muted transition-colors hover:text-ig-text"
             >
-              <X size={14} />
+              <X size={14} strokeWidth={1.5} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-ig-border border-t-ig-accent"></div>
-          </div>
-        ) : searchTerm ? (
-          <div className="py-2">
+          <RowListSkeleton count={5} rowHeight="h-16" />
+        ) : searchTerm.trim() ? (
+          <div className="py-1">
             {filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
                 <Link
                   key={user.id}
                   to={`${Route.friend_profile}/${user.id}`}
                   onClick={onClose}
-                  className="flex items-center px-4 py-3 transition-colors hover:bg-ig-surface"
+                  className="flex h-16 items-center px-4 transition-colors hover:bg-ig-surface"
                 >
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <img
-                      src={user.userImage || "https://via.placeholder.com/150"}
-                      alt={user.userNickname}
-                      className="w-12 h-12 rounded-full object-cover"
+                      src={user.userImage || "/default-avatar.png"}
+                      alt={user.userNickname || ""}
+                      className="h-11 w-11 rounded-full bg-ig-surface object-cover"
                     />
                     {user.isOnline && (
-                      <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-ig-ground bg-ig-text"></div>
+                      <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-ig-ground bg-ig-text" />
                     )}
                   </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-ig-text text-[15px] font-semibold">
+                  <div className="ml-3 min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-semibold text-ig-text">
                       {user.userNickname}
                     </p>
-                    <div className="flex items-center text-ig-muted text-[13px]">
-                      <p>{user.userFullname}</p>
-                      <span className="mx-1">•</span>
-                      <p>{t("search.following")}</p>
-                    </div>
+                    {user.userFullname && (
+                      <p className="truncate text-[12px] text-ig-muted">
+                        {user.userFullname}
+                      </p>
+                    )}
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="px-4 py-8 text-center">
-                <div className="mb-4">
-                  <Search className="mx-auto text-ig-muted" size={32} />
-                </div>
-                <p className="text-ig-muted text-[15px]">
-                  {t("search.noResults", { term: searchTerm })}
-                </p>
-              </div>
+              <EmptyState
+                icon={Search}
+                title={t("search.noResults", { term: searchTerm })}
+                description={t("search.tryDifferentKeyword")}
+              />
             )}
           </div>
         ) : (
-          <div className="px-4 py-8 text-center">
-            <div className="mb-4">
-              <Search className="mx-auto text-ig-muted" size={32} />
-            </div>
-            <p className="text-ig-muted text-[15px]">
-              {t("search.searchPeople")}
-            </p>
-          </div>
+          <EmptyState
+            icon={Search}
+            title={t("search.searchPeople")}
+            description={t("search.placeholder")}
+          />
         )}
       </div>
     </div>

@@ -1,12 +1,7 @@
-import Login from "../Components/Auth/Login";
-import Register from "../Components/Auth/Register";
-import NewsFeed from "../Pages/NewsFeed/index";
-import Stories from "../Pages/Stories/index";
 import FormCreateNewsFeed from "../Pages/Create/RenderFormNewsFeed/RenderNewsFeed";
 import FormCreateStories from "../Pages/Create/RenderFormStories/RenderFormStories";
 import EditProfile from "../Pages/Profile/RenderFormEdit/RenderFormEdit";
 import Profile from "../Pages/Profile/RenderUserProfile/RenderUserProfile";
-import RecommendUser from "../Pages/RecommendUser";
 import Route from "../Components/Routes/index";
 import Search from "../Pages/Search/index";
 import Noti from "../Pages/Notification";
@@ -14,6 +9,7 @@ import Home from "../Pages/Home/index";
 import ChatPage from "../Pages/Chat/ChatPage";
 import StoryViewer from "../Components/Stories/StoryViewer";
 import FriendProfile from "../Components/Profile/UserProfile/FriendProfile";
+
 const routes = [
   { path: Route.profile, element: <Profile /> },
   { path: Route.default_session, element: <Home /> },
@@ -22,11 +18,11 @@ const routes = [
   { path: Route.edit_profile + "/:id", element: <EditProfile /> },
   { path: Route.friend_profile + "/:id", element: <FriendProfile /> },
   { path: Route.notification, element: <Noti /> },
+  { path: Route.chat_ai, element: <ChatPage /> },
   { path: Route.chat, element: <ChatPage /> },
   { path: Route.chat + "/:conversationId", element: <ChatPage /> },
   { path: Route.story + "/:id", element: <StoryViewer /> },
   { path: Route.search, element: <Search /> },
-  { path: Route.newsfeed, element: <NewsFeed /> },
 ];
 
 export default routes;

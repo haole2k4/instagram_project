@@ -1,4 +1,15 @@
 {
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Try again",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "more": "More options",
+    "previous": "Previous",
+    "next": "Next"
+  },
   "LargeNav": {
     "home": "Home",
     "search": "Search",
@@ -9,19 +20,26 @@
     "profile": "Profile"
   },
   "menu": {
-    "setting": "Setting"
+    "setting": "Settings"
   },
   "fromCreate": {
-    "title": "Edit Personal Page",
+    "title": "Edit Profile",
     "name": "Username",
     "phone": "Phone Number",
     "date": "Date of Birth",
     "gender": "Gender",
     "avata": "Profile Picture",
     "bio": "Biography",
-    "update": "Update"
+    "update": "Update",
+    "usernameMin": "Username must be at least 2 characters",
+    "usernameMax": "Username must be at most 20 characters",
+    "usernameRequired": "Username is required",
+    "phoneInvalid": "Phone number must contain only digits",
+    "phoneMin": "Phone number must be at least 10 digits",
+    "phoneRequired": "Phone number is required",
+    "bioMax": "Bio must be at most 200 characters",
+    "genderRequired": "Please select a gender"
   },
-
   "manageUser": {
     "editUser": "Edit User",
     "addUser": "Add User",
@@ -56,7 +74,6 @@
     "birthDateRequired": "Please select birth date",
     "genderRequired": "Please select gender"
   },
-
   "sidebar": {
     "adminTitle": "Instagram Management",
     "manageUsers": "Manage Users",
@@ -64,6 +81,7 @@
     "logout": "Logout",
     "welcome": "Welcome to Instagram system",
     "logoutSuccess": "Logout successful!",
+    "logoutFailed": "Logout failed, please try again.",
     "logoutError": "Logout failed, please try again.",
     "logoutSystemError": "An error occurred while logging out."
   },
@@ -159,18 +177,109 @@
     "videoCall": "Video Call",
     "welcomeToChat": "Welcome to Messages",
     "yesterday": "Yesterday",
-    "you": "You"
+    "you": "You",
+    "incomingCall": "Incoming video call",
+    "accept": "Accept",
+    "decline": "Decline",
+    "endCall": "End call",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "turnOffCamera": "Turn off camera",
+    "turnOnCamera": "Turn on camera"
+  },
+  "aiChat": {
+    "title": "AI Assistant",
+    "subtitle": "Ask questions directly in chat",
+    "welcomeTitle": "Chat with AI",
+    "welcomeDescription": "Ask questions, brainstorm post captions, or explore new ideas.",
+    "placeholder": "Ask AI anything...",
+    "typing": "Replying…",
+    "clearHistory": "Clear chat",
+    "errorResponse": "Could not reach AI right now. Please try again."
+  },
+  "story": {
+    "yourStory": "Your story",
+    "addStory": "Create story",
+    "pause": "Pause",
+    "play": "Play",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "deleteTitle": "Delete this story?",
+    "deleteConfirm": "Are you sure you want to delete this story? This action cannot be undone.",
+    "deleteSuccess": "Story deleted",
+    "deleteError": "Failed to delete story",
+    "notFound": "Story not found",
+    "empty": "No stories yet",
+    "createSuccess": "Story published",
+    "createError": "Could not create story, please try again",
+    "uploadMedia": "Please select an image or video for your story"
+  },
+  "post": {
+    "like": "Like",
+    "unlike": "Unlike",
+    "comment": "Comment",
+    "share": "Share",
+    "save": "Save post",
+    "addComment": "Add a comment...",
+    "postComment": "Post",
+    "reply": "Reply",
+    "replyingTo": "Replying to @{{username}}",
+    "deletePost": "Delete post",
+    "deleteConfirmTitle": "Delete post?",
+    "deleteConfirmMessage": "Are you sure you want to delete this post?",
+    "deleteSuccess": "Post deleted",
+    "deleteError": "Could not delete post",
+    "privacyPublic": "Public",
+    "privacyFriends": "Friends",
+    "privacyPrivate": "Only me",
+    "moreText": "more",
+    "lessText": "less",
+    "emptyFeedTitle": "No posts yet",
+    "emptyFeedDescription": "When you or people you follow share posts, they will appear here.",
+    "loadErrorTitle": "Could not load feed",
+    "loadErrorDescription": "Something went wrong while loading posts. Please try again.",
+    "noComments": "No comments yet.",
+    "options": "Post options"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "fullname": "Full Name",
+    "username": "Username",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Have an account?",
+    "registerSubtitle": "Sign up to see photos and videos from your friends.",
+    "loginSuccess": "Logged in successfully",
+    "registerSuccess": "Account created successfully!",
+    "emailInvalid": "Invalid email address",
+    "emailRequired": "Email is required",
+    "passwordMin": "At least 8 characters",
+    "passwordMax": "At most 12 characters",
+    "passwordRequired": "Password is required",
+    "fullnameInvalid": "Full name may only contain letters",
+    "fullnameRequired": "Full name is required",
+    "usernameInvalid": "Username must be 4-16 characters, start with a letter, and contain only letters, numbers, or underscores",
+    "usernameRequired": "Username is required",
+    "genericError": "Something went wrong, please try again!",
+    "networkError": "Network error, please try again later."
   },
   "moreMenu": {
     "activity": "Your Activity",
     "report": "Report",
     "switchAccount": "Switch Account",
-    "logout": "Logout"
+    "logout": "Log out",
+    "admin": "Admin dashboard"
   },
   "userProfile": {
     "editProfile": "Edit Profile",
-    "editProfileSuccess": "Edit Profile Success",
-    "editProfileError": "Edit Profile Error",
+    "editProfileSuccess": "Profile updated successfully",
+    "editProfileError": "Failed to update profile",
     "posts": "Posts",
     "tagged": "Tagged",
     "storyHighlights": "Story Highlights",
@@ -182,27 +291,31 @@
     "followers": "Followers",
     "seeAll": "See All",
     "suggestedForYou": "Suggested for You",
-    "follow": "Follow"
+    "follow": "Follow",
+    "noSuggestions": "No new suggestions"
   },
   "CreateNew": {
-    "title": "Tạo ",
-    "createNewsfeed": "Create Newsfeed",
+    "title": "Create new",
+    "createNewsfeed": "Create Post",
     "createStory": "Create Story",
     "cancel": "Cancel",
     "tellMeWhatYouThink": "New Post",
     "howDoYouFeelToday": "New Story",
     "caption": "Caption",
     "image": "Image",
-    "loading": "Loading",
-    "create": "Create",
-    "createPost": "Create Post"
+    "loading": "Publishing...",
+    "create": "Share",
+    "createPost": "Create Post",
+    "selectMedia": "Select photo or video from your device"
   },
   "search": {
     "title": "Search",
-    "placeholder": "Search items",
+    "placeholder": "Search users",
     "clear": "Clear search",
     "close": "Close search",
-    "searchPeople": "Enter username"
+    "searchPeople": "Enter username",
+    "emptyPrompt": "Type a name or username to search.",
+    "noResults": "No matching users found."
   },
   "newFed": {
     "phut": "minutes ago",

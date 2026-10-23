@@ -1,26 +1,31 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useSelector } from "react-redux";
+import { ChevronRight, Plus, Search, Sparkles, Users } from "lucide-react";
 import { handleGetFollowingByUser } from "../../Service/UserAPI";
-import { FaUsers } from "react-icons/fa"; // Thêm icon cho group
+import Route from "../../Components/Routes/index";
+import { RowListSkeleton } from "../Common/FlatSkeleton";
+import EmptyState from "../Common/EmptyState";
 
 const ConversationList = ({
-  conversations,
+  conversations = [],
   currentConversationId,
+  isAIChatActive = false,
   onSelectConversation,
   loading,
   setShowNewConversation,
   onSearch,
   searchTerm,
   onStartNewChatWithUser,
+  hasActiveChat = false,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const currentUser = useSelector((state) => state.login?.userInfo) || {};
   const [friendCandidates, setFriendCandidates] = useState([]);
 
-  // Lấy danh sách bạn bè khi searchTerm thay đổi
   useEffect(() => {
     const fetchFriends = async () => {
       if (!searchTerm || !currentUser.id) {
@@ -29,15 +34,17 @@ const ConversationList = ({
       }
       try {
         const res = await handleGetFollowingByUser(currentUser.id);
-        const friends = (res.data || []).filter(
+        const friends = (res?.data || []).filter(
           (item) =>
             item.friend &&
-            (
-              item.following.userFullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              item.following.userNickname.toLowerCase().includes(searchTerm.toLowerCase())
-            )
+            ((item.following?.userFullname || "")
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+              (item.following?.userNickname || "")
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase()))
         );
-        setFriendCandidates(friends.map(item => item.following));
+        setFriendCandidates(friends.map((item) => item.following));
       } catch (error) {
         console.error("Error fetching friends:", error);
         setFriendCandidates([]);
@@ -46,46 +53,51 @@ const ConversationList = ({
     fetchFriends();
   }, [searchTerm, currentUser.id]);
 
-  // Tìm kiếm trong conversations - Sửa lại để xử lý cả group chat
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
-    
+
     return conversations.filter((conv) => {
-      // Nếu là group chat, tìm theo tên nhóm
       if (conv.isGroupChat) {
         return conv.name?.toLowerCase().includes(searchTerm.toLowerCase());
       }
-      
-      // Nếu là chat 1-1, tìm theo tên/nickname của người kia
+
       const otherUser = conv.participants?.find(
         (p) => (p.userId || p.id) !== currentUser?.id
       );
-      return otherUser && (
-        otherUser.userFullname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        otherUser.userNickname?.toLowerCase().includes(searchTerm.toLowerCase())
+      return (
+        otherUser &&
+        (otherUser.userFullname
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+          otherUser.userNickname
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()))
       );
     });
   }, [searchTerm, conversations, currentUser?.id]);
 
-  // Lọc bạn bè chưa có conversation
   const friendsWithoutConversation = useMemo(() => {
     if (!searchTerm || filteredConversations.length > 0) return [];
-    
-    // Lấy tất cả userId trong các conversation hiện có
+
     const conversationUserIds = conversations
-      .flatMap(conv => {
-        // Chỉ lấy id của những người trong chat 1-1, không lấy từ group chat
+      .flatMap((conv) => {
         if (!conv.isGroupChat) {
-          return conv.participants?.map(p => p.userId || p.id);
+          return conv.participants?.map((p) => p.userId || p.id) || [];
         }
         return [];
       })
-      .filter(id => id !== currentUser.id);
-    
+      .filter((id) => id !== currentUser.id);
+
     return friendCandidates.filter(
       (user) => !conversationUserIds.includes(user.id)
     );
-  }, [filteredConversations, friendCandidates, conversations, currentUser.id, searchTerm]);
+  }, [
+    filteredConversations,
+    friendCandidates,
+    conversations,
+    currentUser.id,
+    searchTerm,
+  ]);
 
   const formatLastMessageTime = (dateString) => {
     if (!dateString) return "";
@@ -100,20 +112,16 @@ const ConversationList = ({
     }
   };
 
-  // Hàm này cần được cải tiến để xử lý cả group chat
   const getConversationDisplay = (conversation) => {
-    // Xử lý cho group chat
     if (conversation.isGroupChat) {
       return {
         name: conversation.name || t("messenger.groupChat"),
-        image: "/group-avatar.png", // Avatar mặc định cho nhóm
+        image: "/group-avatar.png",
         isGroup: true,
-        participantCount: conversation.participants?.length || 0
+        participantCount: conversation.participants?.length || 0,
       };
     }
-    
-    // Xử lý cho chat 1-1
-    // Nếu đã có participants
+
     if (conversation.participants && conversation.participants.length > 0) {
       const otherUser = conversation.participants.find(
         (p) => (p.userId || p.id) !== currentUser?.id
@@ -122,130 +130,165 @@ const ConversationList = ({
         return {
           name: otherUser.userFullname || otherUser.userNickname,
           image: otherUser.userImage || "/default-avatar.png",
-          isGroup: false
+          isGroup: false,
         };
       }
     }
 
-    // Fallback: Trích xuất từ tên cuộc trò chuyện
     if (conversation.name && conversation.name.includes("between")) {
       const nameParts = conversation.name
         .replace("Chat between ", "")
         .split(" and ");
       const otherUserName = nameParts.find(
-        (name) => !name.toLowerCase().includes(currentUser?.userNickname?.toLowerCase())
+        (name) =>
+          !name
+            .toLowerCase()
+            .includes((currentUser?.userNickname || "").toLowerCase())
       );
 
       return {
         name: otherUserName,
         image: "/default-avatar.png",
-        isGroup: false
+        isGroup: false,
       };
     }
 
     return {
       name: t("messenger.untitled"),
       image: "/default-avatar.png",
-      isGroup: false
+      isGroup: false,
     };
   };
 
+  const TitleTag = hasActiveChat ? "h2" : "h1";
+
   return (
-    <div className="h-full flex flex-col bg-black">
-      {/* Header with title and new conversation button */}
-      <div className="p-4 flex justify-between items-center">
-        <h1 className="text-xl font-semibold text-white">
+    <div className="flex h-full flex-col bg-ig-ground text-ig-text">
+      {/* Header */}
+      <div className="flex h-16 items-center justify-between border-b border-ig-border px-4">
+        <TitleTag className="text-[20px] font-semibold text-ig-text md:text-[24px]">
           {t("messenger.title")}
-        </h1>
+        </TitleTag>
         <button
+          type="button"
           onClick={() => setShowNewConversation(true)}
-          className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
+          aria-label={t("messenger.createNewConversation")}
           title={t("messenger.createNewConversation")}
+          className="ig-press flex h-9 w-9 items-center justify-center rounded-lg border border-ig-border bg-ig-surface text-ig-text hover:bg-ig-raised"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <Plus size={18} strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
 
-      {/* Search input */}
-      <div className="p-3">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => onSearch(e.target.value)}
-          placeholder={t("messenger.searchConversations")}
-          className="w-full py-2 px-3 bg-black text-white border border-gray-300 rounded-3xl focus:border-blue-500 focus:outline-none"
-        />
+      {/* Ô tìm kiếm hội thoại */}
+      <div className="border-b border-ig-rule p-3">
+        <div className="relative">
+          <Search
+            size={15}
+            strokeWidth={1.5}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ig-faint"
+          />
+          <input
+            type="text"
+            value={searchTerm}
+            aria-label={t("messenger.searchConversations")}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder={t("messenger.searchConversations")}
+            className="w-full rounded-control border border-ig-border bg-ig-surface py-2 pl-9 pr-3 text-[14px] text-ig-text placeholder-ig-faint focus:border-ig-accent focus:outline-none"
+          />
+        </div>
       </div>
 
-      {/* Conversation list */}
-      <div className="overflow-y-auto flex-1">
+      {/* Hàng ghim Trợ lý AI (/user/chat/ai) */}
+      <Link
+        to={Route.chat_ai}
+        className={`flex h-16 shrink-0 items-center gap-3 border-b border-ig-rule px-4 transition-colors ${
+          isAIChatActive ? "bg-ig-surface" : "hover:bg-ig-surface/60"
+        }`}
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+          <Sparkles size={18} strokeWidth={1.5} aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between">
+            <p className="truncate text-[14px] font-semibold text-ig-text">
+              {t("aiChat.title")}
+            </p>
+          </div>
+          <p className="truncate text-[12px] text-ig-muted">
+            {t("aiChat.subtitle")}
+          </p>
+        </div>
+      </Link>
+
+      {/* Danh sách cuộc trò chuyện */}
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="text-center py-4 text-gray-500">
-            <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
-          </div>
-        ) : filteredConversations.length === 0 && friendsWithoutConversation.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>{t("messenger.noConversations")}</p>
-          </div>
+          <RowListSkeleton count={5} rowHeight="h-16" />
+        ) : filteredConversations.length === 0 &&
+          friendsWithoutConversation.length === 0 ? (
+          <EmptyState
+            title={t("messenger.noConversations")}
+            description={t("messenger.selectConversation")}
+          />
         ) : (
           <>
             {filteredConversations.map((conversation) => {
               const displayInfo = getConversationDisplay(conversation);
-              const isActive = conversation.id === currentConversationId;
+              const isActive =
+                !isAIChatActive && conversation.id === currentConversationId;
+              const hasUnread = conversation.unreadCount > 0;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={conversation.id}
                   onClick={() => onSelectConversation(conversation)}
-                  className={`
-                    flex items-center bg-black p-3 hover:bg-gray-950 cursor-pointer text-white
-                    ${isActive ? "bg-gray-900" : ""}
-                  `}
+                  className={`flex h-16 w-full items-center border-b border-ig-rule px-4 text-left transition-colors ${
+                    isActive ? "bg-ig-surface" : "hover:bg-ig-surface/60"
+                  }`}
                 >
                   {/* Avatar */}
-                  <div className="relative ">
+                  <div className="relative shrink-0">
                     {displayInfo.isGroup ? (
-                      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                        <FaUsers className="text-white" size={18} />
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+                        <Users size={18} strokeWidth={1.5} aria-hidden="true" />
                       </div>
                     ) : (
                       <img
                         src={displayInfo.image}
-                        alt="Avatar"
-                        className="w-10 h-10 rounded-full object-cover"
+                        alt={displayInfo.name || ""}
+                        className="h-11 w-11 rounded-full bg-ig-surface object-cover"
                       />
                     )}
-                    {conversation.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                        {conversation.unreadCount}
-                      </span>
+                    {hasUnread && (
+                      <span
+                        aria-label={`${conversation.unreadCount} unread`}
+                        className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-ig-ground bg-ig-like"
+                      />
                     )}
                   </div>
 
-                  {/* Content */}
-                  <div className="ml-3 flex-1 overflow-hidden">
-                    <div className="flex justify-between items-baseline">
-                      <h3 className="font-medium truncate">
+                  {/* Nội dung */}
+                  <div className="ml-3 min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p
+                        className={`truncate text-[14px] ${
+                          hasUnread
+                            ? "font-semibold text-ig-text"
+                            : "font-medium text-ig-text"
+                        }`}
+                      >
                         {displayInfo.name}
                         {displayInfo.isGroup && (
-                          <span className="text-xs text-gray-400 ml-2">
+                          <span className="ml-1.5 text-[12px] text-ig-muted tabular-nums">
                             ({displayInfo.participantCount})
                           </span>
                         )}
-                      </h3>
+                      </p>
                       {conversation.lastMessage && (
-                        <span className="text-xs text-gray-500">
+                        <span className="shrink-0 text-[12px] text-ig-faint tabular-nums">
                           {formatLastMessageTime(
                             conversation.lastMessage.createdAt
                           )}
@@ -254,50 +297,74 @@ const ConversationList = ({
                     </div>
 
                     {conversation.lastMessage && (
-                      <p className="text-sm text-gray-500 truncate">
-                        {displayInfo.isGroup && conversation.lastMessage.senderId !== currentUser?.id && (
-                          <span className="font-medium mr-1">
-                            {conversation.participants?.find(
-                              p => p.userId === conversation.lastMessage.senderId
-                            )?.userNickname || "User"}:
-                          </span>
-                        )}
+                      <p
+                        className={`truncate text-[12px] ${
+                          hasUnread ? "font-medium text-ig-text" : "text-ig-muted"
+                        }`}
+                      >
+                        {displayInfo.isGroup &&
+                          conversation.lastMessage.senderId !==
+                            currentUser?.id && (
+                            <span className="mr-1 font-medium">
+                              {conversation.participants?.find(
+                                (p) =>
+                                  p.userId ===
+                                  conversation.lastMessage.senderId
+                              )?.userNickname || "User"}
+                              :
+                            </span>
+                          )}
                         {conversation.lastMessage.senderId === currentUser?.id
-                          ? `${t("messenger.you")}: ${conversation.lastMessage.content}`
+                          ? `${t("messenger.you")}: ${
+                              conversation.lastMessage.content
+                            }`
                           : conversation.lastMessage.content}
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
               );
             })}
 
-            {/* Friends without conversation */}
-            {filteredConversations.length === 0 && friendsWithoutConversation.length > 0 && (
-              <div className="mt-4">
-                <p className="text-gray-400 px-3 mb-2">{t("messenger.noChatYetButFriend")}</p>
-                {friendsWithoutConversation.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center p-3 hover:bg-gray-800 rounded cursor-pointer transition-colors"
-                    onClick={() => onStartNewChatWithUser && onStartNewChatWithUser(user.id)}
-                  >
-                    <img
-                      src={user.userImage || "/default-avatar.png"}
-                      alt={user.userFullname}
-                      className="w-10 h-10 rounded-full mr-3"
-                    />
-                    <div className="flex-1">
-                      <p className="text-white font-medium">{user.userFullname}</p>
-                      <p className="text-gray-400 text-sm">@{user.userNickname}</p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Bạn bè chưa có hội thoại khi tìm kiếm */}
+            {filteredConversations.length === 0 &&
+              friendsWithoutConversation.length > 0 && (
+                <div className="py-2">
+                  <p className="px-4 py-2 text-[12px] font-medium text-ig-muted">
+                    {t("messenger.noChatYetButFriend")}
+                  </p>
+                  {friendsWithoutConversation.map((user) => (
+                    <button
+                      type="button"
+                      key={user.id}
+                      className="flex h-16 w-full items-center px-4 text-left transition-colors hover:bg-ig-surface"
+                      onClick={() =>
+                        onStartNewChatWithUser &&
+                        onStartNewChatWithUser(user.id)
+                      }
+                    >
+                      <img
+                        src={user.userImage || "/default-avatar.png"}
+                        alt={user.userFullname || ""}
+                        className="mr-3 h-11 w-11 shrink-0 rounded-full bg-ig-surface object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14px] font-semibold text-ig-text">
+                          {user.userFullname}
+                        </p>
+                        <p className="truncate text-[12px] text-ig-muted">
+                          @{user.userNickname}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        strokeWidth={1.5}
+                        className="text-ig-faint"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
           </>
         )}
       </div>

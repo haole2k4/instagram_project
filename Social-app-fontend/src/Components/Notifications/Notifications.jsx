@@ -1,48 +1,45 @@
 import React, { useState, useEffect } from "react";
-import { handlePostFollower } from "../../Service/UserAPI";
-// import webSocketService from "../../Service/WebSocketService";
 import notificationSocket from "../../Service/NotificationSocket";
-import {
-  fetchAllNotifications,
-  fetchAllNotificationsbyUser,
-} from "../../Service/notificationApi";
+import { fetchAllNotificationsbyUser } from "../../Service/notificationApi";
 import { useDispatch, useSelector } from "react-redux";
-import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import { formatTime } from "../../Utils";
 import { useTranslation } from "react-i18next";
+import { Bell } from "lucide-react";
+import { RowListSkeleton } from "../Common/FlatSkeleton";
+import EmptyState from "../Common/EmptyState";
 
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { userInfo } = useSelector((state) => state.login);
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!userInfo?.id) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       try {
         const response = await fetchAllNotificationsbyUser(userInfo.id);
-        // const response = await fetchAllNotifications();
-        setNotifications(response.data);
-        console.log(userInfo.id);
-        // console.log(response)
-        console.log("Notification response:", response.data);
+        setNotifications(Array.isArray(response?.data) ? response.data : []);
       } catch (error) {
         console.error("Lỗi khi fetch data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [userInfo?.id]);
 
   useEffect(() => {
     if (!userInfo?.id) return;
 
-    // notificationSocket.init(dispatch, userInfo.id);
-
     const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
       (data) => {
-        console.log("Received comment update:", data);
-
         const enriched = {
           ...data,
           sentAt: data.sentAt || new Date().toISOString(),
@@ -61,36 +58,34 @@ const Notification = () => {
       }
     );
 
-    const unsubscribeLikes = notificationSocket.subscribeToLikeUpdates((notification) => {
-      console.log("Received like update:", notification);
+    const unsubscribeLikes = notificationSocket.subscribeToLikeUpdates(
+      (notification) => {
+        const enrichedNotification = {
+          ...notification,
+          sentAt: notification.sentAt || new Date().toISOString(),
+        };
 
-      // Gán thời gian hiện tại nếu không có sentAt
-      const enrichedNotification = {
-        ...notification,
-        sentAt: notification.sentAt || new Date().toISOString(),
-      };
-
-      setNotifications((prev) => {
-        if (
-          (enrichedNotification.notificationId != null &&
-            prev.some((n) => n.notificationId === enrichedNotification.notificationId)) ||
-          prev.some(
-            (n) =>
-              n.postId === enrichedNotification.postId &&
-              n.userNickname === enrichedNotification.userNickname &&
-              n.message === enrichedNotification.message
-          )
-        ) {
-          console.log("Duplicate like update ignored:", enrichedNotification);
-          return prev;
-        }
-        return [enrichedNotification, ...prev];
-      });
-    });
+        setNotifications((prev) => {
+          if (
+            (enrichedNotification.notificationId != null &&
+              prev.some(
+                (n) => n.notificationId === enrichedNotification.notificationId
+              )) ||
+            prev.some(
+              (n) =>
+                n.postId === enrichedNotification.postId &&
+                n.userNickname === enrichedNotification.userNickname &&
+                n.message === enrichedNotification.message
+            )
+          ) {
+            return prev;
+          }
+          return [enrichedNotification, ...prev];
+        });
+      }
+    );
 
     const unsubscribeFollow = notificationSocket.subscribeToFollow((data) => {
-      console.log("Received follow update:", data);
-
       const enriched = {
         ...data,
         sentAt: data.sentAt || new Date().toISOString(),
@@ -118,36 +113,39 @@ const Notification = () => {
   }, [userInfo?.id, dispatch]);
 
   return (
-    <div className="lg:w-full w-full h-[60vh] py-4 px-4 bg-black shadow-md">
-      <h2 className="text-2xl font-bold mb-5 text-gray-100">
-        Thông báo người dùng
-      </h2>
+    <div className="mx-auto min-h-screen w-full max-w-[600px] bg-ig-ground px-4 py-6 text-ig-text">
+      <h1 className="mb-4 border-b border-ig-rule pb-3 text-[20px] font-semibold tracking-[-0.02em] text-ig-text">
+        {t("notifications.title")}
+      </h1>
 
-      <div className="max-h-[50vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {notifications.length === 0 ? (
-          <p className="text-gray-100 text-center">Không có thông báo nào</p>
+      <div className="divide-y divide-ig-rule">
+        {loading ? (
+          <RowListSkeleton count={6} />
+        ) : notifications.length === 0 ? (
+          <EmptyState
+            icon={Bell}
+            title={t("notifications.empty")}
+          />
         ) : (
           notifications.map((notification, index) => (
             <div
-              key={index}
-              className="flex items-center gap-3 p-3 hover:bg-gray-800 cursor-pointer transition"
+              key={notification.notificationId || notification.id || index}
+              className="flex min-h-[60px] items-center gap-3 px-2 py-3 transition-colors duration-150 hover:bg-ig-surface"
             >
               <img
                 src={
                   notification.senderAvatar ||
                   "https://cdn.kona-blue.com/upload/kona-blue_com/post/images/2024/09/18/457/avatar-mac-dinh-1.jpg"
                 }
-                alt="Avatar"
-                className="w-12 h-12 rounded-full object-cover border border-gray-300"
+                alt=""
+                className="h-11 w-11 shrink-0 rounded-full border border-ig-border object-cover"
               />
-              <div className="flex-1">
-                <p className="text-gray-100">
-                  <span className="font-semibold"></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] leading-[1.4] text-ig-text">
                   {notification.message}
                 </p>
-                <span className="text-gray-400 text-xs">
+                <span className="mt-0.5 block text-[12px] text-ig-muted">
                   {formatTime(notification.sentAt, t)}
-                  {/* {moment(notification.sentAt).format("HH:mm DD/MM/YYYY")} */}
                 </span>
               </div>
             </div>

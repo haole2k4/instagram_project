@@ -148,7 +148,6 @@ const AdminLayout = () => {
       <aside
         className={[
           "fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-[#161616] bg-black md:flex",
-          "transition-[width] duration-150",
           collapsed ? "w-16" : "w-60",
         ].join(" ")}
       >
@@ -202,7 +201,7 @@ const AdminLayout = () => {
 
       <div
         className={[
-          "min-h-screen transition-[padding] duration-150",
+          "min-h-screen",
           collapsed ? "md:pl-16" : "md:pl-60",
         ].join(" ")}
       >

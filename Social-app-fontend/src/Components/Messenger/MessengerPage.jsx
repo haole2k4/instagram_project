@@ -1,7 +1,19 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import {
+  ChevronLeft,
+  Info,
+  MessageSquare,
+  Phone,
+  Plus,
+  Search,
+  Sparkles,
+  Users,
+  Video,
+  X,
+} from "lucide-react";
 import {
   getConversations,
   getMessagesByConversation,
@@ -23,62 +35,37 @@ import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import UserSearchModal from "./UserSearchModal";
-import {
-  FaPhone,
-  FaVideo,
-  FaInfoCircle,
-  FaTimes,
-  FaUsers,
-} from "react-icons/fa";
+import AIChatPanel from "./AIChatPanel";
 import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import IncomingCallModal from "./IncomingCallModal";
 import VideoCallModal from "./VideoCallModal";
-
-import instance from "../../Utils/AxiosApi/Axios"; // Thêm dòng này ở đầu file
+import instance from "../../Utils/AxiosApi/Axios";
 import ConversationDetails from "./ConversationDetails";
+import Route from "../../Components/Routes/index";
 
 const SearchBar = ({ searchTerm, setSearchTerm, className = "" }) => {
   const { t } = useTranslation();
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-        <svg
-          className="h-5 w-5 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+      <div className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center">
+        <Search size={16} strokeWidth={1.5} className="text-ig-faint" />
       </div>
       <input
         type="text"
-        className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg pl-10 pr-4 py-2 focus:ring-blue-500 focus:border-blue-500"
+        aria-label={t("messenger.searchConversationsOrFriends")}
+        className="w-full rounded-control border border-ig-border bg-ig-surface py-2 pl-10 pr-9 text-[14px] text-ig-text placeholder-ig-faint focus:border-ig-accent focus:outline-none"
         placeholder={t("messenger.searchConversationsOrFriends")}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       {searchTerm && (
         <button
-          className="absolute inset-y-0 right-2 flex items-center"
+          type="button"
+          aria-label={t("search.clear")}
+          className="absolute inset-y-0 right-3 flex items-center text-ig-muted hover:text-ig-text"
           onClick={() => setSearchTerm("")}
         >
-          <svg
-            className="h-5 w-5 text-gray-400 hover:text-white"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <X size={14} strokeWidth={1.5} />
         </button>
       )}
     </div>
@@ -100,8 +87,8 @@ const SearchResults = ({
   return (
     <div className="py-2">
       {filteredConversations.length > 0 && (
-        <div className="mb-4">
-          <p className="px-3 py-1 text-xs text-gray-500 uppercase tracking-wider">
+        <div className="mb-3">
+          <p className="px-3 py-1.5 text-[12px] font-medium text-ig-muted">
             {t("messenger.conversations")}
           </p>
           {filteredConversations.map((conversation) => {
@@ -113,36 +100,37 @@ const SearchResults = ({
               : null;
 
             return (
-              <div
+              <button
+                type="button"
                 key={conversation.id}
-                className="px-3 py-2 hover:bg-gray-800 cursor-pointer flex items-center"
+                className="flex h-14 w-full items-center px-3 text-left transition-colors hover:bg-ig-surface"
                 onClick={() => onSelectConversation(conversation)}
               >
                 {isGroup ? (
-                  <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                    <FaUsers className="text-white" size={16} />
+                  <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+                    <Users size={16} strokeWidth={1.5} />
                   </div>
                 ) : (
                   <img
                     src={otherUser?.userImage || "/default-avatar.png"}
-                    alt="avatar"
-                    className="w-10 h-10 rounded-full mr-3 object-cover"
+                    alt=""
+                    className="mr-3 h-10 w-10 rounded-full bg-ig-surface object-cover"
                   />
                 )}
-                <div>
-                  <p className="text-white">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-medium text-ig-text">
                     {isGroup
                       ? conversation.name
-                      : otherUser?.userFullname || "User"}
+                      : otherUser?.userFullname || t("story.user")}
                   </p>
                   {isGroup && (
-                    <p className="text-gray-400 text-xs">
+                    <p className="text-[12px] text-ig-muted tabular-nums">
                       {conversation.participants?.length || 0}{" "}
                       {t("messenger.members")}
                     </p>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -150,32 +138,37 @@ const SearchResults = ({
 
       {friendsWithoutConversation.length > 0 && (
         <div>
-          <p className="px-3 py-1 text-xs text-gray-500 uppercase tracking-wider">
+          <p className="px-3 py-1.5 text-[12px] font-medium text-ig-muted">
             {t("messenger.friends")}
           </p>
           {friendsWithoutConversation.map((user) => (
-            <div
+            <button
+              type="button"
               key={user.id}
-              className="px-3 py-2 hover:bg-gray-800 cursor-pointer flex items-center"
+              className="flex h-14 w-full items-center px-3 text-left transition-colors hover:bg-ig-surface"
               onClick={() => onStartNewChatWithUser(user.id)}
             >
               <img
                 src={user.userImage || "/default-avatar.png"}
-                alt="avatar"
-                className="w-10 h-10 rounded-full mr-3 object-cover"
+                alt=""
+                className="mr-3 h-10 w-10 rounded-full bg-ig-surface object-cover"
               />
-              <div>
-                <p className="text-white">{user.userFullname}</p>
-                <p className="text-gray-400 text-xs">@{user.userNickname}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-ig-text">
+                  {user.userFullname}
+                </p>
+                <p className="truncate text-[12px] text-ig-muted">
+                  @{user.userNickname}
+                </p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {filteredConversations.length === 0 &&
         friendsWithoutConversation.length === 0 && (
-          <p className="text-center text-gray-500 py-4">
+          <p className="py-4 text-center text-[14px] text-ig-muted">
             {t("messenger.noResultsFound")}
           </p>
         )}
@@ -187,15 +180,18 @@ const MessengerPage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { conversationId } = useParams();
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const [datafriend, setDatafriend] = useState(null);
   const [forceUpdate, setForceUpdate] = useState(0);
 
+  const isAIChat =
+    location.pathname === Route.chat_ai || conversationId === "ai";
+
   const currentUser = useSelector((state) => state.login?.userInfo);
   const accessToken = useSelector((state) => state.login?.accessToken);
-  console.log(currentUser);
   const {
     conversations,
     currentConversation,
@@ -212,12 +208,7 @@ const MessengerPage = () => {
     isVideoCallActive,
     stream,
     remoteStream,
-    caller,
     name,
-    selectedCameraId,
-    setSelectedCameraId,
-    availableCameras,
-    listCameras,
   } = useWebSocket();
 
   const [newMessage, setNewMessage] = useState("");
@@ -227,51 +218,29 @@ const MessengerPage = () => {
   const [allLoaded, setAllLoaded] = useState(false);
   const [showConnectionWarning, setShowConnectionWarning] = useState(false);
   const [idfriend, setIdfriend] = useState(null);
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [localStream, setLocalStream] = useState(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const peerConnection = useRef(null);
-  const [showFullSearch, setShowFullSearch] = useState(false); // Thêm state mới để kiểm soát hiển thị thanh tìm kiếm
-  const [friendCandidates, setFriendCandidates] = useState([]); // Thêm state để lưu danh sách bạn bè
+  const [showFullSearch, setShowFullSearch] = useState(false);
+  const [friendCandidates, setFriendCandidates] = useState([]);
   const [showDetails, setShowDetails] = useState(false);
-  // Add a new state for blocking status
   const [isUserBlocked, setIsUserBlocked] = useState(false);
 
-  // Sửa lại useEffect để đảm bảo thứ tự khởi tạo đúng
   useEffect(() => {
     if (currentUser?.id) {
-      // Đặt userId vào Redux trước
       dispatch(setCurrentUserId(currentUser.id));
-
-      // Lưu userId vào localStorage để WebSocketService có thể lấy trong mọi tình huống
       localStorage.setItem("userId", currentUser.id);
-
-      // Sau khi đã lưu userId, mới khởi tạo WebSocket
       webSocketService.init(dispatch, currentUser.id, accessToken);
-
-      // KHÔNG gọi connect() ở đây, để đến khi cần thiết mới kết nối
-
-      // Lấy danh sách conversation
       dispatch(getConversations(currentUser.id));
     }
 
     return () => {
       dispatch(resetChatState());
-      // Không disconnect ở đây: WebSocketService là singleton dùng chung cho
-      // notification/video call. Logout sẽ gọi disconnect().
     };
   }, [currentUser?.id, accessToken, dispatch]);
 
-  // Thêm useEffect mới để xử lý kết nối WebSocket khi cần thiết
   useEffect(() => {
-    // Chỉ connect khi đã có currentUser và chưa kết nối
     if (currentUser?.id && !webSocketConnected) {
       webSocketService
         .connect()
         .then(() => {
-          console.log("WebSocket connected successfully in MessengerPage");
-          // Sau khi kết nối thành công, mới subscribe
           return webSocketService.subscribeToUserMessages();
         })
         .catch((err) => {
@@ -281,33 +250,32 @@ const MessengerPage = () => {
   }, [currentUser?.id, webSocketConnected]);
 
   useEffect(() => {
+    if (isAIChat) {
+      dispatch(resetMessages());
+      dispatch({ type: "chat/setActiveConversation", payload: null });
+      return;
+    }
+
     if (conversationId && currentUser?.id) {
-      const conversationIdInt = parseInt(conversationId);
+      const conversationIdInt = parseInt(conversationId, 10);
+      if (Number.isNaN(conversationIdInt)) return;
 
       setPage(1);
       setAllLoaded(false);
 
-      console.log(
-        `Current conversation changed to ${conversationIdInt}, loading data...`
-      );
-
-      // Thêm đoạn kiểm tra quyền truy cập conversation
       instance
         .get(
           `/chat/check-access?conversationId=${conversationIdInt}&userId=${currentUser.id}`
         )
         .then((response) => {
-          if (response.data.hasAccess) {
-            // Nếu có quyền, mới tiếp tục lấy dữ liệu
+          if (response.data?.hasAccess) {
             dispatch(setActiveConversation(conversationIdInt));
-
             dispatch(
               getConversationDetails({
                 conversationId: conversationIdInt,
                 userId: currentUser.id,
               })
             );
-
             dispatch(
               getMessagesByConversation({
                 conversationId: conversationIdInt,
@@ -317,38 +285,28 @@ const MessengerPage = () => {
               })
             );
           } else {
-            console.error(
-              "You don't have permission to access this conversation"
-            );
-            navigate("/user/chat"); // Chuyển về trang chính của chat
+            navigate("/user/chat");
           }
         })
         .catch((error) => {
           console.error("Error checking conversation access:", error);
-          navigate("/user/chat"); // Chuyển về trang chính của chat
+          navigate("/user/chat");
         });
     } else if (currentUser?.id) {
-      // Khi không có conversationId, đảm bảo reset trạng thái và hiển thị trang chào mừng
       dispatch(resetMessages());
       dispatch({ type: "chat/setActiveConversation", payload: null });
     }
-  }, [conversationId, currentUser?.id, dispatch, navigate]);
+  }, [conversationId, isAIChat, currentUser?.id, dispatch, navigate]);
 
-  // Thêm useEffect mới để xử lý việc reset state khi không có conversationId
   useEffect(() => {
-    // Khi component được mount mà không có conversationId, reset trạng thái
-    if (!conversationId && currentUser?.id) {
+    if (!conversationId && !isAIChat && currentUser?.id) {
       dispatch(resetMessages());
       dispatch({ type: "chat/setActiveConversation", payload: null });
     }
-  }, []);
+  }, [conversationId, isAIChat, currentUser?.id, dispatch]);
 
-  // Theo dõi thay đổi currentConversation để load dữ liệu
   useEffect(() => {
-    if (currentConversation?.id && currentUser?.id) {
-      console.log(
-        `Current conversation changed to ${currentConversation.id}, loading data...`
-      );
+    if (!isAIChat && currentConversation?.id && currentUser?.id) {
       setPage(0);
       setAllLoaded(false);
       dispatch(
@@ -366,67 +324,44 @@ const MessengerPage = () => {
         })
       );
     }
-  }, [currentConversation?.id, currentUser?.id, dispatch]);
+  }, [currentConversation?.id, currentUser?.id, isAIChat, dispatch]);
 
   useEffect(() => {
-    if (!webSocketConnected && currentConversation) {
+    if (!webSocketConnected && currentConversation && !isAIChat) {
       const timer = setTimeout(() => {
         setShowConnectionWarning(true);
-      }, 3000); // Chỉ hiện cảnh báo sau 3 giây không kết nối được
-
+      }, 3000);
       return () => clearTimeout(timer);
     } else {
       setShowConnectionWarning(false);
     }
-  }, [webSocketConnected, currentConversation]);
+  }, [webSocketConnected, currentConversation, isAIChat]);
 
-  // Cải thiện useEffect cho WebSocket
   useEffect(() => {
-    if (currentConversation?.id && currentUser?.id) {
-      console.log(
-        `Setting up WebSocket for conversation ${currentConversation.id}`
-      );
-
+    if (currentConversation?.id && currentUser?.id && !isAIChat) {
       const connectAndSubscribe = async (retries = 3) => {
         try {
-          // Đảm bảo WebSocket đã kết nối
           if (!webSocketConnected) {
-            console.log("WebSocket not connected, connecting first...");
             try {
               await webSocketService.connect();
             } catch (err) {
               console.error("WebSocket connection failed:", err);
             }
           }
-
-          try {
-            // User queue đã nhận mọi tin nhắn; không cần subscribe theo conversation.
-            if (currentConversation.unreadCount > 0 && webSocketConnected) {
-              await webSocketService.markAsRead(currentConversation.id);
-            }
-          } catch (error) {
-            console.error("Error marking conversation as read:", error);
+          if (currentConversation.unreadCount > 0 && webSocketConnected) {
+            await webSocketService.markAsRead(currentConversation.id);
           }
         } catch (error) {
           if (retries > 0) {
-            console.log(
-              `Retrying WebSocket setup (${retries} attempts left)...`
-            );
             setTimeout(() => connectAndSubscribe(retries - 1), 1000);
-          } else {
-            console.error(
-              "Failed to setup WebSocket after multiple attempts:",
-              error
-            );
           }
         }
       };
 
       connectAndSubscribe();
     }
-  }, [currentConversation?.id, currentUser?.id, webSocketConnected]);
+  }, [currentConversation?.id, currentUser?.id, webSocketConnected, isAIChat]);
 
-  // Thêm effect để đảm bảo kết nối WebSocket với giải pháp retry tốt hơn
   useEffect(() => {
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
@@ -434,7 +369,6 @@ const MessengerPage = () => {
 
     const attemptReconnect = async () => {
       if (reconnectAttempts >= maxReconnectAttempts) {
-        console.log("Maximum reconnect attempts reached, giving up");
         setShowConnectionWarning(true);
         return;
       }
@@ -443,21 +377,11 @@ const MessengerPage = () => {
         reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
 
-        console.log(
-          `Attempting to connect WebSocket (try ${reconnectAttempts}/${maxReconnectAttempts}) in ${
-            delay / 1000
-          }s...`
-        );
-
         try {
           await webSocketService.connect();
-          console.log("WebSocket connected successfully on reconnect");
           reconnectAttempts = 0;
           setShowConnectionWarning(false);
         } catch (err) {
-          console.error("Failed to connect WebSocket:", err);
-
-          // Schedule next retry with exponential backoff
           reconnectTimer = setTimeout(attemptReconnect, delay);
         }
       }
@@ -474,18 +398,12 @@ const MessengerPage = () => {
     };
   }, [currentUser?.id, webSocketConnected]);
 
-  // Thêm một useEffect mới để đảm bảo nhận tin nhắn
   useEffect(() => {
-    // Tạo interval để kiểm tra tin nhắn mới mỗi 10 giây
     let messageRefreshInterval;
 
-    if (currentConversation?.id && currentUser?.id) {
+    if (currentConversation?.id && currentUser?.id && !isAIChat) {
       messageRefreshInterval = setInterval(() => {
-        // Kiểm tra nếu WebSocket không được kết nối, thì tải lại tin nhắn qua API
         if (!webSocketConnected) {
-          console.log(
-            "WebSocket not connected, refreshing messages via API..."
-          );
           dispatch(
             getMessagesByConversation({
               conversationId: currentConversation.id,
@@ -495,7 +413,7 @@ const MessengerPage = () => {
             })
           );
         }
-      }, 10000); // 10 giây
+      }, 10000);
     }
 
     return () => {
@@ -503,52 +421,33 @@ const MessengerPage = () => {
         clearInterval(messageRefreshInterval);
       }
     };
-  }, [currentConversation?.id, currentUser?.id, webSocketConnected, dispatch]);
+  }, [
+    currentConversation?.id,
+    currentUser?.id,
+    webSocketConnected,
+    isAIChat,
+    dispatch,
+  ]);
 
   useEffect(() => {
-    if (messageInputRef.current && currentConversation) {
+    if (messageInputRef.current && currentConversation && !isAIChat) {
       setTimeout(() => {
         try {
           messageInputRef.current.focus();
-        } catch (error) {
-          console.warn("Could not focus input:", error);
+        } catch {
+          // ignore
         }
       }, 100);
     }
-  }, [currentConversation]);
-
-  useEffect(() => {
-    if (currentConversation) {
-      console.log("Current conversation structure:", currentConversation);
-      console.log("Participants:", currentConversation.participants);
-    }
-  }, [currentConversation]);
-
-  useEffect(() => {
-    if (currentConversation) {
-      console.log("Current conversation structure:", currentConversation);
-      console.log(
-        "Participants:",
-        currentConversation.participants || "undefined"
-      );
-      if (!currentConversation.participants) {
-        console.warn(
-          "Participants missing - API might not be returning complete data"
-        );
-      }
-    }
-  }, [currentConversation]);
+  }, [currentConversation, isAIChat]);
 
   const handleSelectConversation = useCallback(
     (conversation) => {
       if (!conversation || !conversation.id) return;
 
       dispatch({ type: "chat/setLoading", payload: true });
-
       dispatch(resetMessages());
-
       dispatch(setActiveConversation(conversation.id));
-
       navigate(`/user/chat/${conversation.id}`);
 
       if (currentUser?.id) {
@@ -558,7 +457,6 @@ const MessengerPage = () => {
             userId: currentUser.id,
           })
         );
-
         dispatch(
           getMessagesByConversation({
             conversationId: conversation.id,
@@ -567,7 +465,6 @@ const MessengerPage = () => {
             size: 20,
           })
         );
-
       }
 
       if (
@@ -575,17 +472,14 @@ const MessengerPage = () => {
         currentUser?.id &&
         webSocketConnected
       ) {
-        webSocketService
-          .markAsRead(conversation.id)
-          .catch((err) => {
-            console.error("Error marking messages as read:", err);
-            dispatch(
-              markMessagesAsRead({
-                conversationId: conversation.id,
-                userId: currentUser.id,
-              })
-            );
-          });
+        webSocketService.markAsRead(conversation.id).catch(() => {
+          dispatch(
+            markMessagesAsRead({
+              conversationId: conversation.id,
+              userId: currentUser.id,
+            })
+          );
+        });
       }
     },
     [navigate, currentUser?.id, webSocketConnected, dispatch]
@@ -641,11 +535,9 @@ const MessengerPage = () => {
 
     setNewMessage("");
     dispatch(addMessage(messageData));
-    setForceUpdate((prev) => prev + 1); // Trigger re-render của MessageList
+    setForceUpdate((prev) => prev + 1);
 
     try {
-      console.log("Sending message to API:", messageData);
-
       const apiMessage = {
         conversationId: currentConversation.id,
         senderId: currentUser.id,
@@ -655,21 +547,15 @@ const MessengerPage = () => {
       if (!webSocketConnected) {
         try {
           await webSocketService.connect();
-        } catch (wsError) {
-          console.warn(
-            "Connection attempt failed, will proceed with API:",
-            wsError
-          );
+        } catch {
+          // proceed with HTTP API
         }
       }
 
       const resultAction = await dispatch(sendMessage(apiMessage));
 
       if (sendMessage.fulfilled.match(resultAction)) {
-        console.log("Message saved successfully:", resultAction.payload);
-
         const savedMessage = resultAction.payload;
-
         if (savedMessage?.id) {
           dispatch(updateConversationWithLatestMessage(savedMessage));
         }
@@ -690,11 +576,6 @@ const MessengerPage = () => {
       return;
 
     try {
-      console.log(
-        `Loading more messages for conversation ${
-          currentConversation.id
-        }, page ${page + 1}`
-      );
       const nextPage = page + 1;
       const resultAction = await dispatch(
         getMoreMessagesByConversation({
@@ -707,13 +588,8 @@ const MessengerPage = () => {
 
       if (getMoreMessagesByConversation.fulfilled.match(resultAction)) {
         const payload = resultAction.payload || [];
-        console.log(`Received ${payload.length} older messages`);
-
         if (payload.length === 0) {
           setAllLoaded(true);
-          console.log(
-            "No more messages to load - reached beginning of conversation"
-          );
         } else {
           setPage(nextPage);
         }
@@ -730,28 +606,38 @@ const MessengerPage = () => {
     dispatch,
   ]);
 
-  const handleCreateGroup = async ({ name, userIds }) => {
+  const handleCreateGroup = async ({ name: groupName, userIds }) => {
     try {
-      const res = await instance.post("/chat/group", { name, userIds });
+      const res = await instance.post("/chat/group", {
+        name: groupName,
+        userIds,
+      });
       if (res.data && res.data.id) {
-        // Sau khi tạo nhóm, chuyển sang màn hình chat nhóm
         navigate(`/user/chat/${res.data.id}`);
-        setShowNewConversation(false); // Đổi tên biến cho đúng
+        setShowNewConversation(false);
         dispatch(getConversations(currentUser.id));
       }
     } catch (e) {
-      // Xử lý lỗi
+      console.error("Error creating group:", e);
     }
   };
 
   const filteredConversations = searchTerm
     ? conversations.filter((conv) => {
+        if (conv.isGroupChat) {
+          return conv.name?.toLowerCase().includes(searchTerm.toLowerCase());
+        }
         const otherUser = conv.participants?.find(
           (p) => (p.userId || p.id) !== currentUser?.id
         );
-        return otherUser?.userFullname
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        return (
+          otherUser?.userFullname
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          otherUser?.userNickname
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        );
       })
     : conversations;
 
@@ -767,21 +653,19 @@ const MessengerPage = () => {
       };
     }
 
-    // Logic cũ xử lý chat 1-1
     if (currentConversation.participants) {
       const otherUser = currentConversation.participants.find(
         (p) => (p.userId || p.id) !== currentUser?.id
       );
       if (otherUser) {
         return {
-          name: otherUser.userFullname,
+          name: otherUser.userFullname || otherUser.userNickname,
           image: otherUser.userImage || "/default-avatar.png",
           isGroup: false,
         };
       }
     }
 
-    // Fallback từ tên conversation
     if (
       currentConversation.name &&
       currentConversation.name.includes("between")
@@ -790,8 +674,10 @@ const MessengerPage = () => {
         .replace("Chat between ", "")
         .split(" and ");
       const otherUserName = nameParts.find(
-        (name) =>
-          !name.toLowerCase().includes(currentUser?.userNickname?.toLowerCase())
+        (part) =>
+          !part
+            .toLowerCase()
+            .includes((currentUser?.userNickname || "").toLowerCase())
       );
 
       return {
@@ -810,20 +696,15 @@ const MessengerPage = () => {
 
   useEffect(() => {
     if (currentConversation?.participants) {
-      let idFr = currentConversation.participants.find(
+      const idFr = currentConversation.participants.find(
         (p) => (p.userId || p.id) !== currentUser?.id
       );
-
       setDatafriend(idFr);
-      setIdfriend(idFr.userId);
+      setIdfriend(idFr?.userId || idFr?.id);
     }
-  }, [currentConversation]);
+  }, [currentConversation, currentUser?.id]);
 
   const headerInfo = getConversationHeader();
-
-  const handleCameraSelect = (cameraId) => {
-    setSelectedCameraId(cameraId);
-  };
 
   const handleVideoCall = async () => {
     try {
@@ -846,9 +727,7 @@ const MessengerPage = () => {
   };
 
   const handleEndCall = () => {
-    if (window.confirm("Bạn có chắc chắn muốn kết thúc cuộc gọi?")) {
-      leaveCall();
-    }
+    leaveCall();
   };
 
   const handleMarkAsRead = () => {
@@ -862,7 +741,6 @@ const MessengerPage = () => {
     }
   };
 
-  // Thêm useEffect để lấy danh sách bạn bè khi tìm kiếm
   useEffect(() => {
     const fetchFriends = async () => {
       if (!searchTerm || !currentUser?.id) {
@@ -871,27 +749,24 @@ const MessengerPage = () => {
       }
 
       try {
-        // Lấy danh sách người mà user đang theo dõi
         const followingRes = await instance.get(
           `/follow/following/${currentUser.id}`
         );
         const followingData = followingRes.data || [];
 
-        // Lọc lấy những người có is_friend = true
         const friends = followingData
           .filter((item) => item.friend === true)
           .map((item) => item.following)
           .filter(
             (friend) =>
               friend.userFullname
-                .toLowerCase()
+                ?.toLowerCase()
                 .includes(searchTerm.toLowerCase()) ||
               friend.userNickname
-                .toLowerCase()
+                ?.toLowerCase()
                 .includes(searchTerm.toLowerCase())
           );
 
-        // Lọc ra những người chưa có conversation
         const conversationUserIds = conversations
           .filter((conv) => !conv.isGroupChat)
           .flatMap((conv) =>
@@ -914,13 +789,16 @@ const MessengerPage = () => {
     fetchFriends();
   }, [searchTerm, currentUser?.id, conversations]);
 
-  // Add a useEffect to check block status when conversation changes
   useEffect(() => {
-    if (currentConversation && !currentConversation.isGroupChat && currentConversation.participants?.length === 2) {
+    if (
+      currentConversation &&
+      !currentConversation.isGroupChat &&
+      currentConversation.participants?.length === 2
+    ) {
       const otherUser = currentConversation.participants.find(
-        p => (p.userId || p.id) !== currentUser?.id
+        (p) => (p.userId || p.id) !== currentUser?.id
       );
-      
+
       if (otherUser && currentUser) {
         checkBlockStatus(otherUser.userId || otherUser.id, currentUser.id);
       }
@@ -929,26 +807,32 @@ const MessengerPage = () => {
     }
   }, [currentConversation, currentUser]);
 
-  // Add this function to check block status
   const checkBlockStatus = async (otherUserId, userId) => {
     try {
-      const response = await instance.get(`/chat/block-status?userId=${userId}&otherUserId=${otherUserId}`);
-      setIsUserBlocked(response.data.isBlocked || false);
+      const response = await instance.get(
+        `/chat/block-status?userId=${userId}&otherUserId=${otherUserId}`
+      );
+      setIsUserBlocked(response.data?.isBlocked || false);
     } catch (error) {
       console.error("Error checking block status:", error);
       setIsUserBlocked(false);
     }
   };
 
-  // Sửa lại phần render để hiển thị trang chào mừng đúng cách
+  const hasActivePane = Boolean(isAIChat || currentConversation);
+
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] bg-ig-ground w-full md:h-screen">
-      {/* Conversation List */}
-      {/* <div className="w-1/3 border-r border-gray-700 bg-gray-900"> */}
-      <div className="w-[400px] border-r border-gray-700 bg-gray-900 ">
+    <div className="flex h-[calc(100dvh-3.5rem)] w-full bg-ig-ground text-ig-text md:h-dvh">
+      {/* Cột danh sách hội thoại */}
+      <div
+        className={`${
+          hasActivePane ? "hidden md:block" : "block w-full"
+        } border-r border-ig-border bg-ig-ground md:w-[360px] lg:w-[380px] shrink-0`}
+      >
         <ConversationList
           conversations={filteredConversations}
           currentConversationId={currentConversation?.id}
+          isAIChatActive={isAIChat}
           onSelectConversation={handleSelectConversation}
           loading={loading}
           setShowNewConversation={setShowNewConversation}
@@ -956,194 +840,174 @@ const MessengerPage = () => {
           searchTerm={searchTerm}
           onStartNewChatWithUser={handleNewConversation}
           currentUser={currentUser}
+          hasActiveChat={hasActivePane}
         />
       </div>
 
-      {/* Messages Area */}
-      {/* <div className="w-2/3 flex flex-col bg-black"> */}
-      <div className="flex-1 flex flex-col bg-black">
-        {currentConversation ? (
+      {/* Vùng hội thoại chính */}
+      <div
+        className={`${
+          hasActivePane ? "flex" : "hidden md:flex"
+        } min-w-0 flex-1 flex-col bg-ig-ground`}
+      >
+        {isAIChat ? (
+          <AIChatPanel />
+        ) : currentConversation ? (
           <>
-            {/* Conversation Header */}
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <div className="flex items-center">
-                {headerInfo.isGroup ? (
-                  <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                    <FaUsers className="text-white" size={18} />
+            {/* Header hội thoại */}
+            <header className="flex h-16 shrink-0 items-center justify-between border-b border-ig-border px-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(Route.chat)}
+                  aria-label={t("messenger.back")}
+                  title={t("messenger.back")}
+                  className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text md:hidden"
+                >
+                  <ChevronLeft size={20} strokeWidth={1.5} />
+                </button>
+                {headerInfo?.isGroup ? (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+                    <Users size={18} strokeWidth={1.5} />
                   </div>
                 ) : (
                   <img
-                    src={headerInfo.image}
-                    alt="Avatar"
-                    className="w-10 h-10 rounded-full object-cover mr-3"
+                    src={headerInfo?.image || "/default-avatar.png"}
+                    alt={headerInfo?.name || ""}
+                    className="h-10 w-10 shrink-0 rounded-full bg-ig-surface object-cover"
                   />
                 )}
-                <div>
-                  <h3 className="font-medium text-white">
-                    {headerInfo.name}
-                    {headerInfo.isGroup && (
-                      <span className="text-xs text-gray-400 ml-2">
-                        ({headerInfo.participantCount} {t("messenger.members")})
-                      </span>
-                    )}
-                  </h3>
+                <div className="min-w-0">
+                  <h1 className="truncate text-[20px] font-semibold leading-tight text-ig-text md:text-[24px]">
+                    {headerInfo?.name}
+                  </h1>
+                  {headerInfo?.isGroup && (
+                    <p className="text-[12px] text-ig-muted tabular-nums">
+                      {headerInfo.participantCount} {t("messenger.members")}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="flex">
-                <button className="text-gray-400 hover:text-white p-2">
-                  <FaPhone />
-                </button>
 
-                <div className="flex items-center space-x-4">
-                  <button
-                    className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-                    title={t("messenger.videoCall") || "Gọi video"}
-                    onClick={() => handleVideoCall()}
-                  >
-                    <FaVideo className="text-gray-600 text-lg" />
-                  </button>
-                </div>
-                <button 
-                  className="text-gray-400 hover:text-white p-2"
-                  onClick={() => setShowDetails(true)}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label={t("messenger.voiceCall")}
+                  title={t("messenger.voiceCall")}
+                  onClick={handleVideoCall}
+                  className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
                 >
-                  <FaInfoCircle />
+                  <Phone size={18} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("messenger.videoCall")}
+                  title={t("messenger.videoCall")}
+                  onClick={handleVideoCall}
+                  className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
+                >
+                  <Video size={18} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("messenger.details")}
+                  title={t("messenger.details")}
+                  aria-expanded={showDetails}
+                  onClick={() => setShowDetails((prev) => !prev)}
+                  className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
+                >
+                  <Info size={18} strokeWidth={1.5} />
                 </button>
               </div>
-            </div>
+            </header>
 
             {showConnectionWarning && (
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-2">
-                <div className="flex items-center">
-                  <div className="py-1">
-                    <svg
-                      className="h-6 w-6 text-yellow-500 mr-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm text-yellow-700">
-                      {t("messenger.connectionLost")}
-                    </p>
-                    <button
-                      onClick={() => webSocketService.connect()}
-                      className="text-xs text-blue-500 hover:underline"
-                    >
-                      {t("messenger.reconnect")}
-                    </button>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between border-b border-ig-border bg-ig-surface px-4 py-2.5 text-[12px]">
+                <span className="text-ig-muted">
+                  {t("messenger.connectionLost")}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => webSocketService.connect()}
+                  className="font-semibold text-ig-accent hover:opacity-85"
+                >
+                  {t("messenger.reconnect")}
+                </button>
               </div>
             )}
 
-            {/* Message List */}
+            {/* Danh sách tin nhắn */}
             <div className="flex-1 overflow-hidden">
-              {currentConversation && (
-                <MessageList
-                  messages={messages}
-                  currentUserId={currentUser?.id}
-                  selectedUser={headerInfo} // Thay otherUser bằng headerInfo đã tính toán
-                  loading={loading}
-                  onLoadMore={handleLoadMore} // Sử dụng handleLoadMore đã được định nghĩa
-                  allLoaded={allLoaded}
-                  forceUpdate={forceUpdate}
-                  isGroupChat={currentConversation.isGroupChat}
-                  participants={currentConversation.participants}
-                />
-              )}
+              <MessageList
+                messages={messages}
+                currentUserId={currentUser?.id}
+                selectedUser={headerInfo}
+                loading={loading}
+                onLoadMore={handleLoadMore}
+                allLoaded={allLoaded}
+                forceUpdate={forceUpdate}
+                isGroupChat={currentConversation.isGroupChat}
+                participants={currentConversation.participants}
+              />
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
+            {/* Ô nhập tin nhắn */}
             <MessageInput
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onSend={handleSendMessage}
               inputRef={messageInputRef}
               isBlocked={isUserBlocked}
-              onFocus={handleMarkAsRead} // <-- thêm dòng này
+              onFocus={handleMarkAsRead}
             />
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full p-8">
-            <img
-              src="/images/messages-welcome.png"
-              alt="Welcome"
-              className="w-24 h-24 mb-6 opacity-50"
-            />
-            <h3 className="text-xl font-medium text-gray-300 mb-4">
-              {t("messenger.welcomeToChat") || "Chào mừng đến với tin nhắn"}
-            </h3>
+          <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
+              <MessageSquare size={24} strokeWidth={1.5} aria-hidden="true" />
+            </div>
+            <h2 className="mb-1 text-[16px] font-medium text-ig-text">
+              {t("messenger.welcomeToChat")}
+            </h2>
 
             {!showFullSearch ? (
               <>
-                <p className="text-center text-gray-500 mb-6 max-w-md">
-                  {t("messenger.selectConversation") ||
-                    "Chọn một cuộc trò chuyện từ danh sách hoặc tìm kiếm"}
+                <p className="mb-6 max-w-sm text-[14px] text-ig-muted">
+                  {t("messenger.selectConversation")}
                 </p>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                   <button
-                    onClick={() => setShowFullSearch(true)}
-                    className="flex items-center px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    type="button"
+                    onClick={() => setShowNewConversation(true)}
+                    className="ig-press inline-flex items-center gap-2 rounded-control bg-ig-accent px-5 py-2.5 text-[14px] font-semibold text-ig-text hover:opacity-90"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {t("messenger.findConversations") || "Tìm cuộc trò chuyện"}
+                    <Plus size={16} strokeWidth={1.5} aria-hidden="true" />
+                    {t("messenger.newConversation")}
                   </button>
 
-                  <button
-                    onClick={() => setShowNewConversation(true)}
-                    className="flex items-center px-5 py-2 border border-blue-600 text-blue-500 rounded-lg hover:bg-gray-900 transition-colors"
+                  <Link
+                    to={Route.chat_ai}
+                    className="ig-press inline-flex items-center gap-2 rounded-control border border-ig-border bg-ig-surface px-5 py-2.5 text-[14px] font-semibold text-ig-text hover:bg-ig-raised"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-2"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {t("messenger.createNewGroup") || "Tạo nhóm chat mới"}
-                  </button>
+                    <Sparkles size={16} strokeWidth={1.5} aria-hidden="true" />
+                    {t("aiChat.title")}
+                  </Link>
                 </div>
               </>
             ) : (
-              <div className="w-full max-w-md">
+              <div className="mt-4 w-full max-w-md text-left">
                 <SearchBar
                   searchTerm={searchTerm}
                   setSearchTerm={setSearchTerm}
-                  className="mb-5"
+                  className="mb-3"
                 />
 
                 {searchTerm && (
-                  <div className="bg-gray-900 rounded-lg max-h-80 overflow-y-auto">
-                    {/* Hiển thị kết quả tìm kiếm ở đây - dùng logic tương tự của ConversationList */}
+                  <div className="max-h-80 overflow-y-auto rounded-panel border border-ig-border bg-ig-surface">
                     <SearchResults
                       filteredConversations={filteredConversations}
-                      friendsWithoutConversation={friendCandidates} // Cần định nghĩa state này
+                      friendsWithoutConversation={friendCandidates}
                       onSelectConversation={handleSelectConversation}
                       onStartNewChatWithUser={handleNewConversation}
                       currentUser={currentUser}
@@ -1153,25 +1017,15 @@ const MessengerPage = () => {
                 )}
 
                 <button
-                  className="mt-4 text-blue-500 flex items-center"
+                  type="button"
+                  className="mt-4 inline-flex items-center gap-1.5 text-[14px] font-medium text-ig-muted hover:text-ig-text"
                   onClick={() => {
                     setShowFullSearch(false);
                     setSearchTerm("");
                   }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mr-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  {t("messenger.back") || "Quay lại"}
+                  <ChevronLeft size={16} strokeWidth={1.5} />
+                  {t("messenger.back")}
                 </button>
               </div>
             )}
@@ -1179,7 +1033,7 @@ const MessengerPage = () => {
         )}
       </div>
 
-      {/* User Search Modal */}
+      {/* Modal tạo hội thoại / nhóm */}
       <UserSearchModal
         isOpen={showNewConversation}
         onClose={() => setShowNewConversation(false)}
@@ -1187,6 +1041,7 @@ const MessengerPage = () => {
         onCreateGroup={handleCreateGroup}
         currentUserId={currentUser?.id}
       />
+
       {receivingCall && !callAccepted && (
         <IncomingCallModal
           caller={{
@@ -1197,6 +1052,7 @@ const MessengerPage = () => {
           onReject={handleRejectCall}
         />
       )}
+
       {isVideoCallActive && (
         <VideoCallModal
           stream={stream}
@@ -1206,11 +1062,11 @@ const MessengerPage = () => {
           name={name}
         />
       )}
-      {/* Conversation Details Panel */}
-      {showDetails && currentConversation && (
-        <div className="w-1/4 min-w-[300px]">
-          <ConversationDetails 
-            conversation={currentConversation} 
+
+      {showDetails && currentConversation && !isAIChat && (
+        <div className="w-80 shrink-0">
+          <ConversationDetails
+            conversation={currentConversation}
             onClose={() => setShowDetails(false)}
             currentUser={currentUser}
           />

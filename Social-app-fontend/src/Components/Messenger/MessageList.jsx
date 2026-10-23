@@ -1,16 +1,29 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import React, { useRef, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { MessageListSkeleton } from "../Common/FlatSkeleton";
+import EmptyState from "../Common/EmptyState";
 
-const MessageList = ({ messages, 
-  currentUserId, 
-  selectedUser, 
-  loading, 
-  onLoadMore, 
+const getScrollBehavior = () => {
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return "auto";
+  }
+  return "smooth";
+};
+
+const MessageList = ({
+  messages,
+  currentUserId,
+  selectedUser,
+  loading,
+  onLoadMore,
   allLoaded,
   forceUpdate,
-  isGroupChat, 
+  isGroupChat,
   participants,
 }) => {
   const { t } = useTranslation();
@@ -32,9 +45,6 @@ const MessageList = ({ messages,
     const previous = new Date(previousTime);
     const diffMinutes = Math.floor((current - previous) / (1000 * 60));
 
-    // Hiển thị timestamp nếu:
-    // - Cách nhau ≥5 phút (cùng người gửi)
-    // - Hoặc đổi người gửi và cách nhau ≥1 phút
     if (diffMinutes >= 5 || (isSenderChanged && diffMinutes >= 1)) {
       const isSameDay = current.toDateString() === previous.toDateString();
 
@@ -42,7 +52,9 @@ const MessageList = ({ messages,
         return format(current, "HH:mm");
       }
 
-      const diffDays = Math.floor((current - previous) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(
+        (current - previous) / (1000 * 60 * 60 * 24)
+      );
       if (diffDays < 7) {
         return format(current, "EEEE, HH:mm", { locale: vi });
       } else {
@@ -53,68 +65,72 @@ const MessageList = ({ messages,
     return null;
   };
 
-  // Xác định tin nhắn đầu tiên trong chuỗi liên tiếp của một user
-  const isFirstInCluster = (msg, index, sortedMessages) => {
+  const isFirstInCluster = (msg, index, list) => {
     if (msg.senderId === currentUserId) return false;
     if (index === 0) return true;
-    const prevMsg = sortedMessages[index - 1];
+    const prevMsg = list[index - 1];
     return (
       prevMsg.senderId !== msg.senderId ||
-      Math.abs(new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 60000 >= 5
+      Math.abs(new Date(msg.createdAt) - new Date(prevMsg.createdAt)) / 60000 >=
+        5
     );
   };
 
-  // Xác định tin nhắn cuối cùng trong chuỗi liên tiếp của một user
-  const isLastInCluster = (msg, index, sortedMessages) => {
+  const isLastInCluster = (msg, index, list) => {
     if (msg.senderId === currentUserId) return false;
-    if (index === sortedMessages.length - 1) return true;
-    const nextMsg = sortedMessages[index + 1];
+    if (index === list.length - 1) return true;
+    const nextMsg = list[index + 1];
     return (
       nextMsg.senderId !== msg.senderId ||
-      Math.abs(new Date(nextMsg.createdAt) - new Date(msg.createdAt)) / 60000 >= 5
+      Math.abs(new Date(nextMsg.createdAt) - new Date(msg.createdAt)) / 60000 >=
+        5
     );
   };
 
-  // 1. Effect cho việc cuộn xuống sau khi conversation được load lần đầu
   useEffect(() => {
     if (messagesContainerRef.current && messages.length > 0 && !isLoadingOld) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }
-  }, [currentUserId, messages.length > 0]); 
+  }, [currentUserId, messages.length, isLoadingOld]);
 
   useEffect(() => {
     if (messages.length > 0 && messages.length > prevMessagesLength) {
       const latestMessage = messages[messages.length - 1];
-      
-      // Cuộn xuống nếu tin nhắn mới từ người dùng hiện tại hoặc mới load xong tin nhắn đầu tiên
-      if ((latestMessage.senderId === currentUserId || prevMessagesLength === 0) && !isLoadingOld) {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
+
+      if (
+        (latestMessage.senderId === currentUserId ||
+          prevMessagesLength === 0) &&
+        !isLoadingOld
+      ) {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: getScrollBehavior(),
+        });
       }
     }
-    
+
     setPrevMessagesLength(messages.length);
-    
+
     if (isLoadingOld) {
       setIsLoadingOld(false);
     }
-  }, [messages.length, isLoadingOld, prevMessagesLength, currentUserId]);
+  }, [messages.length, isLoadingOld, prevMessagesLength, currentUserId, messages]);
 
   useEffect(() => {
     if (forceUpdate > 0 && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({
+        behavior: getScrollBehavior(),
+      });
     }
   }, [forceUpdate]);
 
   const formatMessageTime = (dateString) => {
-    if (!dateString) return '';
+    if (!dateString) return "";
 
     const date = new Date(dateString);
-    return date.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
     });
   };
 
@@ -135,119 +151,65 @@ const MessageList = ({ messages,
     }
   };
 
-
-  // Thêm hàm lấy thông tin người gửi từ participants
   const getSenderInfo = (senderId) => {
     if (!participants) return null;
-    return participants.find(p => (p.userId || p.id) === senderId);
+    return participants.find((p) => (p.userId || p.id) === senderId);
   };
 
-  // Hàm xử lý nội dung tin nhắn
-  const processMessageContent = (content, isSentByCurrentUser) => {
-    // Kiểm tra nếu là chỉ emoji (hoặc chuỗi emoji)
-    if (isOnlyEmojis(content)) {
-      return (
-        <span className="text-3xl leading-relaxed">{content}</span>
-      );
-    }
-    
-    // Kiểm tra và xử lý đường link
+  const processMessageContent = (content) => {
+    if (!content) return null;
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     if (urlRegex.test(content)) {
       const parts = content.split(urlRegex);
-      const elements = [];
-      
-      for (let i = 0; i < parts.length; i++) {
-        if (urlRegex.test(parts[i])) {
-          elements.push(
-            <a 
-              key={i} 
-              href={parts[i]} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${isSentByCurrentUser ? 'text-white' : 'text-white'} hover:underline break-all`}
-            >
-              {parts[i]}
-            </a>
-          );
-        } else if (parts[i]) {
-          // Xử lý emoji trong đoạn text thường
-          elements.push(processEmojisInText(parts[i], i));
-        }
-      }
-      
-      return <>{elements}</>;
+      return parts.map((part, i) =>
+        urlRegex.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all text-ig-text underline"
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      );
     }
-    
-    // Xử lý emoji trong đoạn text thường
-    return processEmojisInText(content);
-  };
-  
-  // Thêm hàm để đếm emoji chính xác hơn
-  const countEmojis = (text) => {
-    // Sử dụng thư viện emoji-regex nếu có thể
-    // Hoặc đếm bằng cách sử dụng regex phức tạp hơn
-    return [...text.matchAll(/\p{Emoji}/gu)].length;
-  };
-
-  // Hàm kiểm tra chuỗi chỉ chứa emoji
-  const isOnlyEmojis = (text) => {
-    // Loại bỏ các ký tự không phải emoji (khoảng trắng, Zero Width Joiner, v.v.)
-    const cleanText = text.replace(/[\s\u200D\uFE0F\u20E3]/g, '');
-    // Regex để phát hiện emoji
-    const emojiRegex = /^[\p{Emoji}\p{Emoji_Presentation}\p{Emoji_Modifier_Base}\p{Emoji_Modifier}\p{Emoji_Component}]+$/u;
-    const emojiCount = countEmojis(text);
-    // Nếu có ít hơn 8 emoji và chuỗi (đã làm sạch) chỉ chứa emoji
-    return emojiCount <= 8 && emojiRegex.test(cleanText);
-  };
-  
-  // Hàm xử lý emoji trong văn bản thường
-  const processEmojisInText = (text, key = 0) => {
-    const emojiRegex = /([\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F000}-\u{1F02F}]+)/gu;
-    if (!emojiRegex.test(text)) return text;
-    const parts = text.split(emojiRegex);
-    const elements = [];
-    for (let i = 0; i < parts.length; i++) {
-      if (emojiRegex.test(parts[i])) {
-        elements.push(
-          <span key={`${key}-${i}`} className="text-xl align-middle">{parts[i]}</span>
-        );
-      } else if (parts[i]) {
-        elements.push(<span key={`${key}-${i}`}>{parts[i]}</span>);
-      }
-    }
-    
-    return <>{elements}</>;
+    return content;
   };
 
   return (
     <div
       ref={messagesContainerRef}
-      className='overflow-y-auto flex-1 p-4 bg-black scroll-smooth h-[calc(100vh-150px)]'
+      className="h-full flex-1 overflow-y-auto bg-ig-ground p-4"
       onScroll={handleScroll}
     >
       {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
-        </div>
+        <MessageListSkeleton />
       ) : (
         <>
-          {allLoaded && (
-            <div className="text-center text-gray-500 text-sm py-4 border-b border-gray-200 mb-4">
-              <p>{t('messenger.conversationStart')}</p>
-              {sortedMessages.length > 0 && sortedMessages[0]?.createdAt && (
-                <p className="font-medium mt-1">
-                  {format(new Date(sortedMessages[0].createdAt), 'PPP', { locale: vi })}
+          {allLoaded && sortedMessages.length > 0 && (
+            <div className="mb-4 border-b border-ig-rule py-4 text-center text-[12px] text-ig-muted">
+              <p>{t("messenger.conversationStart")}</p>
+              {sortedMessages[0]?.createdAt && (
+                <p className="mt-1 font-medium tabular-nums">
+                  {format(new Date(sortedMessages[0].createdAt), "PPP", {
+                    locale: vi,
+                  })}
                 </p>
               )}
             </div>
           )}
 
-          <div className='flex flex-col gap-0.5'>
+          <div className="flex flex-col gap-1">
             {sortedMessages.map((msg, index) => {
               const isSentByCurrentUser = msg.senderId === currentUserId;
               const previousMsg = index > 0 ? sortedMessages[index - 1] : null;
-              const isSenderChanged = previousMsg ? previousMsg.senderId !== msg.senderId : true;
+              const isSenderChanged = previousMsg
+                ? previousMsg.senderId !== msg.senderId
+                : true;
 
               const timestamp = formatTimeStamp(
                 msg.createdAt,
@@ -255,63 +217,69 @@ const MessageList = ({ messages,
                 isSenderChanged
               );
 
-              const showTimestamp = !!timestamp;
-              const showAvatar = isLastInCluster(msg, index, sortedMessages); // avatar ở cuối chuỗi
-              const showSenderName = isFirstInCluster(msg, index, sortedMessages); // tên ở đầu chuỗi
-
+              const showTimestamp = Boolean(timestamp);
+              const showAvatar = isLastInCluster(msg, index, sortedMessages);
+              const showSenderName = isFirstInCluster(
+                msg,
+                index,
+                sortedMessages
+              );
               const sender = isGroupChat ? getSenderInfo(msg.senderId) : null;
 
               return (
-                <React.Fragment key={`${msg.id || msg.tempId}-${index}-${msg.senderId}`}>
-                  {/* Hiển thị mốc thời gian */}
+                <React.Fragment
+                  key={`${msg.id || msg.tempId}-${index}-${msg.senderId}`}
+                >
                   {showTimestamp && (
-                    <div className="flex justify-center my-2">
-                      <div className="text-gray-500 text-xs px-3 py-1">
+                    <div className="my-2 flex justify-center">
+                      <span className="px-3 py-1 text-[12px] text-ig-faint tabular-nums">
                         {timestamp}
-                      </div>
+                      </span>
                     </div>
                   )}
 
-                  <div className="group mb-1 flex items-end">
-                    {/* Avatar đối phương */}
+                  <div className="ig-msg-enter group mb-1 flex items-end">
                     {!isSentByCurrentUser && showAvatar ? (
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <img
-                          src={isGroupChat 
-                            ? (sender?.userImage || "/default-avatar.png") 
-                            : (selectedUser?.userImage || "/default-avatar.png")}
-                          alt="Avatar"
-                          className="w-8 h-8 rounded-full object-cover mr-2"
+                          src={
+                            isGroupChat
+                              ? sender?.userImage || "/default-avatar.png"
+                              : selectedUser?.image || "/default-avatar.png"
+                          }
+                          alt=""
+                          className="mr-2 h-8 w-8 rounded-full bg-ig-surface object-cover"
                         />
                       </div>
                     ) : (
-                      !isSentByCurrentUser && <div className="w-8 h-8 mr-2 flex-shrink-0" />
+                      !isSentByCurrentUser && (
+                        <div className="mr-2 h-8 w-8 shrink-0" />
+                      )
                     )}
 
-                    {/* Cột tin nhắn */}
-                    <div className="flex flex-col w-full">
-                      {/* Hiển thị tên người gửi trong group chat */}
+                    <div className="flex w-full flex-col">
                       {isGroupChat && !isSentByCurrentUser && showSenderName && (
-                        <div className="text-xs text-gray-400 mb-1 ml-1">
-                          {sender?.userNickname || sender?.userFullname || "User"}
-                        </div>
+                        <span className="mb-1 ml-1 text-[12px] text-ig-muted">
+                          {sender?.userNickname ||
+                            sender?.userFullname ||
+                            "User"}
+                        </span>
                       )}
-                      
-                      {/* Container tin nhắn */}
-                      <div className={`flex ${isSentByCurrentUser ? "justify-end" : "justify-start"} w-full`}>
+
+                      <div
+                        className={`flex w-full ${
+                          isSentByCurrentUser ? "justify-end" : "justify-start"
+                        }`}
+                      >
                         <div
-                          className={`relative break-words px-3 py-1 rounded-2xl
-                            ${isSentByCurrentUser ? "bg-blue-600 text-white" : "bg-gray-800 text-white"}
-                            ${isOnlyEmojis(msg.content) ? "bg-transparent !p-0" : msg.content.length < 20 ? "max-w-fit" : "max-w-[75%]"}
-                            ${msg.pending ? "opacity-70" : ""}`}
+                          title={formatMessageTime(msg.createdAt)}
+                          className={`relative max-w-[75%] break-words rounded-panel px-3.5 py-2 text-[14px] leading-snug ${
+                            isSentByCurrentUser
+                              ? "bg-ig-accent text-ig-text"
+                              : "border border-ig-border bg-ig-surface text-ig-text"
+                          } ${msg.pending ? "opacity-70" : ""}`}
                         >
-                          {processMessageContent(msg.content, isSentByCurrentUser)}
-                          {/* Tooltip thời gian */}
-                          <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-40 transition-opacity duration-200 pointer-events-none">
-                            <div className={`text-xs px-2 py-1 rounded bg-gray-800 text-white whitespace-nowrap ${isSentByCurrentUser ? "right-0" : "left-0"}`}>
-                              {formatMessageTime(msg.createdAt)}
-                            </div>
-                          </div>
+                          {processMessageContent(msg.content)}
                         </div>
                       </div>
                     </div>
@@ -320,17 +288,17 @@ const MessageList = ({ messages,
               );
             })}
           </div>
-          
-          {/* Đặt messagesEndRef tại vị trí cuối cùng của danh sách tin nhắn */}
-          <div ref={messagesEndRef} style={{ height: "1px", marginBottom: "10px" }}></div>
+
+          <div
+            ref={messagesEndRef}
+            style={{ height: "1px", marginBottom: "10px" }}
+          />
 
           {sortedMessages.length === 0 && !loading && (
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="text-center text-gray-500">
-                <p className="mb-2">{t("messenger.noMessages")}</p>
-                <p className="text-sm">{t("messenger.sendFirstMessage")}</p>
-              </div>
-            </div>
+            <EmptyState
+              title={t("messenger.noMessages")}
+              description={t("messenger.sendFirstMessage")}
+            />
           )}
         </>
       )}
