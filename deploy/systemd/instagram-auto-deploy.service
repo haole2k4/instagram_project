@@ -1,0 +1,13 @@
+[Unit]
+Description=Instagram project: pull code mới và deploy lại
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# `make auto-deploy-install` thay __REPO_DIR__ bằng đường dẫn repo deploy.
+WorkingDirectory=__REPO_DIR__
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-%h/.config/instagram-auto-deploy.env
+ExecStart=__REPO_DIR__/scripts/auto-deploy.sh
+TimeoutStartSec=30min

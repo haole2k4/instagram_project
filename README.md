@@ -148,6 +148,29 @@ cd backend_instagram
 ./mvnw test
 ```
 
+## Tự động deploy khi có code mới
+
+`scripts/auto-deploy.sh` cứ 2 phút kiểm tra `origin/master` một lần (chạy bằng systemd user timer). Nếu có commit mới, script sẽ fast-forward pull rồi build và chạy lại stack. Không cần mở cổng vào máy hay dùng GitHub runner.
+
+```bash
+# Nên dùng một bản clone riêng để deploy, tách khỏi thư mục đang code
+git clone https://github.com/haole2k4/instagram_project.git ~/deploy/instagram_project
+cp .env ~/deploy/instagram_project/.env
+cd ~/deploy/instagram_project
+
+make auto-deploy-install          # cài + bật timer
+loginctl enable-linger "$USER"    # để timer chạy cả khi chưa đăng nhập
+make auto-deploy-logs             # xem log
+make auto-deploy                  # deploy ngay, không cần chờ có commit mới
+make auto-deploy-uninstall        # tắt
+```
+
+- Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, khi đó script chạy `make k8s-redeploy`. Các biến khác: `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`.
+- Script sẽ dừng, không pull, nếu thư mục deploy không ở nhánh `master` hoặc có thay đổi tracked chưa commit. Nếu không fast-forward được, script cũng dừng.
+- Commit chỉ sửa file `.md` thì không build lại.
+- Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử lại khi có commit mới hoặc khi chạy `make auto-deploy`. Script không tự rollback.
+- Compose project name lấy theo tên thư mục. Clone vào thư mục cũng tên `instagram_project` thì stack dùng lại container và volume dữ liệu hiện có.
+
 ## Kubernetes local với kind
 
 Stack K8s nằm trong thư mục `k8s/`, dùng kind + ingress-nginx.
@@ -249,6 +272,8 @@ Social-app-fontend/  React frontend, Dockerfile và nginx config
 backend_instagram/   Spring Boot API, Dockerfile và seed-demo.sql
 localstack-init/     Khởi tạo bucket S3 local
 k8s/                 Manifest Kubernetes (kind) + script tạo secret
+scripts/             auto-deploy.sh (tự pull + deploy)
+deploy/systemd/      Unit systemd cho auto-deploy
 docker-compose.yml   Bộ dịch vụ phát triển local
 Makefile             Lệnh tắt cho Compose và Kubernetes
 ```

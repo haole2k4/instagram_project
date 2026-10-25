@@ -6,7 +6,7 @@ FRONTEND_IMAGE ?= instagram-frontend:local
 PUBLIC_HOST ?= instagram.local
 PUBLIC_URL ?= http://$(PUBLIC_HOST)
 
-.PHONY: help k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down
+.PHONY: help k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down auto-deploy auto-deploy-install auto-deploy-uninstall auto-deploy-logs
 
 help:
 	@echo "Các target:"
@@ -17,6 +17,7 @@ help:
 	@echo "  make k8s-logs     Theo dõi log backend"
 	@echo "  make compose-up   Chạy stack bằng Docker Compose (có Redis)"
 	@echo "  make compose-down Dừng stack Docker Compose"
+	@echo "  make auto-deploy-install  Bật timer tự pull + deploy bản mới nhất"
 
 k8s-cluster:
 	kind get clusters | grep -qx "$(KIND_CLUSTER)" || kind create cluster --config k8s/kind-config.yaml
@@ -74,3 +75,25 @@ compose-up:
 
 compose-down:
 	docker compose down
+
+# Tự động pull + deploy bằng systemd user timer (xem README, mục Tự động deploy)
+SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
+
+auto-deploy:
+	./scripts/auto-deploy.sh --force
+
+auto-deploy-install:
+	mkdir -p $(SYSTEMD_USER_DIR)
+	sed "s|__REPO_DIR__|$(CURDIR)|g" deploy/systemd/instagram-auto-deploy.service > $(SYSTEMD_USER_DIR)/instagram-auto-deploy.service
+	cp deploy/systemd/instagram-auto-deploy.timer $(SYSTEMD_USER_DIR)/
+	systemctl --user daemon-reload
+	systemctl --user enable --now instagram-auto-deploy.timer
+	@echo "Đã bật timer. Chạy 'loginctl enable-linger $$USER' để timer chạy cả khi chưa đăng nhập."
+
+auto-deploy-uninstall:
+	-systemctl --user disable --now instagram-auto-deploy.timer
+	rm -f $(SYSTEMD_USER_DIR)/instagram-auto-deploy.service $(SYSTEMD_USER_DIR)/instagram-auto-deploy.timer
+	systemctl --user daemon-reload
+
+auto-deploy-logs:
+	journalctl --user -u instagram-auto-deploy.service -f
