@@ -1,5 +1,3 @@
-import { useTranslation } from "react-i18next";
-
 export const formatTime = (dateString, t) => {
   const postDate = new Date(dateString);
   const now = new Date();

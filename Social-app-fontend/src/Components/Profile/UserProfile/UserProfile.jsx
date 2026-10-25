@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { handleGetUserById } from "../../../Service/UserAPI";
 import { getAllStoryByUserId } from "../../../Service/storyApi";
 import { handleGetAllPostByUserId } from "../../../Service/postApi";
@@ -26,32 +26,35 @@ const UserProfile = () => {
   const navigate = useNavigate();
   const [t] = useTranslation();
 
-  useEffect(() => {
-    fetchDataUser();
-    fetchDataStory();
-    fetchDataPost();
-  }, []);
-
-  const fetchDataUser = async () => {
+  const fetchDataUser = useCallback(async () => {
+    if (!userredux?.id) return;
     let res = await handleGetUserById(userredux.id);
     if (res.statusCode === 200 && res.data) {
       setDataUser(res.data);
     }
-  };
+  }, [userredux?.id]);
 
-  const fetchDataStory = async () => {
+  const fetchDataStory = useCallback(async () => {
+    if (!userredux?.id) return;
     let res = await getAllStoryByUserId(userredux.id);
     if (res.statusCode === 200 && res.data) {
       setDataStory(res.data);
     }
-  };
+  }, [userredux?.id]);
 
-  const fetchDataPost = async () => {
+  const fetchDataPost = useCallback(async () => {
+    if (!userredux?.id) return;
     let res = await handleGetAllPostByUserId(userredux.id);
     if (res.statusCode === 200 && res.data) {
       setDataPost(res.data);
     }
-  };
+  }, [userredux?.id]);
+
+  useEffect(() => {
+    fetchDataUser();
+    fetchDataStory();
+    fetchDataPost();
+  }, [fetchDataUser, fetchDataStory, fetchDataPost]);
 
   const hasStories = Array.isArray(dataStory) && dataStory.length > 0;
 

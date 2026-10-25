@@ -3,10 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
 const PrivateRouter = ({ children }) => {
-  const { account, isAuthenticated } = useSelector((state) => ({
-    account: state.login.userInfo,
-    isAuthenticated: state.login.isLoggedIn,
-  }));
+  const isAuthenticated = useSelector((state) => state.login.isLoggedIn);
   const navigate = useNavigate();
 
   useEffect(() => {

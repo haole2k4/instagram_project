@@ -360,7 +360,13 @@ const MessengerPage = () => {
 
       connectAndSubscribe();
     }
-  }, [currentConversation?.id, currentUser?.id, webSocketConnected, isAIChat]);
+  }, [
+    currentConversation?.id,
+    currentConversation?.unreadCount,
+    currentUser?.id,
+    webSocketConnected,
+    isAIChat,
+  ]);
 
   useEffect(() => {
     let reconnectAttempts = 0;

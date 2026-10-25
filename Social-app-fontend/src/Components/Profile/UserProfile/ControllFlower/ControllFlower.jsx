@@ -19,6 +19,14 @@ export default function ControllFollower({
   const { t } = useTranslation();
 
   useEffect(() => {
+    const fectDataFollower = async () => {
+      if (!id) return;
+      let res = await handleGetAllFollower(id);
+      if (res.statusCode === 200 && res.data) {
+        setDataFollower(res.data);
+      }
+    };
+
     if (isOpen) {
       fectDataFollower();
       document.body.classList.add("overflow-hidden");
@@ -37,14 +45,6 @@ export default function ControllFollower({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
-
-  const fectDataFollower = async () => {
-    if (!id) return;
-    let res = await handleGetAllFollower(id);
-    if (res.statusCode === 200 && res.data) {
-      setDataFollower(res.data);
-    }
-  };
 
   const handleGetFollowersByUser = async (user) => {
     try {

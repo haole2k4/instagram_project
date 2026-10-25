@@ -2,28 +2,6 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import instance from '../../Utils/AxiosApi/Axios';
 import webSocketService from '../../Service/WebSocketService'; 
 
-const updateConversationWithNewMessage = (state, message) => {
-  if (!message || !message.conversationId) {
-    console.error('Invalid message format for updateConversation:', message);
-    return;
-  }
-  
-  const conversationIndex = state.conversations.findIndex(
-    c => c.id === message.conversationId
-  );
-  
-  if (conversationIndex >= 0) {
-    state.conversations[conversationIndex].lastMessage = message;
-    if (message.senderId !== state.currentUserId) {
-      state.conversations[conversationIndex].unreadCount = 
-        (state.conversations[conversationIndex].unreadCount || 0) + 1;
-    }
-    const updatedConversation = state.conversations[conversationIndex];
-    state.conversations.splice(conversationIndex, 1);
-    state.conversations.unshift(updatedConversation);
-  }
-};
-
 export const getConversations = createAsyncThunk(
   'chat/getConversations',
   async (userId) => {
@@ -331,10 +309,6 @@ const chatSlice = createSlice({
           status
         };
       }
-    },
-
-    resetMessages: (state) => {
-      state.messages = [];
     },
 
     resetMessages: (state) => {

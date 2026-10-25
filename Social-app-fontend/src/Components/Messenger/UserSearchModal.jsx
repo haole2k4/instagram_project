@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import instance from "../../Utils/AxiosApi/Axios";
@@ -22,26 +22,7 @@ const UserSearchModal = ({
   const [groupName, setGroupName] = useState("");
   const [fetchAttempted, setFetchAttempted] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && !fetchAttempted) {
-      fetchFriends();
-      setFetchAttempted(true);
-    }
-    if (!isOpen) {
-      setFetchAttempted(false);
-    }
-  }, [isOpen, fetchAttempted]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     if (!currentUserId) return;
 
     setLoading(true);
@@ -84,7 +65,26 @@ const UserSearchModal = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId, excludeUserIds]);
+
+  useEffect(() => {
+    if (isOpen && !fetchAttempted) {
+      fetchFriends();
+      setFetchAttempted(true);
+    }
+    if (!isOpen) {
+      setFetchAttempted(false);
+    }
+  }, [isOpen, fetchAttempted, fetchFriends]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {

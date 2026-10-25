@@ -1,4 +1,3 @@
-import { data } from "autoprefixer";
 import instance from "../Utils/AxiosApi/Axios";
 
 const getAllPost = () => {

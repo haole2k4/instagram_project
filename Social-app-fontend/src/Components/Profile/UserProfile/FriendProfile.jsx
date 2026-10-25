@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   handleGetUserById,
@@ -31,14 +31,7 @@ const FriendProfile = () => {
   const currentUser = useSelector((state) => state.login?.userInfo);
   const { sendFollowNotification } = useWebSocket();
 
-  useEffect(() => {
-    fectDataUserbyId();
-    fectDataStory();
-    fectDataPost();
-    checkFollowingStatus();
-  }, [id, currentUser?.id]);
-
-  const fectDataUserbyId = async () => {
+  const fectDataUserbyId = useCallback(async () => {
     try {
       const res = await handleGetUserById(id);
       if (res?.statusCode === 200 && res.data) {
@@ -47,9 +40,9 @@ const FriendProfile = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [id]);
 
-  const fectDataStory = async () => {
+  const fectDataStory = useCallback(async () => {
     try {
       const res = await getAllStoryByUserId(id);
       if (res?.statusCode === 200 && res.data) {
@@ -58,9 +51,9 @@ const FriendProfile = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [id]);
 
-  const fectDataPost = async () => {
+  const fectDataPost = useCallback(async () => {
     try {
       const res = await handleGetAllPostByUserId(id);
       if (res?.statusCode === 200 && res.data) {
@@ -69,9 +62,9 @@ const FriendProfile = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [id]);
 
-  const checkFollowingStatus = async () => {
+  const checkFollowingStatus = useCallback(async () => {
     if (!currentUser?.id || !id) return;
     try {
       const res = await handleGetFollowersByUser(id);
@@ -85,7 +78,14 @@ const FriendProfile = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [currentUser?.id, id]);
+
+  useEffect(() => {
+    fectDataUserbyId();
+    fectDataStory();
+    fectDataPost();
+    checkFollowingStatus();
+  }, [fectDataUserbyId, fectDataStory, fectDataPost, checkFollowingStatus]);
 
   const handleToggleFollow = async () => {
     if (!currentUser?.id) {

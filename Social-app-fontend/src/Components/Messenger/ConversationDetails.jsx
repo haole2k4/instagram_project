@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -19,26 +19,7 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
   const [groupOwner, setGroupOwner] = useState(null);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
 
-  useEffect(() => {
-    if (conversation) {
-      if (
-        !conversation.isGroupChat &&
-        conversation.participants?.length === 2
-      ) {
-        const otherUser = conversation.participants.find(
-          (p) => (p.userId || p.id) !== currentUser.id
-        );
-        if (otherUser) {
-          checkBlockStatus(otherUser.userId || otherUser.id);
-        }
-      }
-      if (conversation.isGroupChat) {
-        fetchGroupOwner(conversation.id);
-      }
-    }
-  }, [conversation, currentUser]);
-
-  const fetchGroupOwner = async (conversationId) => {
+  const fetchGroupOwner = useCallback(async (conversationId) => {
     try {
       const response = await instance.get(
         `/chat/conversation/${conversationId}/owner`
@@ -49,9 +30,10 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
     } catch (error) {
       console.error("Error fetching group owner:", error);
     }
-  };
+  }, []);
 
-  const checkBlockStatus = async (otherUserId) => {
+  const checkBlockStatus = useCallback(async (otherUserId) => {
+    if (!currentUser?.id) return;
     try {
       const response = await instance.get(
         `/chat/block-status?userId=${currentUser.id}&otherUserId=${otherUserId}`
@@ -60,7 +42,26 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
     } catch (error) {
       console.error("Error checking block status:", error);
     }
-  };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (conversation) {
+      if (
+        !conversation.isGroupChat &&
+        conversation.participants?.length === 2
+      ) {
+        const otherUser = conversation.participants.find(
+          (p) => (p.userId || p.id) !== currentUser?.id
+        );
+        if (otherUser) {
+          checkBlockStatus(otherUser.userId || otherUser.id);
+        }
+      }
+      if (conversation.isGroupChat) {
+        fetchGroupOwner(conversation.id);
+      }
+    }
+  }, [conversation, currentUser?.id, checkBlockStatus, fetchGroupOwner]);
 
   const handleUpdateName = async (name) => {
     if (!name || !name.trim()) return;
