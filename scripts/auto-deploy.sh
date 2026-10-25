@@ -50,9 +50,9 @@ if [[ "$old_sha" != "$new_sha" ]]; then
     || die "Không fast-forward được lên $DEPLOY_REMOTE/$DEPLOY_BRANCH."
   log "Đã pull ${old_sha:0:7} -> ${new_sha:0:7}"
 
-  # Commit chỉ đổi tài liệu thì không cần build lại.
-  if [[ "$FORCE" -eq 0 ]] && ! git diff --name-only "$old_sha" "$new_sha" | grep -qvE '\.md$'; then
-    log "Chỉ thay đổi tài liệu, bỏ qua deploy."
+  # Commit chỉ đổi tài liệu hoặc cấu hình GitHub thì không cần build lại.
+  if [[ "$FORCE" -eq 0 ]] && ! git diff --name-only "$old_sha" "$new_sha" | grep -qvE '^(\.github/|.*\.md$)'; then
+    log "Chỉ thay đổi tài liệu hoặc cấu hình GitHub, bỏ qua deploy."
     exit 0
   fi
 fi
