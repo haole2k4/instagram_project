@@ -9,6 +9,7 @@ import { handleGetFollowingByUser } from "../../Service/UserAPI";
 import Route from "../../Components/Routes/index";
 import { RowListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";
+import { parseMessageContent } from "./MessageList";
 
 const ConversationList = ({
   conversations = [],
@@ -316,11 +317,21 @@ const ConversationList = ({
                               :
                             </span>
                           )}
-                        {conversation.lastMessage.senderId === currentUser?.id
-                          ? `${t("messenger.you")}: ${
-                              conversation.lastMessage.content
-                            }`
-                          : conversation.lastMessage.content}
+                        {(() => {
+                          const parsedLast = parseMessageContent(
+                            conversation.lastMessage.content
+                          );
+                          const text = parsedLast.isStoryReply
+                            ? `[${
+                                t("story.storyReplyLabel") || "Đã trả lời tin"
+                              }]: ${parsedLast.text || ""}`
+                            : conversation.lastMessage.content;
+
+                          return conversation.lastMessage.senderId ===
+                            currentUser?.id
+                            ? `${t("messenger.you")}: ${text}`
+                            : text;
+                        })()}
                       </p>
                     )}
                   </div>

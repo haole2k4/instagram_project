@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +16,10 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { getStories, getStoryByFollowing, deleteStory } from "../../Service/storyApi";
+import {
+  getOrCreateConversation,
+  sendMessage as sendChatMessage,
+} from "../../Redux/Reducer/chatSlice";
 import Route from "../../Components/Routes/index";
 
 const VIEWED_STORIES_KEY = "ig_viewed_stories";
@@ -39,6 +43,7 @@ const StoryViewer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.login);
 
   const [stories, setStories] = useState([]);
@@ -227,10 +232,55 @@ const StoryViewer = () => {
     return t("story.justNow");
   };
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      toast.success(t("story.replySent"));
+  const handleSendMessage = async () => {
+    const text = message.trim();
+    if (!text || !currentStory || !userInfo?.id) return;
+
+    const authorId = currentStory.user?.id || currentStory.userId;
+    if (!authorId) return;
+
+    if (authorId === userInfo.id) {
+      toast.info(t("story.selfReply") || "Bạn không thể tự gửi tin nhắn cho mình.");
       setMessage("");
+      return;
+    }
+
+    try {
+      const convAction = await dispatch(
+        getOrCreateConversation({
+          userId: userInfo.id,
+          otherUserId: authorId,
+        })
+      );
+
+      if (getOrCreateConversation.fulfilled.match(convAction) && convAction.payload) {
+        const conversationId = convAction.payload.id;
+
+        const storyPayload = {
+          type: "STORY_REPLY",
+          storyId: currentStory.id,
+          storyMedia: currentStory.url,
+          storyType: currentStory.type || "IMAGE",
+          storyAuthor:
+            currentStory.user?.userNickname ||
+            currentStory.user?.userFullname ||
+            "User",
+          text: text,
+        };
+
+        const apiMessage = {
+          conversationId,
+          senderId: userInfo.id,
+          content: JSON.stringify(storyPayload),
+        };
+
+        await dispatch(sendChatMessage(apiMessage));
+        toast.success(t("story.replySent") || "Đã gửi tin nhắn");
+        setMessage("");
+      }
+    } catch (err) {
+      console.error("Error sending story reply:", err);
+      toast.error(t("messenger.sendError") || "Không thể gửi tin nhắn.");
     }
   };
 

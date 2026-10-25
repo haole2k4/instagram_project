@@ -249,6 +249,8 @@
     "pleaseSelectMedia": "Please select an image or video",
     "replyPlaceholder": "Send message...",
     "replySent": "Reply sent",
+    "selfReply": "You cannot reply to your own story.",
+    "storyReplyLabel": "Replied to story",
     "sendReply": "Send",
     "user": "User",
     "viewerTitle": "Story viewer",

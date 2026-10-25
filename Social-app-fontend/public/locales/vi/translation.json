@@ -245,6 +245,8 @@
     "pleaseSelectMedia": "Vui lòng chọn ảnh hoặc video",
     "replyPlaceholder": "Gửi tin nhắn...",
     "replySent": "Đã gửi phản hồi",
+    "selfReply": "Bạn không thể tự gửi tin nhắn cho mình.",
+    "storyReplyLabel": "Đã trả lời tin",
     "sendReply": "Gửi",
     "user": "Người dùng",
     "viewerTitle": "Xem tin",

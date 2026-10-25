@@ -5,9 +5,11 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
   Bell,
+  ChevronDown,
   CircleSlash,
   Eye,
   EyeOff,
+  Globe,
   KeyRound,
   Lock,
   Search,
@@ -20,6 +22,7 @@ import {
 
 import { handleEditProfile, handleGetById } from "../../Service/UserAPI";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
+import { changeLanguageRedux } from "../../Redux/Reducer/appReducer";
 
 const SETTINGS_SECTIONS = [
   {
@@ -30,10 +33,12 @@ const SETTINGS_SECTIONS = [
       {
         id: "meta_account",
         icon: Shield,
-        titleVi: "Trung tâm tài khoản Meta",
+        titleVi: "Tài khoản Meta",
         titleEn: "Meta Account",
-        subtitleVi: "Mật khẩu, bảo mật, thông tin cá nhân",
-        subtitleEn: "Password, security, personal details, cross-profile experiences",
+        subtitleVi:
+          "Mật khẩu, bảo mật, thông tin cá nhân, trải nghiệm liên trang cá nhân, tùy chọn quảng cáo",
+        subtitleEn:
+          "Password, security, personal details, cross-profile experiences, ad preferences",
         isMeta: true,
       },
     ],
@@ -54,6 +59,12 @@ const SETTINGS_SECTIONS = [
         icon: Bell,
         titleVi: "Thông báo",
         titleEn: "Notifications",
+      },
+      {
+        id: "language",
+        icon: Globe,
+        titleVi: "Ngôn ngữ",
+        titleEn: "Language",
       },
     ],
   },
@@ -83,20 +94,20 @@ const SETTINGS_SECTIONS = [
       {
         id: "story_live",
         icon: Video,
-        titleVi: "Tin, phát trực tiếp và vị trí",
+        titleVi: "Tin, buổi phát trực tiếp và vị trí",
         titleEn: "Story, live and location",
       },
     ],
   },
   {
     groupKey: "how_others_interact",
-    groupLabelVi: "Cách người khác tương tác với bạn",
+    groupLabelVi: "Cách người khác có thể tương tác với bạn",
     groupLabelEn: "How others can interact with you",
     items: [
       {
         id: "messages_replies",
         icon: Send,
-        titleVi: "Tin nhắn và phản hồi tin",
+        titleVi: "Tin nhắn và lượt trả lời tin",
         titleEn: "Messages and story replies",
       },
     ],
@@ -105,7 +116,8 @@ const SETTINGS_SECTIONS = [
 
 const Settings = () => {
   const { i18n } = useTranslation();
-  const isEn = i18n.language === "en";
+  const currentLang = i18n.language || "vi";
+  const isEn = currentLang === "en";
   const [searchParams, setSearchParams] = useSearchParams();
   const dispatch = useDispatch();
 
@@ -113,11 +125,15 @@ const Settings = () => {
   const activeTab = searchParams.get("tab") || "edit_profile";
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Edit Profile Form State
+  // Edit Profile Form State (matching Image 0)
   const [nickname, setNickname] = useState("");
-  const [phone, setPhone] = useState("");
+  const [website, setWebsite] = useState("");
   const [bio, setBio] = useState("");
   const [gender, setGender] = useState("male");
+  const [showThreadsBadge, setShowThreadsBadge] = useState(true);
+  const [aiProfileBadge, setAiProfileBadge] = useState(false);
+  const [showAccountSuggestions, setShowAccountSuggestions] = useState(true);
+  const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarBase64, setAvatarBase64] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -154,7 +170,6 @@ const Settings = () => {
         if (res && res.statusCode === 200 && res.data) {
           const user = res.data;
           setNickname(user.userNickname || "");
-          setPhone(user.userPhone || "");
           setBio(user.userBio || "");
           setGender(user.userGender === "female" ? "female" : "male");
           if (user.userImage) {
@@ -170,6 +185,14 @@ const Settings = () => {
 
   const handleSelectTab = (tabId) => {
     setSearchParams({ tab: tabId });
+  };
+
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+    dispatch(changeLanguageRedux(lang));
+    toast.success(
+      lang === "vi" ? "Đã chuyển sang Tiếng Việt" : "Switched to English"
+    );
   };
 
   const handleAvatarChange = (e) => {
@@ -192,7 +215,6 @@ const Settings = () => {
       const payload = {
         id: userInfo.id,
         userNickname: nickname,
-        userPhone: phone,
         userBio: bio,
         userGender: gender,
         userImage: avatarBase64 || avatarPreview,
@@ -200,7 +222,11 @@ const Settings = () => {
 
       const res = await handleEditProfile(payload);
       if (res && (res.statusCode === 200 || res.status === 200)) {
-        toast.success(isEn ? "Profile updated successfully!" : "Cập nhật trang cá nhân thành công!");
+        toast.success(
+          isEn
+            ? "Profile updated successfully!"
+            : "Cập nhật trang cá nhân thành công!"
+        );
         dispatch(
           userLoginData({
             user: {
@@ -209,14 +235,15 @@ const Settings = () => {
               userNickname: nickname,
               avatar: avatarBase64 || avatarPreview,
               userImage: avatarBase64 || avatarPreview,
-              userPhone: phone,
               userBio: bio,
               userGender: gender,
             },
           })
         );
       } else {
-        toast.error(isEn ? "Failed to update profile." : "Không thể cập nhật trang cá nhân.");
+        toast.error(
+          isEn ? "Failed to update profile." : "Không thể cập nhật trang cá nhân."
+        );
       }
     } catch (err) {
       console.error("Profile save error:", err);
@@ -229,25 +256,37 @@ const Settings = () => {
   const handleChangePassword = (e) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) {
-      toast.error(isEn ? "Please fill in all password fields." : "Vui lòng nhập đầy đủ mật khẩu.");
+      toast.error(
+        isEn
+          ? "Please fill in all password fields."
+          : "Vui lòng nhập đầy đủ mật khẩu."
+      );
       return;
     }
     if (newPassword.length < 8) {
-      toast.error(isEn ? "New password must be at least 8 characters." : "Mật khẩu mới tối thiểu 8 ký tự.");
+      toast.error(
+        isEn
+          ? "New password must be at least 8 characters."
+          : "Mật khẩu mới tối thiểu 8 ký tự."
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error(isEn ? "Passwords do not match." : "Mật khẩu xác nhận không khớp.");
+      toast.error(
+        isEn ? "Passwords do not match." : "Mật khẩu xác nhận không khớp."
+      );
       return;
     }
 
-    toast.success(isEn ? "Password changed successfully!" : "Đổi mật khẩu thành công!");
+    toast.success(
+      isEn ? "Password changed successfully!" : "Đổi mật khẩu thành công!"
+    );
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
   };
 
-  // Lọc mục cài đặt theo search query
+  // Filter sections by search query
   const filteredSections = SETTINGS_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
@@ -264,9 +303,9 @@ const Settings = () => {
 
   return (
     <div className="flex min-h-[calc(100vh-56px)] w-full bg-black text-white selection:bg-[#0095f6]/30">
-      {/* Cột Danh Mục Cài Đặt (Sidebar phong cách Instagram Web) */}
-      <aside className="w-full md:w-[320px] lg:w-[340px] shrink-0 border-r border-[#1a1a1a] bg-black p-4 md:p-6 overflow-y-auto">
-        <h1 className="mb-4 text-[22px] md:text-[24px] font-bold text-white tracking-tight">
+      {/* Cột Danh Mục Cài Đặt (Sidebar phong cách Instagram Web - Hình 0) */}
+      <aside className="w-full md:w-[320px] lg:w-[340px] shrink-0 border-r border-[#1a1a1a] bg-black p-4 md:p-6 overflow-y-auto no-scrollbar">
+        <h1 className="mb-5 text-[22px] md:text-[24px] font-bold text-white tracking-tight">
           {isEn ? "Settings" : "Cài đặt"}
         </h1>
 
@@ -343,7 +382,7 @@ const Settings = () => {
                               <p className="text-[14px] font-semibold text-white">
                                 {isEn ? item.titleEn : item.titleVi}
                               </p>
-                              <p className="text-[12px] text-neutral-400 line-clamp-2 mt-0.5 leading-snug">
+                              <p className="text-[12px] text-neutral-400 line-clamp-3 mt-0.5 leading-snug">
                                 {isEn ? item.subtitleEn : item.subtitleVi}
                               </p>
                             </div>
@@ -358,7 +397,7 @@ const Settings = () => {
                       <button
                         type="button"
                         onClick={() => handleSelectTab(item.id)}
-                        className={`w-full flex items-center gap-3.5 rounded-xl px-3.5 py-3 text-[14px] font-medium transition-colors ${
+                        className={`w-full flex items-center gap-3.5 rounded-xl px-3.5 py-3 text-[14px] transition-colors ${
                           isActive
                             ? "bg-[#262626] text-white font-semibold"
                             : "text-neutral-300 hover:bg-[#121212] hover:text-white"
@@ -378,29 +417,29 @@ const Settings = () => {
         </nav>
       </aside>
 
-      {/* Vùng Hiển Thị Nội Dung Cài Đặt (Right Panel) */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 md:px-12 lg:px-16 max-w-[820px]">
-        {/* TAB 1: EDIT PROFILE */}
+      {/* Vùng Hiển Thị Nội Dung Cài Đặt (Right Panel - Chuẩn Hình 0) */}
+      <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 md:px-12 lg:px-14 max-w-[720px] no-scrollbar">
+        {/* TAB 1: CHỈNH SỬA TRANG CÁ NHÂN (Chuẩn theo hình 0) */}
         {activeTab === "edit_profile" && (
           <div>
-            <h2 className="mb-6 text-[22px] font-bold text-white">
+            <h2 className="mb-6 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Edit profile" : "Chỉnh sửa trang cá nhân"}
             </h2>
 
-            {/* Avatar Row */}
-            <div className="mb-8 flex items-center justify-between rounded-2xl border border-[#262626] bg-[#121212] p-4 sm:p-5">
+            {/* Profile Avatar Card */}
+            <div className="mb-6 flex items-center justify-between rounded-2xl bg-[#262626] p-4">
               <div className="flex items-center gap-4">
                 <img
                   src={avatarPreview || userInfo?.avatar || "/default-avatar.png"}
                   alt={nickname}
-                  className="h-16 w-16 rounded-full border border-neutral-700 object-cover"
+                  className="h-14 w-14 rounded-full object-cover"
                 />
                 <div>
-                  <p className="text-[16px] font-semibold text-white">
-                    {nickname || userInfo?.name || "User"}
+                  <p className="text-[16px] font-bold text-white">
+                    {nickname || userInfo?.userNickname || "username"}
                   </p>
-                  <p className="text-[13px] text-neutral-400">
-                    {userInfo?.email || ""}
+                  <p className="text-[14px] text-neutral-400">
+                    {userInfo?.name || userInfo?.userFullname || "User"}
                   </p>
                 </div>
               </div>
@@ -408,8 +447,10 @@ const Settings = () => {
               <div>
                 <button
                   type="button"
-                  onClick={() => document.getElementById("settingsAvatarInput")?.click()}
-                  className="ig-press rounded-xl bg-[#0095f6] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#1877f2]"
+                  onClick={() =>
+                    document.getElementById("settingsAvatarInput")?.click()
+                  }
+                  className="ig-press rounded-lg bg-[#0095f6] px-4 py-1.5 text-[14px] font-semibold text-white hover:bg-[#1877f2]"
                 >
                   {isEn ? "Change photo" : "Đổi ảnh"}
                 </button>
@@ -423,93 +464,203 @@ const Settings = () => {
               </div>
             </div>
 
-            {/* Form Fields */}
-            <form onSubmit={handleSaveProfile} className="space-y-6">
+            {/* Form Fields theo phong cách chuẩn Instagram Hình 0 */}
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              {/* Trang web */}
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
-                  {isEn ? "Username" : "Tên người dùng"}
-                </label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 text-[14px] text-white placeholder-neutral-500 outline-none focus:border-[#0095f6] transition-colors"
-                />
-                <p className="mt-1.5 text-[12px] text-neutral-500">
+                <div className="rounded-xl border border-[#262626] bg-[#121212] px-4 py-3">
+                  <input
+                    type="text"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder={isEn ? "Website" : "Trang web"}
+                    className="w-full bg-transparent text-[14px] text-white placeholder-neutral-500 outline-none"
+                  />
+                </div>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-neutral-400">
                   {isEn
-                    ? "In most cases, you'll be able to change your username back to another handle within 14 days."
-                    : "Tên người dùng của bạn hiển thị trên trang cá nhân và các bài đăng."}
+                    ? "You can only edit links on mobile. Open the Instagram app and edit your profile to change the website in your bio."
+                    : "Bạn chỉ có thể chỉnh sửa liên kết trên di động. Hãy mở ứng dụng Instagram và chỉnh sửa trang cá nhân của bạn để thay đổi trang web trong phần tiểu sử."}
                 </p>
               </div>
 
+              {/* Tiểu sử */}
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
-                  {isEn ? "Phone number" : "Số điện thoại"}
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 text-[14px] text-white placeholder-neutral-500 outline-none focus:border-[#0095f6] transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
-                  {isEn ? "Bio" : "Tiểu sử"}
-                </label>
-                <textarea
-                  rows="3"
-                  maxLength={150}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 text-[14px] text-white placeholder-neutral-500 outline-none focus:border-[#0095f6] transition-colors"
-                  placeholder={isEn ? "Write something about yourself..." : "Viết một vài dòng về bạn..."}
-                />
-                <div className="mt-1 flex justify-end text-[12px] text-neutral-500 tabular-nums">
-                  {bio.length} / 150
+                <div className="relative rounded-xl border border-[#262626] bg-[#121212] p-4">
+                  <textarea
+                    rows="3"
+                    maxLength={150}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder={
+                      isEn
+                        ? "Write something about yourself..."
+                        : "Tiểu sử..."
+                    }
+                    className="w-full resize-none bg-transparent text-[14px] text-white placeholder-neutral-500 outline-none"
+                  />
+                  <div className="flex justify-end text-[12px] text-neutral-500 tabular-nums">
+                    {bio.length} / 150
+                  </div>
                 </div>
               </div>
 
+              {/* Switch 1: Hiển thị huy hiệu Threads */}
+              <div className="flex items-center justify-between rounded-xl border border-[#262626] bg-[#121212] p-4">
+                <span className="text-[14px] font-normal text-white">
+                  {isEn ? "Show Threads badge" : "Hiển thị huy hiệu Threads"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowThreadsBadge((prev) => !prev)}
+                  className={`h-6 w-11 shrink-0 rounded-full transition-colors relative ${
+                    showThreadsBadge ? "bg-[#0095f6]" : "bg-neutral-700"
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white transition-transform ${
+                      showThreadsBadge ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Switch 2: Trang cá nhân do AI tạo */}
+              <div className="flex items-center justify-between rounded-xl border border-[#262626] bg-[#121212] p-4">
+                <div className="pr-4">
+                  <p className="text-[14px] text-white">
+                    {isEn ? "AI-created profile" : "Trang cá nhân do AI tạo"}
+                  </p>
+                  <p className="text-[12px] text-neutral-400 mt-0.5">
+                    {isEn
+                      ? "Add this label if your profile introduces an AI-generated persona. Learn more"
+                      : "Thêm nhãn này nếu trang cá nhân của bạn giới thiệu một nhân vật do AI tạo. "}
+                    <span className="text-[#0095f6] hover:underline cursor-pointer">
+                      {isEn ? "Learn more" : "Tìm hiểu thêm"}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiProfileBadge((prev) => !prev)}
+                  className={`h-6 w-11 shrink-0 rounded-full transition-colors relative ${
+                    aiProfileBadge ? "bg-[#0095f6]" : "bg-neutral-700"
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white transition-transform ${
+                      aiProfileBadge ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Giới tính */}
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
+                <label className="mb-2 block text-[15px] font-semibold text-white">
                   {isEn ? "Gender" : "Giới tính"}
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setGender("male")}
-                    className={`rounded-xl border p-3 text-center text-[14px] font-medium transition-colors ${
-                      gender === "male"
-                        ? "border-[#0095f6] bg-[#0095f6]/10 text-white font-semibold"
-                        : "border-[#262626] bg-[#121212] text-neutral-400 hover:text-white"
-                    }`}
+                    onClick={() => setIsGenderDropdownOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 text-left text-[14px] text-white hover:border-neutral-500 transition-colors"
                   >
-                    {isEn ? "Male" : "Nam"}
+                    <span>
+                      {gender === "male"
+                        ? isEn
+                          ? "Male"
+                          : "Nam"
+                        : isEn
+                        ? "Female"
+                        : "Nữ"}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className={`text-neutral-400 transition-transform ${
+                        isGenderDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setGender("female")}
-                    className={`rounded-xl border p-3 text-center text-[14px] font-medium transition-colors ${
-                      gender === "female"
-                        ? "border-[#0095f6] bg-[#0095f6]/10 text-white font-semibold"
-                        : "border-[#262626] bg-[#121212] text-neutral-400 hover:text-white"
-                    }`}
-                  >
-                    {isEn ? "Female" : "Nữ"}
-                  </button>
+
+                  {isGenderDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-12 z-20 mt-1 rounded-xl border border-[#262626] bg-[#1c1c1c] p-1.5 shadow-xl">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGender("male");
+                          setIsGenderDropdownOpen(false);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-neutral-800 transition ${
+                          gender === "male"
+                            ? "font-semibold text-[#0095f6]"
+                            : "text-white"
+                        }`}
+                      >
+                        {isEn ? "Male" : "Nam"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGender("female");
+                          setIsGenderDropdownOpen(false);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-neutral-800 transition ${
+                          gender === "female"
+                            ? "font-semibold text-[#0095f6]"
+                            : "text-white"
+                        }`}
+                      >
+                        {isEn ? "Female" : "Nữ"}
+                      </button>
+                    </div>
+                  )}
                 </div>
+                <p className="mt-1.5 text-[12px] text-neutral-400">
+                  {isEn
+                    ? "This won't be part of your public profile."
+                    : "Thông tin này sẽ không hiển thị trên trang cá nhân công khai của bạn."}
+                </p>
               </div>
 
-              <div className="pt-4">
+              {/* Switch 3: Hiển thị gợi ý tài khoản trên trang cá nhân */}
+              <div className="flex items-center justify-between rounded-xl border border-[#262626] bg-[#121212] p-4">
+                <div className="pr-4">
+                  <p className="text-[14px] text-white">
+                    {isEn
+                      ? "Show account suggestions on profiles"
+                      : "Hiển thị gợi ý tài khoản trên trang cá nhân"}
+                  </p>
+                  <p className="text-[12px] text-neutral-400 mt-0.5 line-clamp-2">
+                    {isEn
+                      ? "Choose whether people can see similar account suggestions on your profile, and whether your account can be suggested on other profiles."
+                      : "Chọn có cho mọi người thấy các gợi ý tài khoản tương tự trên trang cá nhân của bạn và có cho tài khoản của bạn được đề xuất trên các trang cá nhân khác hay không."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAccountSuggestions((prev) => !prev)}
+                  className={`h-6 w-11 shrink-0 rounded-full transition-colors relative ${
+                    showAccountSuggestions ? "bg-[#0095f6]" : "bg-neutral-700"
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white transition-transform ${
+                      showAccountSuggestions ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSavingProfile}
-                  className="ig-press rounded-xl bg-[#0095f6] px-6 py-2.5 text-[14px] font-semibold text-white hover:bg-[#1877f2] disabled:opacity-50"
+                  className="ig-press rounded-lg bg-[#0095f6] px-6 py-2 text-[14px] font-semibold text-white hover:bg-[#1877f2] disabled:opacity-50"
                 >
                   {isSavingProfile
                     ? isEn
-                      ? "Saving..."
+                      ? "Submitting..."
                       : "Đang lưu..."
                     : isEn
                     ? "Submit"
@@ -520,10 +671,80 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 2: META ACCOUNT / PASSWORD & SECURITY */}
+        {/* TAB 2: NGÔN NGỮ (LANGUAGE - Requirement 1) */}
+        {activeTab === "language" && (
+          <div>
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
+              {isEn ? "App language" : "Ngôn ngữ ứng dụng"}
+            </h2>
+            <p className="mb-6 text-[14px] text-neutral-400">
+              {isEn
+                ? "Select your preferred display language for Instagram."
+                : "Chọn ngôn ngữ hiển thị cho giao diện Instagram của bạn."}
+            </p>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => handleLanguageChange("vi")}
+                className={`w-full flex items-center justify-between rounded-xl border p-4 text-left transition ${
+                  currentLang === "vi"
+                    ? "border-[#0095f6] bg-[#0095f6]/10 text-white"
+                    : "border-[#262626] bg-[#121212] text-neutral-300 hover:border-neutral-500"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[20px]">🇻🇳</span>
+                  <div>
+                    <p className="text-[15px] font-semibold text-white">
+                      Tiếng Việt
+                    </p>
+                    <p className="text-[12px] text-neutral-400">
+                      Ngôn ngữ mặc định
+                    </p>
+                  </div>
+                </div>
+                {currentLang === "vi" && (
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0095f6] text-white">
+                    ✓
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleLanguageChange("en")}
+                className={`w-full flex items-center justify-between rounded-xl border p-4 text-left transition ${
+                  currentLang === "en"
+                    ? "border-[#0095f6] bg-[#0095f6]/10 text-white"
+                    : "border-[#262626] bg-[#121212] text-neutral-300 hover:border-neutral-500"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[20px]">🇬🇧</span>
+                  <div>
+                    <p className="text-[15px] font-semibold text-white">
+                      English
+                    </p>
+                    <p className="text-[12px] text-neutral-400">
+                      United States / International
+                    </p>
+                  </div>
+                </div>
+                {currentLang === "en" && (
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0095f6] text-white">
+                    ✓
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: META ACCOUNT / PASSWORD & SECURITY */}
         {activeTab === "meta_account" && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Password and security" : "Mật khẩu và bảo mật"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
@@ -532,9 +753,9 @@ const Settings = () => {
                 : "Quản lý mật khẩu, cảnh báo đăng nhập và bảo mật tài khoản."}
             </p>
 
-            <form onSubmit={handleChangePassword} className="space-y-5">
+            <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
+                <label className="mb-1.5 block text-[13px] font-semibold text-white">
                   {isEn ? "Current password" : "Mật khẩu hiện tại"}
                 </label>
                 <div className="relative">
@@ -542,7 +763,7 @@ const Settings = () => {
                     type={showCurrentPw ? "text" : "password"}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 pr-11 text-[14px] text-white outline-none focus:border-[#0095f6]"
+                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-2.5 pr-11 text-[14px] text-white outline-none focus:border-[#0095f6]"
                   />
                   <button
                     type="button"
@@ -555,7 +776,7 @@ const Settings = () => {
               </div>
 
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
+                <label className="mb-1.5 block text-[13px] font-semibold text-white">
                   {isEn ? "New password" : "Mật khẩu mới"}
                 </label>
                 <div className="relative">
@@ -563,7 +784,7 @@ const Settings = () => {
                     type={showNewPw ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 pr-11 text-[14px] text-white outline-none focus:border-[#0095f6]"
+                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-2.5 pr-11 text-[14px] text-white outline-none focus:border-[#0095f6]"
                   />
                   <button
                     type="button"
@@ -576,35 +797,35 @@ const Settings = () => {
               </div>
 
               <div>
-                <label className="mb-2 block text-[14px] font-semibold text-white">
+                <label className="mb-1.5 block text-[13px] font-semibold text-white">
                   {isEn ? "Re-type new password" : "Nhập lại mật khẩu mới"}
                 </label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3 text-[14px] text-white outline-none focus:border-[#0095f6]"
+                  className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-2.5 text-[14px] text-white outline-none focus:border-[#0095f6]"
                 />
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="ig-press rounded-xl bg-[#0095f6] px-6 py-2.5 text-[14px] font-semibold text-white hover:bg-[#1877f2]"
+                  className="ig-press rounded-lg bg-[#0095f6] px-6 py-2 text-[14px] font-semibold text-white hover:bg-[#1877f2]"
                 >
                   {isEn ? "Change password" : "Đổi mật khẩu"}
                 </button>
               </div>
             </form>
 
-            <div className="mt-12 rounded-2xl border border-[#262626] bg-[#121212] p-5">
+            <div className="mt-8 rounded-2xl border border-[#262626] bg-[#121212] p-5">
               <div className="flex items-center gap-3 mb-2">
                 <KeyRound size={20} className="text-[#00ba38]" />
-                <h3 className="text-[16px] font-semibold text-white">
+                <h3 className="text-[15px] font-semibold text-white">
                   {isEn ? "Two-factor authentication" : "Xác thực hai yếu tố"}
                 </h3>
               </div>
-              <p className="text-[13px] text-neutral-400">
+              <p className="text-[13px] text-neutral-400 leading-relaxed">
                 {isEn
                   ? "Two-factor authentication adds an extra layer of security to your account."
                   : "Bảo vệ tài khoản của bạn bằng mã bảo mật bổ sung mỗi khi đăng nhập."}
@@ -613,10 +834,10 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 3: NOTIFICATIONS */}
+        {/* TAB 4: NOTIFICATIONS */}
         {activeTab === "notifications" && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Notifications" : "Thông báo"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
@@ -658,7 +879,9 @@ const Settings = () => {
                     {isEn ? "Likes" : "Lượt thích"}
                   </p>
                   <p className="text-[12px] text-neutral-400">
-                    {isEn ? "Notifications when someone likes your post" : "Thông báo khi có người thích bài viết của bạn"}
+                    {isEn
+                      ? "Notifications when someone likes your post"
+                      : "Thông báo khi có người thích bài viết của bạn"}
                   </p>
                 </div>
                 <button
@@ -682,7 +905,9 @@ const Settings = () => {
                     {isEn ? "Comments" : "Bình luận"}
                   </p>
                   <p className="text-[12px] text-neutral-400">
-                    {isEn ? "Notifications when someone comments on your post" : "Thông báo khi có người bình luận bài viết"}
+                    {isEn
+                      ? "Notifications when someone comments on your post"
+                      : "Thông báo khi có người bình luận bài viết"}
                   </p>
                 </div>
                 <button
@@ -706,7 +931,9 @@ const Settings = () => {
                     {isEn ? "New followers" : "Người theo dõi mới"}
                   </p>
                   <p className="text-[12px] text-neutral-400">
-                    {isEn ? "Notifications when someone follows you" : "Thông báo khi có người bắt đầu theo dõi bạn"}
+                    {isEn
+                      ? "Notifications when someone follows you"
+                      : "Thông báo khi có người bắt đầu theo dõi bạn"}
                   </p>
                 </div>
                 <button
@@ -730,7 +957,9 @@ const Settings = () => {
                     {isEn ? "Direct messages" : "Tin nhắn trực tiếp"}
                   </p>
                   <p className="text-[12px] text-neutral-400">
-                    {isEn ? "Notifications when you receive a message" : "Thông báo khi bạn nhận được tin nhắn"}
+                    {isEn
+                      ? "Notifications when you receive a message"
+                      : "Thông báo khi bạn nhận được tin nhắn"}
                   </p>
                 </div>
                 <button
@@ -751,10 +980,10 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 4: ACCOUNT PRIVACY */}
+        {/* TAB 5: ACCOUNT PRIVACY */}
         {activeTab === "account_privacy" && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Account privacy" : "Quyền riêng tư của tài khoản"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
@@ -782,8 +1011,12 @@ const Settings = () => {
                     setIsPrivateAccount((prev) => !prev);
                     toast.success(
                       isEn
-                        ? `Account privacy set to ${!isPrivateAccount ? "Private" : "Public"}`
-                        : `Đã đổi sang chế độ ${!isPrivateAccount ? "Riêng tư" : "Công khai"}`
+                        ? `Account privacy set to ${
+                            !isPrivateAccount ? "Private" : "Public"
+                          }`
+                        : `Đã đổi sang chế độ ${
+                            !isPrivateAccount ? "Riêng tư" : "Công khai"
+                          }`
                     );
                   }}
                   className={`h-6 w-11 shrink-0 rounded-full transition-colors relative mt-1 ${
@@ -828,10 +1061,10 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 5: CLOSE FRIENDS */}
+        {/* TAB 6: CLOSE FRIENDS */}
         {activeTab === "close_friends" && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Close Friends" : "Bạn thân"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
@@ -843,7 +1076,9 @@ const Settings = () => {
             <div className="mb-4">
               <input
                 type="text"
-                placeholder={isEn ? "Search users..." : "Tìm kiếm người dùng..."}
+                placeholder={
+                  isEn ? "Search users..." : "Tìm kiếm người dùng..."
+                }
                 value={closeFriendsSearch}
                 onChange={(e) => setCloseFriendsSearch(e.target.value)}
                 className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-2.5 text-[14px] text-white outline-none focus:border-[#0095f6]"
@@ -876,8 +1111,12 @@ const Settings = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setCloseFriends((prev) => prev.filter((f) => f !== friend));
-                          toast.info(`Đã xóa @${friend} khỏi danh sách bạn thân.`);
+                          setCloseFriends((prev) =>
+                            prev.filter((f) => f !== friend)
+                          );
+                          toast.info(
+                            `Đã xóa @${friend} khỏi danh sách bạn thân.`
+                          );
                         }}
                         className="text-[12px] text-neutral-400 hover:text-white"
                       >
@@ -890,10 +1129,10 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 6: BLOCKED */}
+        {/* TAB 7: BLOCKED */}
         {activeTab === "blocked" && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {isEn ? "Blocked accounts" : "Tài khoản đã chặn"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
@@ -905,7 +1144,9 @@ const Settings = () => {
             {blockedUsers.length === 0 ? (
               <div className="py-12 text-center text-neutral-500">
                 <CircleSlash size={36} className="mx-auto mb-2 opacity-40" />
-                <p>{isEn ? "You haven't blocked anyone." : "Bạn chưa chặn ai."}</p>
+                <p>
+                  {isEn ? "You haven't blocked anyone." : "Bạn chưa chặn ai."}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -926,14 +1167,14 @@ const Settings = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setBlockedUsers((prev) => prev.filter((u) => u !== user));
+                        setBlockedUsers((prev) =>
+                          prev.filter((u) => u !== user)
+                        );
                         toast.success(
-                          isEn
-                            ? `Unblocked @${user}`
-                            : `Đã bỏ chặn @${user}`
+                          isEn ? `Unblocked @${user}` : `Đã bỏ chặn @${user}`
                         );
                       }}
-                      className="ig-press rounded-xl border border-neutral-700 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800"
+                      className="ig-press rounded-lg border border-neutral-700 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800"
                     >
                       {isEn ? "Unblock" : "Bỏ chặn"}
                     </button>
@@ -944,17 +1185,17 @@ const Settings = () => {
           </div>
         )}
 
-        {/* TAB 7 & 8: MESSAGES & STORY REPLIES */}
+        {/* TAB 8: MESSAGES & STORY REPLIES */}
         {(activeTab === "messages_replies" || activeTab === "story_live") && (
           <div>
-            <h2 className="mb-2 text-[22px] font-bold text-white">
+            <h2 className="mb-2 text-[20px] font-bold text-white tracking-tight">
               {activeTab === "messages_replies"
                 ? isEn
                   ? "Messages and story replies"
-                  : "Tin nhắn và phản hồi tin"
+                  : "Tin nhắn và lượt trả lời tin"
                 : isEn
                 ? "Story, live and location"
-                : "Tin, phát trực tiếp và vị trí"}
+                : "Tin, buổi phát trực tiếp và vị trí"}
             </h2>
             <p className="mb-6 text-[14px] text-neutral-400">
               {isEn
@@ -965,20 +1206,39 @@ const Settings = () => {
             <div className="space-y-4">
               <div className="rounded-xl border border-[#262626] bg-[#121212] p-4">
                 <p className="text-[14px] font-semibold text-white mb-2">
-                  {isEn ? "Who can send you message requests" : "Ai có thể gửi yêu cầu tin nhắn"}
+                  {isEn
+                    ? "Who can send you message requests"
+                    : "Ai có thể gửi yêu cầu tin nhắn"}
                 </p>
                 <div className="space-y-2 text-[13px] text-neutral-300">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="msgReq" defaultChecked className="accent-[#0095f6]" />
+                    <input
+                      type="radio"
+                      name="msgReq"
+                      defaultChecked
+                      className="accent-[#0095f6]"
+                    />
                     <span>{isEn ? "Everyone" : "Mọi người"}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="msgReq" className="accent-[#0095f6]" />
-                    <span>{isEn ? "People you follow" : "Những người bạn theo dõi"}</span>
+                    <input
+                      type="radio"
+                      name="msgReq"
+                      className="accent-[#0095f6]"
+                    />
+                    <span>
+                      {isEn ? "People you follow" : "Những người bạn theo dõi"}
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="msgReq" className="accent-[#0095f6]" />
-                    <span>{isEn ? "Don't receive requests" : "Không nhận yêu cầu"}</span>
+                    <input
+                      type="radio"
+                      name="msgReq"
+                      className="accent-[#0095f6]"
+                    />
+                    <span>
+                      {isEn ? "Don't receive requests" : "Không nhận yêu cầu"}
+                    </span>
                   </label>
                 </div>
               </div>
@@ -989,15 +1249,36 @@ const Settings = () => {
                 </p>
                 <div className="space-y-2 text-[13px] text-neutral-300">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="storyReplies" defaultChecked className="accent-[#0095f6]" />
-                    <span>{isEn ? "Allow replies from everyone" : "Cho phép phản hồi từ mọi người"}</span>
+                    <input
+                      type="radio"
+                      name="storyReplies"
+                      defaultChecked
+                      className="accent-[#0095f6]"
+                    />
+                    <span>
+                      {isEn
+                        ? "Allow replies from everyone"
+                        : "Cho phép phản hồi từ mọi người"}
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="storyReplies" className="accent-[#0095f6]" />
-                    <span>{isEn ? "Only people you follow" : "Chỉ những người bạn theo dõi"}</span>
+                    <input
+                      type="radio"
+                      name="storyReplies"
+                      className="accent-[#0095f6]"
+                    />
+                    <span>
+                      {isEn
+                        ? "Only people you follow"
+                        : "Chỉ những người bạn theo dõi"}
+                    </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="storyReplies" className="accent-[#0095f6]" />
+                    <input
+                      type="radio"
+                      name="storyReplies"
+                      className="accent-[#0095f6]"
+                    />
                     <span>{isEn ? "Off" : "Tắt"}</span>
                   </label>
                 </div>
