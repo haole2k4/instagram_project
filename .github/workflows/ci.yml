@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend_instagram
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend_instagram/pom.xml
+      - run: ./mvnw -B test
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Social-app-fontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: Social-app-fontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          # shortcut: CRA coi mọi warning ESLint sẵn có là lỗi khi CI=true; bật lại CI=true sau khi dọn hết warning
+          CI: 'false'
+          GENERATE_SOURCEMAP: 'false'

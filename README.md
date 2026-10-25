@@ -165,9 +165,10 @@ make auto-deploy                  # deploy ngay, không cần chờ có commit m
 make auto-deploy-uninstall        # tắt
 ```
 
-- Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, khi đó script chạy `make k8s-redeploy`. Các biến khác: `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`.
+- Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, khi đó script chạy `make k8s-redeploy`. Các biến khác: `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`, `DOCKER_CONTEXT` (nên đặt `DOCKER_CONTEXT=default` nếu máy cài cả Docker Desktop để timer luôn dùng Docker Engine hệ thống).
 - Script sẽ dừng, không pull, nếu thư mục deploy không ở nhánh `master` hoặc có thay đổi tracked chưa commit. Nếu không fast-forward được, script cũng dừng.
-- Commit chỉ sửa file `.md` thì không build lại.
+- Commit chỉ sửa file `.md` hoặc thư mục `.github/` thì không build lại.
+- PR và nhánh `master` được kiểm tra tự động qua GitHub Actions (`.github/workflows/ci.yml`: `./mvnw test` + `pnpm build`) trên runner của GitHub.
 - Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử lại khi có commit mới hoặc khi chạy `make auto-deploy`. Script không tự rollback.
 - Compose project name lấy theo tên thư mục. Clone vào thư mục cũng tên `instagram_project` thì stack dùng lại container và volume dữ liệu hiện có.
 
