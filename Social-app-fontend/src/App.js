@@ -2,10 +2,12 @@ import React from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import RouterApp from "./Routes/RouterApp";
 import { ToastContainer } from "react-toastify";
+import TopLoadingBar from "./Components/Common/TopLoadingBar";
 
 function App() {
   return (
     <BrowserRouter>
+      <TopLoadingBar />
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route

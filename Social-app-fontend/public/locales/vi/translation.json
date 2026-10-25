@@ -303,6 +303,7 @@
     "earlier": "Trước đó"
   },
   "auth": {
+    "loginTitle": "Đăng nhập vào Instagram",
     "login": "Đăng nhập",
     "register": "Đăng ký",
     "email": "Email",

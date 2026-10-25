@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Language from "./Language/Language";
 import { useTranslation } from "react-i18next";
 import { UserLogOut } from "../../../Service/AuthApi";
@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import instance from "../../../Utils/AxiosApi/Axios";
 import webSocketService from "../../../Service/WebSocketService";
-import Route from "../../../Components/Routes/index";
+import AuthSplashScreen from "../../Common/AuthSplashScreen";
 
 const MoreMenu = ({
   showMenu,
@@ -16,6 +16,8 @@ const MoreMenu = ({
   positionClassName = "fixed bottom-20 left-[84px] origin-bottom-left",
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [t] = useTranslation();
   const lang = useSelector((state) => state.app.language);
   const { userInfo, roles = [] } = useSelector((state) => state.login);
@@ -57,42 +59,43 @@ const MoreMenu = ({
 
   const handleLogOut = async () => {
     try {
-      const res = await UserLogOut();
-      if (res && res.statusCode === 200) {
-        toast.success(t("sidebar.logoutSuccess"));
-        webSocketService.disconnect();
-        await dispatch(userLogoutALL());
-        instance.defaults.headers.common = {};
-      } else {
-        toast.error(t("sidebar.logoutFailed"));
-      }
+      setIsLoggingOut(true);
+      await UserLogOut();
+      webSocketService.disconnect();
+      await dispatch(userLogoutALL());
+      instance.defaults.headers.common = {};
+      setTimeout(() => {
+        navigate("/login");
+      }, 850);
     } catch (error) {
       console.error("Logout error:", error);
+      setIsLoggingOut(false);
       toast.error(t("sidebar.logoutError"));
     }
   };
 
-  if (!showMenu) return null;
-
   return (
-    <div ref={menuRef} className="relative">
-      <div
-        role="menu"
-        aria-label={t("LargeNav.more")}
-        className={`nav-popover ${positionClassName}`}
-      >
-        <ul className="text-[14px] text-ig-text">
-          {userInfo?.id && (
-            <li>
-              <Link
-                to={`${Route.edit_profile}/${userInfo.id}`}
-                onClick={() => setShowMenu(false)}
-                className="block rounded-lg p-2 hover:bg-ig-surface"
-              >
-                {t("menu.setting")}
-              </Link>
-            </li>
-          )}
+    <>
+      <AuthSplashScreen isVisible={isLoggingOut} />
+      {showMenu && (
+        <div ref={menuRef} className="relative">
+          <div
+            role="menu"
+            aria-label={t("LargeNav.more")}
+            className={`nav-popover ${positionClassName}`}
+          >
+            <ul className="text-[14px] text-ig-text">
+              {userInfo?.id && (
+                <li>
+                  <Link
+                    to="/user/settings"
+                    onClick={() => setShowMenu(false)}
+                    className="block rounded-lg p-2 hover:bg-ig-surface"
+                  >
+                    {t("menu.setting")}
+                  </Link>
+                </li>
+              )}
           {isStaff && (
             <li>
               <Link
@@ -120,6 +123,8 @@ const MoreMenu = ({
         </button>
       </div>
     </div>
+  )}
+</>
   );
 };
 

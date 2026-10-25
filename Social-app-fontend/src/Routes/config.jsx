@@ -9,6 +9,7 @@ import Home from "../Pages/Home/index";
 import ChatPage from "../Pages/Chat/ChatPage";
 import StoryViewer from "../Components/Stories/StoryViewer";
 import FriendProfile from "../Components/Profile/UserProfile/FriendProfile";
+import Settings from "../Pages/Settings/Settings";
 
 const routes = [
   { path: Route.profile, element: <Profile /> },
@@ -23,6 +24,7 @@ const routes = [
   { path: Route.chat + "/:conversationId", element: <ChatPage /> },
   { path: Route.story + "/:id", element: <StoryViewer /> },
   { path: Route.search, element: <Search /> },
+  { path: Route.settings, element: <Settings /> },
 ];
 
 export default routes;

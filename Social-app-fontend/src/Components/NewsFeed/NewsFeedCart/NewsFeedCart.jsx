@@ -18,6 +18,7 @@ import {
 import ModalCart from "./ModalCart/ModalCart";
 import {
   handleLike,
+  unlikePost,
   getPostByFollowing,
   getLikedPostIdsByUser,
 } from "../../../Service/postApi";
@@ -180,36 +181,65 @@ const NewsFeedCart = () => {
   };
 
   const handleLikePost = async (id, likesCount) => {
-    try {
-      if (likes[id]) {
-        triggerHeartPop(id);
-        return;
+    const isCurrentlyLiked = !!likes[id];
+    const originalCount = likesCount ?? 0;
+
+    if (isCurrentlyLiked) {
+      // Unlike post
+      setLikes((prevLikes) => ({
+        ...prevLikes,
+        [id]: false,
+      }));
+      const newCount = Math.max(0, originalCount - 1);
+      setPostData((prev) =>
+        prev.map((post) =>
+          post.id === id ? { ...post, likesCount: newCount } : post
+        )
+      );
+      try {
+        await unlikePost(id, userInfo.id);
+      } catch (error) {
+        console.error("Error unliking post:", error);
+        setLikes((prevLikes) => ({
+          ...prevLikes,
+          [id]: true,
+        }));
+        setPostData((prev) =>
+          prev.map((post) =>
+            post.id === id ? { ...post, likesCount: originalCount } : post
+          )
+        );
+        toast.error(t("post.likeError") || "Không thể hủy thích bài viết");
       }
+    } else {
+      // Like post
       triggerHeartPop(id);
       setLikes((prevLikes) => ({
         ...prevLikes,
         [id]: true,
       }));
-      const newLikesCount = (likesCount || 0) + 1;
+      const newLikesCount = originalCount + 1;
       setPostData((prev) =>
         prev.map((post) =>
           post.id === id ? { ...post, likesCount: newLikesCount } : post
         )
       );
-      await handleLike(id, userInfo.id);
-    } catch (error) {
-      console.error("Error liking post:", error);
-      if (!error.response?.data?.message?.includes("đã thích")) {
-        setLikes((prevLikes) => ({
-          ...prevLikes,
-          [id]: false,
-        }));
-        setPostData((prev) =>
-          prev.map((post) =>
-            post.id === id ? { ...post, likesCount: likesCount } : post
-          )
-        );
-        toast.error(t("post.likeError"));
+      try {
+        await handleLike(id, userInfo.id);
+      } catch (error) {
+        console.error("Error liking post:", error);
+        if (!error.response?.data?.message?.includes("đã thích")) {
+          setLikes((prevLikes) => ({
+            ...prevLikes,
+            [id]: false,
+          }));
+          setPostData((prev) =>
+            prev.map((post) =>
+              post.id === id ? { ...post, likesCount: originalCount } : post
+            )
+          );
+          toast.error(t("post.likeError"));
+        }
       }
     }
   };
@@ -486,9 +516,11 @@ const NewsFeedCart = () => {
       <ModalCart
         isOpen={isOpen}
         setIsOpen={setIsOpen}
-        post={selectedPost}
+        post={selectedPost ? (postData.find((p) => p.id === selectedPost.id) || selectedPost) : null}
         onCommentAdded={handleCommentAdded}
         fetchPostData={fetchPostData}
+        isLiked={selectedPost ? !!likes[selectedPost.id] : false}
+        onToggleLikePost={handleLikePost}
       />
     </div>
   );

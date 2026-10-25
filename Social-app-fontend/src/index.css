@@ -79,6 +79,21 @@
       #cc2366 75%,
       #bc1888 100%
     );
+    background-size: 200% 200%;
+    animation: igStoryRingRotate 4s ease infinite;
+  }
+
+  .ig-top-gradient-bar {
+    background: linear-gradient(
+      90deg,
+      #f09433 0%,
+      #e6683c 25%,
+      #dc2743 50%,
+      #cc2366 75%,
+      #bc1888 100%
+    );
+    background-size: 200% 100%;
+    animation: igTopBarShift 2s linear infinite;
   }
 
   .story-item-avatar {
@@ -174,6 +189,27 @@
   }
   40% {
     opacity: 1;
+  }
+}
+
+@keyframes igStoryRingRotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes igTopBarShift {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
   }
 }
 

@@ -12,6 +12,7 @@ const routes = {
   story: `${USER_PATH}/story`,
   friend_profile: `${USER_PATH}/friend-profile`,
   search: `${USER_PATH}/search`,
+  settings: `${USER_PATH}/settings`,
 };
 
 export default routes;

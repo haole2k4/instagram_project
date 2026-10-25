@@ -307,6 +307,7 @@
     "earlier": "Earlier"
   },
   "auth": {
+    "loginTitle": "Log into Instagram",
     "login": "Log in",
     "register": "Sign up",
     "email": "Email",
