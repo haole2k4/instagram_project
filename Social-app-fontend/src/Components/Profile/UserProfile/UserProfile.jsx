@@ -107,7 +107,7 @@ const UserProfile = () => {
               {dataUser.username}
             </h1>
             <Link
-              to={`/edit-profile/${dataUser.userId}`}
+              to="/user/settings?tab=edit_profile"
               className="ig-press rounded-lg border border-ig-border bg-ig-surface px-4 py-1.5 text-[13px] font-semibold text-ig-text hover:bg-ig-raised"
             >
               {t("userProfile.editProfile")}

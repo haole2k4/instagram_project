@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import AuthSplashScreen from "../../Components/Common/AuthSplashScreen";
 import {
   ChevronLeft,
   ChevronRight,
@@ -83,14 +84,19 @@ const AdminLayout = () => {
           : location.pathname.startsWith(path)
       )?.[1] || "dashboard";
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true);
       await UserLogOut();
     } catch {
       // Cookie/token cleanup on the client still applies.
     }
     dispatch(userLogoutALL());
-    navigate("/login", { replace: true });
+    setTimeout(() => {
+      navigate("/login", { replace: true });
+    }, 850);
   };
 
   const nav = (mobile = false) => (
@@ -145,6 +151,7 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      <AuthSplashScreen isVisible={isLoggingOut} />
       <aside
         className={[
           "fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-[#161616] bg-black md:flex",

@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
+  Bookmark,
   ChevronLeft,
   ChevronRight,
   Globe,
+  Heart,
   Lock,
+  MessageCircle,
   MoreHorizontal,
+  Send,
+  Smile,
   Trash2,
   Users,
   X,
@@ -63,6 +68,8 @@ const ModalCart = ({
   post,
   onCommentAdded,
   fetchPostData,
+  isLiked = false,
+  onToggleLikePost,
 }) => {
   const { userInfo } = useSelector((state) => state.login);
   const [comments, setComments] = useState([]);
@@ -70,9 +77,23 @@ const ModalCart = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const commentInputRef = useRef(null);
+
+  // Lưu trạng thái tim bình luận theo user
+  const [commentLikes, setCommentLikes] = useState(() => {
+    try {
+      const stored = localStorage.getItem(
+        `ig_comment_likes_${userInfo?.id || "guest"}`
+      );
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [poppingCommentHeart, setPoppingCommentHeart] = useState(null);
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -149,6 +170,27 @@ const ModalCart = ({
     }
   };
 
+  const toggleCommentLike = (commentId) => {
+    setPoppingCommentHeart(commentId);
+    setTimeout(() => setPoppingCommentHeart(null), 250);
+
+    setCommentLikes((prev) => {
+      const updated = {
+        ...prev,
+        [commentId]: !prev[commentId],
+      };
+      try {
+        localStorage.setItem(
+          `ig_comment_likes_${userInfo?.id || "guest"}`,
+          JSON.stringify(updated)
+        );
+      } catch (err) {
+        console.error("Failed to save comment likes", err);
+      }
+      return updated;
+    });
+  };
+
   const nextImage = () => {
     if (!post?.media?.length) return;
     setCurrentImageIndex((prev) => (prev + 1) % post.media.length);
@@ -194,21 +236,21 @@ const ModalCart = ({
   return (
     <div
       onClick={() => setIsOpen(false)}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ig-ground/85 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 md:p-6"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={t("newFed.comment")}
         onClick={(e) => e.stopPropagation()}
-        className="ig-modal-panel relative flex h-[85dvh] w-full max-w-5xl flex-col overflow-hidden rounded-panel border border-ig-border bg-ig-ground shadow-lg md:flex-row"
+        className="ig-modal-panel relative flex h-[94vh] max-h-[920px] w-full max-w-[1240px] flex-col overflow-hidden rounded-2xl border border-ig-border bg-black shadow-2xl md:flex-row"
       >
-        {/* Vùng ảnh/video */}
-        <div className="relative flex h-1/2 w-full items-center justify-center bg-ig-ground md:h-full md:w-1/2 border-b md:border-b-0 md:border-r border-ig-border">
+        {/* Vùng Media (Ảnh/Video) - Tối ưu tỷ lệ và căn giữa hoàn hảo */}
+        <div className="relative flex h-1/2 w-full flex-1 items-center justify-center bg-black md:h-full border-b md:border-b-0 md:border-r border-ig-border overflow-hidden select-none">
           {isVideoMedia ? (
             <video
               src={currentMedia?.url}
-              className="h-full w-full object-contain"
+              className="max-h-full max-w-full object-contain"
               controls
               autoPlay
               loop
@@ -216,10 +258,11 @@ const ModalCart = ({
           ) : (
             <img
               src={currentMedia?.url || "/default-avatar.png"}
-              className="h-full w-full object-contain"
+              className="max-h-full max-w-full object-contain"
               alt={post.title || ""}
             />
           )}
+
           {post.media?.length > 1 && (
             <>
               <button
@@ -227,41 +270,43 @@ const ModalCart = ({
                 aria-label={t("story.previous")}
                 title={t("story.previous")}
                 onClick={prevImage}
-                className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
+                className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
               >
-                <ChevronLeft size={18} strokeWidth={1.5} />
+                <ChevronLeft size={20} strokeWidth={1.5} />
               </button>
               <button
                 type="button"
                 aria-label={t("story.next")}
                 title={t("story.next")}
                 onClick={nextImage}
-                className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-ig-text hover:bg-ig-raised"
+                className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
               >
-                <ChevronRight size={18} strokeWidth={1.5} />
+                <ChevronRight size={20} strokeWidth={1.5} />
               </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-control border border-ig-border bg-ig-ground/80 px-2.5 py-0.5 text-[12px] text-ig-text tabular-nums">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-black/60 px-3 py-0.5 text-[12px] font-medium text-white tabular-nums backdrop-blur-md">
                 {currentImageIndex + 1} / {post.media.length}
               </div>
             </>
           )}
         </div>
 
-        {/* Vùng bình luận */}
-        <div className="flex h-1/2 w-full flex-col justify-between bg-ig-ground text-ig-text md:h-full md:w-1/2">
+        {/* Cột Chi Tiết & Bình Luận (Right Side) */}
+        <div className="flex h-1/2 w-full shrink-0 flex-col justify-between bg-ig-ground text-ig-text md:h-full md:w-[420px] lg:w-[460px]">
           {/* Header */}
-          <div className="relative flex items-center justify-between border-b border-ig-rule px-4 py-3">
+          <div className="relative flex items-center justify-between border-b border-ig-rule px-4 py-3 shrink-0">
             <div className="flex min-w-0 items-center gap-3">
-              <img
-                src={post.user?.userImage || "/default-avatar.png"}
-                className="h-9 w-9 shrink-0 rounded-full bg-ig-surface object-cover"
-                alt={post.user?.userNickname || ""}
-              />
+              <div className="ig-ring-story rounded-full p-[1.5px]">
+                <img
+                  src={post.user?.userImage || "/default-avatar.png"}
+                  className="h-8 w-8 rounded-full bg-ig-surface object-cover"
+                  alt={post.user?.userNickname || ""}
+                />
+              </div>
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-semibold text-ig-text">
+                <p className="truncate text-[14px] font-semibold text-white">
                   {post.user?.userNickname || t("story.user")}
                 </p>
-                <div className="flex items-center gap-1.5 text-[12px] text-ig-faint tabular-nums">
+                <div className="flex items-center gap-1.5 text-[12px] text-neutral-400 tabular-nums">
                   <span>{formatTime(post.createdAt, t)}</span>
                   <AccessIcon access={post?.access} t={t} />
                 </div>
@@ -277,7 +322,7 @@ const ModalCart = ({
                     title={t("story.options")}
                     aria-expanded={showMenu}
                     onClick={() => setShowMenu((prev) => !prev)}
-                    className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
+                    className="ig-press flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-ig-surface hover:text-white"
                   >
                     <MoreHorizontal size={18} strokeWidth={1.5} />
                   </button>
@@ -294,21 +339,21 @@ const ModalCart = ({
                         </button>
                       ) : (
                         <div className="p-2">
-                          <p className="mb-2 text-[12px] text-ig-muted">
+                          <p className="mb-2 text-[12px] text-neutral-400">
                             {t("post.confirmDeletePost")}
                           </p>
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => setConfirmDelete(false)}
-                              className="rounded-control px-2.5 py-1 text-[12px] text-ig-muted hover:text-ig-text"
+                              className="rounded-control px-2.5 py-1 text-[12px] text-neutral-400 hover:text-white"
                             >
                               {t("CreateNew.cancel")}
                             </button>
                             <button
                               type="button"
                               onClick={handleDeletePost}
-                              className="ig-press rounded-control bg-ig-like px-2.5 py-1 text-[12px] font-semibold text-ig-text"
+                              className="ig-press rounded-control bg-ig-like px-2.5 py-1 text-[12px] font-semibold text-white"
                             >
                               {t("story.confirmDeleteBtn")}
                             </button>
@@ -325,89 +370,215 @@ const ModalCart = ({
                 aria-label={t("story.close")}
                 title={t("story.close")}
                 onClick={() => setIsOpen(false)}
-                className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
+                className="ig-press flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-ig-surface hover:text-white"
               >
-                <X size={18} strokeWidth={1.5} />
+                <X size={20} strokeWidth={1.5} />
               </button>
             </div>
           </div>
 
-          {/* Danh sách bình luận */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* Danh Sách Bình Luận & Caption (Scrollable) */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            {/* Post Caption (Hiển thị như mục đầu tiên) */}
             {post.title && (
-              <div className="mb-4 flex items-start gap-3 border-b border-ig-rule pb-3">
+              <div className="flex items-start gap-3 border-b border-ig-rule pb-3.5">
                 <img
                   src={post.user?.userImage || "/default-avatar.png"}
-                  className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover"
+                  className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover mt-0.5"
                   alt={post.user?.userNickname || ""}
                 />
                 <div className="min-w-0 flex-1 text-[14px]">
-                  <span className="mr-2 font-semibold text-ig-text">
-                    {post.user?.userNickname}
+                  <p className="leading-snug">
+                    <span className="mr-2 font-semibold text-white">
+                      {post.user?.userNickname}
+                    </span>
+                    <span className="text-neutral-200">{post.title}</span>
+                  </p>
+                  <span className="mt-1 block text-[12px] text-neutral-500 tabular-nums">
+                    {formatTime(post.createdAt, t)}
                   </span>
-                  <span className="text-ig-text">{post.title}</span>
                 </div>
               </div>
             )}
 
+            {/* Danh sách bình luận */}
             {comments.length === 0 ? (
-              <p className="py-8 text-center text-[14px] text-ig-muted">
-                {t("post.noComments")}
-              </p>
+              <div className="py-12 text-center">
+                <p className="text-[14px] font-semibold text-white">
+                  {t("post.noComments") || "Chưa có bình luận nào."}
+                </p>
+                <p className="mt-1 text-[13px] text-neutral-500">
+                  Bắt đầu cuộc trò chuyện.
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-3">
-                    <img
-                      src={comment.userImage || "/default-avatar.png"}
-                      className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover"
-                      alt={comment.userNickname || ""}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] leading-snug">
-                        <span className="mr-2 font-semibold text-ig-text">
-                          {comment.userNickname}
-                        </span>
-                        <span className="text-ig-text">{comment.content}</span>
-                      </p>
-                      <div className="mt-1 flex items-center gap-3 text-[12px] text-ig-faint tabular-nums">
-                        <span>{formatTime(comment.createdAt, t)}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleReplyClick(comment.userNickname)}
-                          className="font-medium text-ig-muted hover:text-ig-text"
-                        >
-                          {t("post.reply")}
-                        </button>
+                {comments.map((comment) => {
+                  const hasLikedComment = !!commentLikes[comment.id];
+                  return (
+                    <div
+                      key={comment.id}
+                      className="group flex items-start justify-between gap-3"
+                    >
+                      <div className="flex min-w-0 items-start gap-3 flex-1">
+                        <img
+                          src={comment.userImage || "/default-avatar.png"}
+                          className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover mt-0.5"
+                          alt={comment.userNickname || ""}
+                        />
+                        <div className="min-w-0 flex-1 text-[14px]">
+                          <p className="leading-snug">
+                            <span className="mr-2 font-semibold text-white">
+                              {comment.userNickname}
+                            </span>
+                            <span className="text-neutral-200 break-words">
+                              {comment.content}
+                            </span>
+                          </p>
+                          <div className="mt-1.5 flex items-center gap-3 text-[12px] text-neutral-500 tabular-nums">
+                            <span>{formatTime(comment.createdAt, t)}</span>
+                            {hasLikedComment && (
+                              <span className="font-semibold text-neutral-300">
+                                1 lượt thích
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleReplyClick(comment.userNickname)}
+                              className="font-medium text-neutral-400 hover:text-white"
+                            >
+                              {t("post.reply") || "Trả lời"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* NÚT TIM CHO BÌNH LUẬN (Requirement 5) */}
+                      <button
+                        type="button"
+                        aria-label="Thích bình luận"
+                        onClick={() => toggleCommentLike(comment.id)}
+                        className={`ig-press flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-transform ${
+                          hasLikedComment
+                            ? "text-ig-like"
+                            : "text-neutral-500 hover:text-neutral-300"
+                        } ${
+                          poppingCommentHeart === comment.id
+                            ? "ig-heart-pop"
+                            : ""
+                        }`}
+                      >
+                        <Heart
+                          size={15}
+                          strokeWidth={1.5}
+                          className={hasLikedComment ? "fill-current" : ""}
+                        />
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Ô thêm bình luận */}
-          <div className="flex items-center gap-2 border-t border-ig-rule px-4 py-3">
+          {/* Action Bar (Like post, Comment, Save, Likes count, Time) */}
+          <div className="border-t border-ig-rule px-4 py-3 shrink-0">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  aria-label={t("newFed.like")}
+                  onClick={() => {
+                    if (onToggleLikePost && post) {
+                      onToggleLikePost(post.id, post.likesCount);
+                    }
+                  }}
+                  className={`ig-press flex items-center justify-center ${
+                    isLiked ? "text-ig-like" : "text-white hover:text-neutral-400"
+                  }`}
+                >
+                  <Heart
+                    size={24}
+                    strokeWidth={1.5}
+                    className={isLiked ? "fill-current" : ""}
+                  />
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("newFed.comment")}
+                  onClick={() => commentInputRef.current?.focus()}
+                  className="ig-press flex items-center justify-center text-white hover:text-neutral-400"
+                >
+                  <MessageCircle size={24} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Chia sẻ"
+                  onClick={() => toast.info("Đã sao chép liên kết bài viết.")}
+                  className="ig-press flex items-center justify-center text-white hover:text-neutral-400"
+                >
+                  <Send size={22} strokeWidth={1.5} />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                aria-label={t("post.save")}
+                onClick={() => setIsSaved((prev) => !prev)}
+                className={`ig-press flex items-center justify-center ${
+                  isSaved ? "text-white fill-white" : "text-white hover:text-neutral-400"
+                }`}
+              >
+                <Bookmark
+                  size={24}
+                  strokeWidth={1.5}
+                  className={isSaved ? "fill-current" : ""}
+                />
+              </button>
+            </div>
+
+            <p className="text-[14px] font-semibold text-white tabular-nums">
+              {post.likesCount || 0} {t("newFed.like")}
+            </p>
+            <p className="text-[11px] uppercase tracking-wide text-neutral-500 mt-1">
+              {formatTime(post.createdAt, t)}
+            </p>
+          </div>
+
+          {/* Ô Thêm Bình Luận */}
+          <div className="flex items-center gap-2 border-t border-ig-rule px-4 py-3 shrink-0">
+            <button
+              type="button"
+              className="text-neutral-400 hover:text-white"
+              onClick={() => {
+                setNewComment((prev) => `${prev} ❤️ `);
+                commentInputRef.current?.focus();
+              }}
+              aria-label="Thêm biểu tượng cảm xúc"
+            >
+              <Smile size={22} strokeWidth={1.5} />
+            </button>
             <input
               ref={commentInputRef}
               type="text"
               aria-label={t("post.commentPlaceholder")}
-              placeholder={t("post.commentPlaceholder")}
-              className="flex-1 bg-transparent py-1.5 text-[14px] text-ig-text placeholder-ig-faint focus:outline-none"
+              placeholder={t("post.commentPlaceholder") || "Thêm bình luận..."}
+              className="flex-1 bg-transparent py-1 text-[14px] text-white placeholder-neutral-500 focus:outline-none"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleCommentSubmit();
+                if (e.key === "Enter" && newComment.trim()) {
+                  handleCommentSubmit();
+                }
               }}
             />
             <button
               type="button"
               disabled={!newComment.trim()}
-              className="ig-press text-[14px] font-semibold text-ig-accent hover:opacity-85 disabled:opacity-40"
+              className="ig-press text-[14px] font-semibold text-[#0095f6] hover:text-[#1877f2] disabled:opacity-40"
               onClick={handleCommentSubmit}
             >
-              {t("post.postComment")}
+              {t("post.postComment") || "Đăng"}
             </button>
           </div>
         </div>
