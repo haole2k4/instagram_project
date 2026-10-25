@@ -9,6 +9,14 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
   const { t } = useTranslation();
 
   useEffect(() => {
+    const fectDataFollowering = async () => {
+      if (!id) return;
+      let res = await handleGetAllFollowing(id);
+      if (res.statusCode === 200 && res.data) {
+        setDataFollowering(res.data);
+      }
+    };
+
     if (isOpening) {
       fectDataFollowering();
       document.body.classList.add("overflow-hidden");
@@ -27,14 +35,6 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpening, onClosing]);
-
-  const fectDataFollowering = async () => {
-    if (!id) return;
-    let res = await handleGetAllFollowing(id);
-    if (res.statusCode === 200 && res.data) {
-      setDataFollowering(res.data);
-    }
-  };
 
   if (!isOpening) return null;
 

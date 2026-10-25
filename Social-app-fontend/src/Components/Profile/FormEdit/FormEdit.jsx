@@ -52,31 +52,31 @@ const EditProfileModal = () => {
   });
 
   useEffect(() => {
-    fechDataUserById();
-  }, [id]);
+    const fechDataUserById = async () => {
+      let res = await handleGetById(id);
+      if (res.statusCode === 200 && res.data) {
+        const user = res.data;
 
-  const fechDataUserById = async () => {
-    let res = await handleGetById(id);
-    if (res.statusCode === 200 && res.data) {
-      const user = res.data;
+        setValue("username", user.userNickname);
+        setValue("phone", user.userPhone);
+        setValue("bio", user.userBio);
+        setValue("avatar", user.userImage);
 
-      setValue("username", user.userNickname);
-      setValue("phone", user.userPhone);
-      setValue("bio", user.userBio);
-      setValue("avatar", user.userImage);
+        if (user.userImage) {
+          setPreviewImage(user.userImage);
+        }
 
-      if (user.userImage) {
-        setPreviewImage(user.userImage);
+        const genderValue =
+          user.userGender === "male"
+            ? { value: "male", label: t("manageUser.male") }
+            : { value: "female", label: t("manageUser.female") };
+        setGender(genderValue);
+        setValue("gender", genderValue);
       }
+    };
 
-      const genderValue =
-        user.userGender === "male"
-          ? { value: "male", label: t("manageUser.male") }
-          : { value: "female", label: t("manageUser.female") };
-      setGender(genderValue);
-      setValue("gender", genderValue);
-    }
-  };
+    fechDataUserById();
+  }, [id, setValue, t]);
 
   const convertImageToBase64 = (file) => {
     return new Promise((resolve, reject) => {
