@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Language from "./Language/Language";
 import { useTranslation } from "react-i18next";
 import { UserLogOut } from "../../../Service/AuthApi";
 import { userLogoutALL } from "../../../Redux/Reducer/UserAppDeucer";
@@ -107,9 +106,6 @@ const MoreMenu = ({
               </Link>
             </li>
           )}
-          <li>
-            <Language dark />
-          </li>
           <li aria-hidden="true">
             <hr className="my-2 border-ig-border" />
           </li>

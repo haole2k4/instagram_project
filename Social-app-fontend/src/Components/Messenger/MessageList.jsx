@@ -1,9 +1,133 @@
 import React, { useRef, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { MessageListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";
+
+export const parseMessageContent = (content) => {
+  if (!content) return { isStoryReply: false, text: "" };
+  if (typeof content === "object") {
+    if (content.type === "STORY_REPLY" || content.storyMedia) {
+      return {
+        isStoryReply: true,
+        storyMedia: content.storyMedia || content.storyUrl,
+        storyType: content.storyType || "IMAGE",
+        storyAuthor: content.storyAuthor || content.author || "",
+        text: content.text || "",
+        storyId: content.storyId,
+      };
+    }
+  }
+  if (typeof content === "string") {
+    const trimmed = content.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.type === "STORY_REPLY" || parsed.storyMedia) {
+          return {
+            isStoryReply: true,
+            storyMedia: parsed.storyMedia || parsed.storyUrl,
+            storyType: parsed.storyType || "IMAGE",
+            storyAuthor: parsed.storyAuthor || parsed.author || "",
+            text: parsed.text || "",
+            storyId: parsed.storyId,
+          };
+        }
+      } catch {
+        // Not a JSON story reply
+      }
+    }
+  }
+  return { isStoryReply: false, text: content };
+};
+
+const StoryReplyCard = ({
+  storyReply,
+  isSentByCurrentUser,
+  formatMessageTime,
+  createdAt,
+  processMessageContent,
+}) => {
+  const { storyMedia, storyType, storyAuthor, text, storyId } = storyReply;
+  const navigate = useNavigate();
+
+  return (
+    <div
+      className={`flex flex-col ${
+        isSentByCurrentUser ? "items-end" : "items-start"
+      } max-w-[85%]`}
+    >
+      {/* Vùng xem trước tin kèm cột dọc xám bên phải (Hình 4) */}
+      <div className="flex items-stretch gap-2 mb-1.5">
+        <div
+          onClick={() => {
+            if (storyId) navigate(`/user/story/${storyId}`);
+          }}
+          className="relative h-[95px] w-[145px] sm:h-[105px] sm:w-[165px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#1c1c1c] shadow-md select-none group"
+          title="Xem tin"
+        >
+          {storyMedia ? (
+            storyType === "VIDEO" || storyMedia.endsWith(".mp4") ? (
+              <video
+                src={storyMedia}
+                className="h-full w-full object-cover filter blur-[2px] scale-110 transition-transform duration-300 group-hover:scale-115"
+                muted
+              />
+            ) : (
+              <img
+                src={storyMedia}
+                alt={storyAuthor || "Story"}
+                className="h-full w-full object-cover filter blur-[2px] scale-110 transition-transform duration-300 group-hover:scale-115"
+              />
+            )
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-neutral-500 text-xs">
+              Tin
+            </div>
+          )}
+
+          {/* Lớp phủ thông tin âm thanh / tác giả tin (Chuẩn Hình 4) */}
+          <div className="absolute inset-0 flex flex-col justify-between bg-black/45 p-2.5 backdrop-blur-[1px]">
+            <div className="flex items-center gap-1.5 text-white/90">
+              <span className="font-mono text-[11px] font-bold tracking-tighter">
+                |||
+              </span>
+              <span className="truncate text-[12px] font-semibold">
+                {storyAuthor || "Tin"}
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-300/90 font-medium">
+              Tin đã trả lời
+            </p>
+          </div>
+        </div>
+
+        {/* Cột dọc màu xám ở bên phải báo hiệu tin nhắn reply (Hình 4) */}
+        <div
+          className="w-[3px] self-stretch rounded-full bg-neutral-500/80 my-1 shrink-0"
+          title="Tin nhắn trả lời tin"
+          aria-hidden="true"
+        />
+      </div>
+
+      {/* Bubble tin nhắn phản hồi */}
+      {text && (
+        <div
+          title={formatMessageTime(createdAt)}
+          className={`relative max-w-full break-words rounded-2xl px-4 py-2 text-[14px] leading-5 ${
+            isSentByCurrentUser
+              ? "bg-ig-accent text-white"
+              : "border border-ig-border bg-ig-surface text-white"
+          }`}
+        >
+          {processMessageContent(text)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const getScrollBehavior = () => {
   if (
@@ -271,16 +395,33 @@ const MessageList = ({
                           isSentByCurrentUser ? "justify-end" : "justify-start"
                         }`}
                       >
-                        <div
-                          title={formatMessageTime(msg.createdAt)}
-                          className={`relative max-w-[75%] break-words rounded-panel px-3.5 py-2 text-[14px] leading-5 ${
-                            isSentByCurrentUser
-                              ? "bg-ig-accent text-ig-text"
-                              : "border border-ig-border bg-ig-surface text-ig-text"
-                          } ${msg.pending ? "opacity-70" : ""}`}
-                        >
-                          {processMessageContent(msg.content)}
-                        </div>
+                        {(() => {
+                          const parsed = parseMessageContent(msg.content);
+                          if (parsed.isStoryReply) {
+                            return (
+                              <StoryReplyCard
+                                storyReply={parsed}
+                                isSentByCurrentUser={isSentByCurrentUser}
+                                formatMessageTime={formatMessageTime}
+                                createdAt={msg.createdAt}
+                                processMessageContent={processMessageContent}
+                              />
+                            );
+                          }
+
+                          return (
+                            <div
+                              title={formatMessageTime(msg.createdAt)}
+                              className={`relative max-w-[75%] break-words rounded-panel px-3.5 py-2 text-[14px] leading-5 ${
+                                isSentByCurrentUser
+                                  ? "bg-ig-accent text-ig-text"
+                                  : "border border-ig-border bg-ig-surface text-ig-text"
+                              } ${msg.pending ? "opacity-70" : ""}`}
+                            >
+                              {processMessageContent(msg.content)}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
