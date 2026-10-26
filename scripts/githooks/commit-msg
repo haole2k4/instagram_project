@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Commit có file shared (trong worktree có .agent-scope) phải bắt đầu bằng "shared:".
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+[[ -f "$root/.agent-scope" ]] || exit 0
+. "$root/scripts/agent/lib.sh"
+while IFS= read -r f; do
+  if is_shared "$f" && ! head -n1 "$1" | grep -q '^shared:'; then
+    echo "✗ Commit chạm file shared ($f): message phải bắt đầu bằng 'shared:'." >&2
+    exit 1
+  fi
+done < <(git diff --cached --name-only --no-renames)

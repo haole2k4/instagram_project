@@ -66,3 +66,51 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - Trước khi thiết kế hoặc sửa UI, đọc `ART_DIRECTION.md` ở thư mục gốc và giữ đúng hướng thẩm mỹ đã chốt (palette, typography, layout, motion, anti-pattern).
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
 - Commit message và mô tả PR ngắn gọn, rõ ý; không ràng buộc định dạng hay ngôn ngữ.
+
+## Làm việc song song nhiều worktree
+
+Áp dụng khi nhiều agent chạy cùng lúc. Một agent làm một mình vẫn theo các mục trên.
+Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/githooks/). Hook chạy khi `core.hooksPath=scripts/githooks` (script tạo worktree tự đặt).
+
+### Khởi tạo
+- Tạo worktree bằng `scripts/agent/new-worktree.sh <loại/mô-tả> <agent> '<glob>'...`. Không dùng `git worktree add` tay.
+- Script tạo worktree ở `../instagram_project.worktrees/<loại>-<mô-tả>`, branch từ `origin/master`. Sai gốc thì rebase khó và lẫn commit của người khác.
+- Branch đặt theo `<loại>/<kebab-case>` như mục Git ở trên. Script từ chối tên sai.
+
+### Vùng sở hữu
+- Vùng sửa ghi trong `.agent-scope` ở gốc worktree (một glob mỗi dòng, `*` khớp cả `/`). File này không bị commit.
+- Mọi thứ ngoài `.agent-scope` là read-only. Sửa ngoài vùng sẽ bị hook chặn.
+- Backend chia theo tầng, nên vùng backend giao theo tên file (`**/*Story*`) hoặc `messaging/`, `event/`, `src/test/**` tương ứng. Cần xác nhận quy ước tên khi giao.
+- Frontend giao theo `src/Pages/<tên>/`, `src/Components/<tên>/`, `src/Admin/`, `src/Service/<tên>Api.js`.
+
+### File shared
+- Danh sách duy nhất: [scripts/agent/shared-paths.txt](scripts/agent/shared-paths.txt). Không tự ý sửa. Sửa trực tiếp mà không theo quy trình thì dễ conflict lockfile, schema và route.
+- Cần đổi shared: ghi đề xuất vào báo cáo cuối (file, dòng cần thêm). Không sửa.
+- Bắt buộc sửa: commit riêng, `AGENT_ALLOW_SHARED=1`, message bắt đầu `shared:`. Sửa tối thiểu.
+- Không thêm dependency. Ghi tên package và lý do vào báo cáo; integrator sẽ cài.
+- Không sửa schema (`entity/*`, `migration/*`). `ddl-auto=update` tự đổi DB, nên entity sai sẽ đổi DB của mọi người.
+
+### Điều phối
+- Bảng claims: `.git/agent-claims.txt` (chung mọi worktree, không đi theo branch). Dòng: `agent | branch | glob`.
+- Xem bảng bằng `scripts/agent/claims.sh list` trước khi bắt đầu và trước mỗi commit.
+- Claim được thêm khi tạo worktree. Trùng claim thì dừng phần đó, ghi xung đột vào báo cáo, chuyển việc khác.
+- Xong thì `scripts/agent/claims.sh rm` (xoá claim của branch hiện tại).
+
+### Giới hạn thông tin
+- Không đọc diff, branch hay code của agent khác để "tìm hiểu". Chỉ dùng bảng claims.
+- Không `git log`/`git diff`/`git checkout` vào branch khác. Việc đó làm lộ thay đổi dở dang và dễ copy code chưa merge.
+
+### Đồng bộ
+- Commit nhỏ, đúng vùng. Hook `pre-commit` kiểm tra scope, shared, claim, `.env`.
+- Trước khi báo xong: `git fetch origin && git rebase origin/master`, rồi chạy `./mvnw test` (backend) hoặc `pnpm build` (frontend).
+- Conflict ở file ngoài vùng: dừng và báo. Không tự giải.
+
+### Merge
+- Merge tuần tự từng PR, theo thứ tự PR sẵn sàng. Mỗi PR rebase lại sau PR trước.
+- Chỉ integrator chạy `pnpm install` và sửa `pnpm-lock.yaml`. Agent khác không đụng lockfile.
+- Migration: agent không viết SQL. Integrator tạo `backend_instagram/migration/YYYY-MM-<tên>.sql` theo mẫu file hiện có.
+- `target/`, `build/`, `node_modules/` đã bị gitignore. Không commit.
+
+### Kết thúc
+- `scripts/agent/claims.sh rm`, rồi sau khi PR merge: `git worktree remove <đường dẫn>`.
+- Báo cáo ngắn: file đã đổi, đề xuất cho shared, điều agent khác cần biết.
