@@ -13,7 +13,7 @@ branch="${1:?thiếu <loại/mô-tả>}"; agent="${2:?thiếu <agent>}"; shift 2
 dir="$(dirname "$AGENT_ROOT")/$(basename "$AGENT_ROOT").worktrees/${branch//\//-}"
 
 base="${AGENT_BASE:-origin/master}"; [[ -n "${AGENT_BASE:-}" ]] || git fetch origin master
-"$AGENT_ROOT/scripts/agent/claims.sh" add "$agent" "$@"
+AGENT_BRANCH="$branch" "$AGENT_ROOT/scripts/agent/claims.sh" add "$agent" "$@"
 git worktree add -b "$branch" "$dir" "$base"
 printf '%s\n' "$@" > "$dir/.agent-scope"
 grep -qx '.agent-scope' "$AGENT_COMMON/info/exclude" 2>/dev/null || echo '.agent-scope' >> "$AGENT_COMMON/info/exclude"

@@ -7,7 +7,7 @@ set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 
 touch "$AGENT_CLAIMS"
-branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="${AGENT_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 cmd="${1:-list}"; shift || true
 
 case "$cmd" in
