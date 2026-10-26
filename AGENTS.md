@@ -43,7 +43,7 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 ## Bảo mật và cấu hình
 
 - Không commit secret: `.env`, mật khẩu, API key (`GEMINI_API_KEY`, `JWT_BASE64_SECRET`, key AWS), `k8s/secret.yaml`. Chỉ cập nhật các file mẫu (`.env.example`, `k8s/secret.example.yaml`).
-- Không sửa và không commit mọi file `.env`, kể cả `Social-app-fontend/.env` (hiện đang bị track trong git dù `.gitignore` đã chặn). Cần đổi biến môi trường thì cập nhật file mẫu và báo lại.
+- Không sửa và không commit mọi file `.env`, kể cả `Social-app-fontend/.env` (đã gỡ khỏi git, chỉ còn tồn tại local và bị `.gitignore` chặn). Cần đổi biến môi trường thì cập nhật file mẫu và báo lại.
 - Không in giá trị secret ra log, PR hoặc tin nhắn.
 - Biến môi trường mới phải được thêm vào `.env.example` / `docker-compose.yml` / `k8s/configmap.yaml` khi liên quan.
 
