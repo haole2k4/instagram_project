@@ -70,6 +70,7 @@ const NewsFeedCart = () => {
   const [poppingHearts, setPoppingHearts] = useState({});
   const [doubleTapHeart, setDoubleTapHeart] = useState({});
   const [expandedCaptions, setExpandedCaptions] = useState({});
+  const [failedMedia, setFailedMedia] = useState({});
   const [isOpen, setIsOpen] = useState(false);
   const [postData, setPostData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -282,6 +283,10 @@ const NewsFeedCart = () => {
     );
   };
 
+  const handleMediaError = (mediaKey) => {
+    setFailedMedia((prev) => ({ ...prev, [mediaKey]: true }));
+  };
+
   if (isLoading) {
     return (
       <div className="flex w-full flex-col py-2">
@@ -308,6 +313,8 @@ const NewsFeedCart = () => {
       {postData.map((item) => {
         const activeIdx = currentImageIndex[item.id] || 0;
         const currentMedia = item.media?.[activeIdx];
+        const currentMediaKey = `${item.id}-${activeIdx}-${currentMedia?.url || ""}`;
+        const isMediaFailed = Boolean(failedMedia[currentMediaKey]);
         const isVideoMedia = currentMedia?.url?.endsWith(".mp4");
         const authorName =
           item.user?.userNickname || item.username || t("story.user");
@@ -364,7 +371,16 @@ const NewsFeedCart = () => {
                 style={{ touchAction: "pan-y" }}
                 className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-media border border-ig-rule bg-ig-surface select-none"
               >
-                {isVideoMedia ? (
+                {isMediaFailed ? (
+                  <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-ig-muted">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ig-raised text-ig-faint">
+                      <ImageIcon size={24} strokeWidth={1.5} />
+                    </div>
+                    <p className="text-[13px] font-medium text-ig-muted">
+                      {t("post.imageLoadError")}
+                    </p>
+                  </div>
+                ) : isVideoMedia ? (
                   <video
                     className="h-full w-full object-contain"
                     src={currentMedia?.url}
@@ -376,8 +392,9 @@ const NewsFeedCart = () => {
                   <img
                     className="h-full w-full object-cover"
                     src={currentMedia?.url}
-                    alt={captionText || authorName}
+                    alt={t("post.postImage")}
                     loading="lazy"
+                    onError={() => handleMediaError(currentMediaKey)}
                   />
                 )}
 

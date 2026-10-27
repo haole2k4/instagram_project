@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Globe,
   Heart,
+  Image as ImageIcon,
   Lock,
   MessageCircle,
   MoreHorizontal,
@@ -78,6 +79,7 @@ const ModalCart = ({
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [failedMedia, setFailedMedia] = useState({});
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const commentInputRef = useRef(null);
@@ -247,7 +249,16 @@ const ModalCart = ({
       >
         {/* Vùng Media (Ảnh/Video) - Tối ưu tỷ lệ và căn giữa hoàn hảo */}
         <div className="relative flex h-1/2 w-full flex-1 items-center justify-center bg-black md:h-full border-b md:border-b-0 md:border-r border-ig-border overflow-hidden select-none">
-          {isVideoMedia ? (
+          {failedMedia[`${post.id}-${currentImageIndex}-${currentMedia?.url}`] ? (
+            <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-ig-muted">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ig-raised text-ig-faint">
+                <ImageIcon size={24} strokeWidth={1.5} />
+              </div>
+              <p className="text-[13px] font-medium text-ig-muted">
+                {t("post.imageLoadError")}
+              </p>
+            </div>
+          ) : isVideoMedia ? (
             <video
               src={currentMedia?.url}
               className="max-h-full max-w-full object-contain"
@@ -259,7 +270,13 @@ const ModalCart = ({
             <img
               src={currentMedia?.url || "/default-avatar.png"}
               className="max-h-full max-w-full object-contain"
-              alt={post.title || ""}
+              alt={t("post.postImage")}
+              onError={() =>
+                setFailedMedia((prev) => ({
+                  ...prev,
+                  [`${post.id}-${currentImageIndex}-${currentMedia?.url}`]: true,
+                }))
+              }
             />
           )}
 

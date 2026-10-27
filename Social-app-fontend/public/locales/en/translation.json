@@ -258,6 +258,8 @@
     "scrollRight": "Scroll right"
   },
   "post": {
+    "imageLoadError": "Could not load image",
+    "postImage": "Post image",
     "like": "Like",
     "unlike": "Unlike",
     "comment": "Comment",

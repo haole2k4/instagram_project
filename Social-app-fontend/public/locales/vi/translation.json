@@ -254,6 +254,8 @@
     "scrollRight": "Cuộn sang phải"
   },
   "post": {
+    "imageLoadError": "Không thể tải hình ảnh",
+    "postImage": "Ảnh bài viết",
     "like": "Thích",
     "unlike": "Bỏ thích",
     "comment": "Bình luận",
