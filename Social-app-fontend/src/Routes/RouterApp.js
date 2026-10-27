@@ -14,6 +14,7 @@ import Content from "../Admin/Content";
 import AuditLogs from "../Admin/AuditLogs";
 import PrivateRouter from "./PrivateRoutes/PrivateRoutes";
 import { PostCardSkeleton } from "../Components/Common/FlatSkeleton";
+import CallPage from "../Pages/Call/CallPage";
 
 const RouterApp = () => {
   return (
@@ -28,6 +29,16 @@ const RouterApp = () => {
         {/* ROUTE FOR LOGIN AND REGISTER */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* ROUTE FOR CALL (DEDICATED FULLSCREEN PAGE) */}
+        <Route
+          path="/call"
+          element={
+            <PrivateRouter>
+              <CallPage />
+            </PrivateRouter>
+          }
+        />
 
         {/* ROUTE FOR ADMIN */}
         <Route

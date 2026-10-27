@@ -38,7 +38,6 @@ import UserSearchModal from "./UserSearchModal";
 import AIChatPanel from "./AIChatPanel";
 import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import IncomingCallModal from "./IncomingCallModal";
-import VideoCallModal from "./VideoCallModal";
 import instance from "../../Utils/AxiosApi/Axios";
 import ConversationDetails from "./ConversationDetails";
 import Route from "../../Components/Routes/index";
@@ -200,14 +199,9 @@ const MessengerPage = () => {
     webSocketConnected,
   } = useSelector((state) => state.chat);
   const {
-    callUser,
-    answerCall,
-    leaveCall,
     receivingCall,
-    callAccepted,
-    isVideoCallActive,
-    stream,
-    remoteStream,
+    incomingCall,
+    setReceivingCall,
     name,
   } = useWebSocket();
 
@@ -217,7 +211,6 @@ const MessengerPage = () => {
   const [page, setPage] = useState(1);
   const [allLoaded, setAllLoaded] = useState(false);
   const [showConnectionWarning, setShowConnectionWarning] = useState(false);
-  const [idfriend, setIdfriend] = useState(null);
   const [showFullSearch, setShowFullSearch] = useState(false);
   const [friendCandidates, setFriendCandidates] = useState([]);
   const [showDetails, setShowDetails] = useState(false);
@@ -706,35 +699,61 @@ const MessengerPage = () => {
         (p) => (p.userId || p.id) !== currentUser?.id
       );
       setDatafriend(idFr);
-      setIdfriend(idFr?.userId || idFr?.id);
     }
   }, [currentConversation, currentUser?.id]);
 
   const headerInfo = getConversationHeader();
 
-  const handleVideoCall = async () => {
-    try {
-      await callUser(idfriend);
-    } catch (error) {
-      console.error("Error starting video call:", error);
+  const openCallWindow = useCallback(
+    (hasVideo) => {
+      if (!currentConversation?.id) return;
+      const url = `/call?has_video=${hasVideo}&ig_thread_id=${currentConversation.id}`;
+      const callWindow = window.open(
+        url,
+        `instagram_call_${currentConversation.id}`,
+        "width=1280,height=750,menubar=no,status=no,toolbar=no"
+      );
+      if (!callWindow) {
+        navigate(url);
+      }
+    },
+    [currentConversation?.id, navigate]
+  );
+
+  const handleVoiceCall = useCallback(() => {
+    openCallWindow(false);
+  }, [openCallWindow]);
+
+  const handleVideoCall = useCallback(() => {
+    openCallWindow(true);
+  }, [openCallWindow]);
+
+  const handleAcceptCall = useCallback(() => {
+    const threadId = incomingCall?.conversationId || currentConversation?.id;
+    const hasVid = incomingCall?.hasVideo ?? true;
+    const url = `/call?has_video=${hasVid}&ig_thread_id=${threadId}&auto_join=true`;
+    if (setReceivingCall) setReceivingCall(false);
+    const callWindow = window.open(
+      url,
+      `instagram_call_${threadId}`,
+      "width=1280,height=750,menubar=no,status=no,toolbar=no"
+    );
+    if (!callWindow) {
+      navigate(url);
     }
-  };
+  }, [incomingCall, currentConversation?.id, setReceivingCall, navigate]);
 
-  const handleAcceptCall = async () => {
-    try {
-      await answerCall();
-    } catch (error) {
-      console.error("Error accepting call:", error);
+  const handleRejectCall = useCallback(() => {
+    if (incomingCall?.from) {
+      webSocketService
+        .sendVideoSignal(incomingCall.from, {
+          action: "call-reject",
+          conversationId: incomingCall.conversationId,
+        })
+        .catch(() => {});
     }
-  };
-
-  const handleRejectCall = () => {
-    leaveCall();
-  };
-
-  const handleEndCall = () => {
-    leaveCall();
-  };
+    if (setReceivingCall) setReceivingCall(false);
+  }, [incomingCall, setReceivingCall]);
 
   const handleMarkAsRead = () => {
     if (currentConversation && currentUser?.id) {
@@ -900,7 +919,7 @@ const MessengerPage = () => {
                   type="button"
                   aria-label={t("messenger.voiceCall")}
                   title={t("messenger.voiceCall")}
-                  onClick={handleVideoCall}
+                  onClick={handleVoiceCall}
                   className="ig-press flex h-9 w-9 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
                 >
                   <Phone size={18} strokeWidth={1.5} />
@@ -1048,24 +1067,16 @@ const MessengerPage = () => {
         currentUserId={currentUser?.id}
       />
 
-      {receivingCall && !callAccepted && (
+      {receivingCall && (
         <IncomingCallModal
           caller={{
-            userFullname: name,
-            userImage: datafriend?.userImage,
+            userFullname: incomingCall?.name || name,
+            userImage: incomingCall?.userImage || datafriend?.userImage,
           }}
+          isGroup={Boolean(incomingCall?.isGroup)}
+          hasVideo={incomingCall?.hasVideo ?? true}
           onAccept={handleAcceptCall}
           onReject={handleRejectCall}
-        />
-      )}
-
-      {isVideoCallActive && (
-        <VideoCallModal
-          stream={stream}
-          remoteStream={remoteStream}
-          onEndCall={handleEndCall}
-          callAccepted={callAccepted}
-          name={name}
         />
       )}
 
