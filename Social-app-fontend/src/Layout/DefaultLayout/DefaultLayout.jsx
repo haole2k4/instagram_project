@@ -6,6 +6,7 @@ import Fragment from "../Fragment/index.jsx";
 import LeftNav from "../Sidebar/Left/SidebarLeft.jsx";
 import RightNav from "../Sidebar/Right/SidebarRight.jsx";
 import ChatPage from "../../Pages/Chat/ChatPage.jsx";
+import MiniChatFloating from "../../Components/Messenger/MiniChatFloating.jsx";
 import Route from "../../Components/Routes/index";
 
 const DefaultLayout = ({ socketData }) => {
@@ -51,6 +52,8 @@ const DefaultLayout = ({ socketData }) => {
           </div>
         </div>
       )}
+
+      {!isChatPage && <MiniChatFloating />}
     </div>
   );
 };
