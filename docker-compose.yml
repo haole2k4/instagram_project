@@ -149,7 +149,7 @@ services:
       MYSQL_PWD: ${DB_PASSWORD:-instagram_pass}
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - 'mysql --protocol=tcp -h mysql -u"${DB_USERNAME:-instagram_user}" "${DB_NAME:-backend_instagram}" < /seed-demo.sql'
+      - 'mysql --default-character-set=utf8mb4 --protocol=tcp -h mysql -u"${DB_USERNAME:-instagram_user}" "${DB_NAME:-backend_instagram}" < /seed-demo.sql'
     volumes:
       - ./backend_instagram/seed-demo.sql:/seed-demo.sql:ro
     depends_on:

@@ -24,7 +24,7 @@ import notificationSocket from "../../../../Service/NotificationSocket";
 import { useTranslation } from "react-i18next";
 import { handleUpdateStatus } from "../../../../Service/postApi";
 import { toast } from "react-toastify";
-import { formatTime } from "../../../../Utils";
+import { formatTime, cleanMojibake } from "../../../../Utils";
 
 const AccessIcon = ({ access, t }) => {
   if (access === "PUBLIC") {
@@ -108,13 +108,17 @@ const ModalCart = ({
     const fetchComments = async () => {
       try {
         const response = await getCommentsByPostId(post.id);
-        setComments(Array.isArray(response?.data) ? response.data : []);
+        const list = Array.isArray(response?.data) ? response.data : [];
+        setComments(list);
+        if (list.length === 0 && Number(post?.commentsCount) > 0 && onCommentAdded) {
+          onCommentAdded(post.id, 0);
+        }
       } catch (error) {
         console.error("Error fetching comments:", error);
       }
     };
     fetchComments();
-  }, [isOpen, post?.id, userInfo?.id]);
+  }, [isOpen, post?.id, post?.commentsCount, userInfo?.id, onCommentAdded]);
 
   useEffect(() => {
     if (!post?.id) return;
@@ -409,7 +413,7 @@ const ModalCart = ({
                     <span className="mr-2 font-semibold text-white">
                       {post.user?.userNickname}
                     </span>
-                    <span className="text-neutral-200">{post.title}</span>
+                    <span className="text-neutral-200">{cleanMojibake(post.title)}</span>
                   </p>
                   <span className="mt-1 block text-[12px] text-neutral-500 tabular-nums">
                     {formatTime(post.createdAt, t)}
@@ -449,7 +453,7 @@ const ModalCart = ({
                               {comment.userNickname}
                             </span>
                             <span className="text-neutral-200 break-words">
-                              {comment.content}
+                              {cleanMojibake(comment.content)}
                             </span>
                           </p>
                           <div className="mt-1.5 flex items-center gap-3 text-[12px] text-neutral-500 tabular-nums">

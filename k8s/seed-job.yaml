@@ -77,7 +77,7 @@ spec:
           command:
             - /bin/sh
             - -c
-            - mysql --protocol=tcp -h "$DB_HOST" -u"$DB_USERNAME" "$DB_NAME" < /seed/seed-demo.sql
+            - mysql --default-character-set=utf8mb4 --protocol=tcp -h "$DB_HOST" -u"$DB_USERNAME" "$DB_NAME" < /seed/seed-demo.sql
           volumeMounts:
             - name: seed-sql
               mountPath: /seed

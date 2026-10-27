@@ -22,7 +22,7 @@ import {
   getPostByFollowing,
   getLikedPostIdsByUser,
 } from "../../../Service/postApi";
-import { formatTime } from "../../../Utils";
+import { formatTime, cleanMojibake } from "../../../Utils";
 import notificationSocket from "../../../Service/NotificationSocket";
 import Route from "../../../Components/Routes/index";
 import { PostCardSkeleton } from "../../Common/FlatSkeleton";
@@ -319,7 +319,7 @@ const NewsFeedCart = () => {
         const authorName =
           item.user?.userNickname || item.username || t("story.user");
         const isCaptionExpanded = Boolean(expandedCaptions[item.id]);
-        const captionText = item.title || "";
+        const captionText = cleanMojibake(item.title || "");
         const isLongCaption = captionText.length > 110;
 
         return (
@@ -517,14 +517,16 @@ const NewsFeedCart = () => {
                 </p>
               )}
 
-              <button
-                type="button"
-                onClick={() => handleModelComment(item)}
-                className="block text-[14px] text-ig-muted hover:text-ig-text tabular-nums"
-              >
-                {t("newFed.view")} {item.commentsCount || 0}{" "}
-                {t("newFed.comment")}
-              </button>
+              {Number(item.commentsCount) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleModelComment(item)}
+                  className="block text-[14px] text-ig-muted hover:text-ig-text tabular-nums"
+                >
+                  {t("newFed.view")} {item.commentsCount}{" "}
+                  {t("newFed.comment")}
+                </button>
+              )}
             </div>
           </article>
         );
