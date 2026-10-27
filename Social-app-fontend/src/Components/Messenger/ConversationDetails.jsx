@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { MoreVertical, UserPlus, X } from "lucide-react";
+import { MoreVertical, UserPlus, X, Phone, Video } from "lucide-react";
 import { updateConversationName } from "../../Redux/Reducer/chatSlice";
 import instance from "../../Utils/AxiosApi/Axios";
 import { toast } from "react-toastify";
@@ -210,6 +210,42 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
             </div>
           </div>
         )}
+
+        {/* Quick Call Actions */}
+        <div className="mb-6 flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const url = `/call?has_video=true&ig_thread_id=${conversation.id}`;
+              const win = window.open(
+                url,
+                `instagram_call_${conversation.id}`,
+                "width=1280,height=750,menubar=no,status=no,toolbar=no"
+              );
+              if (!win) window.location.href = url;
+            }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-control border border-ig-border bg-ig-surface py-2 text-[13px] font-medium text-ig-text transition-colors hover:bg-ig-raised"
+          >
+            <Video size={16} strokeWidth={1.5} />
+            <span>Gọi video</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const url = `/call?has_video=false&ig_thread_id=${conversation.id}`;
+              const win = window.open(
+                url,
+                `instagram_call_${conversation.id}`,
+                "width=1280,height=750,menubar=no,status=no,toolbar=no"
+              );
+              if (!win) window.location.href = url;
+            }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-control border border-ig-border bg-ig-surface py-2 text-[13px] font-medium text-ig-text transition-colors hover:bg-ig-raised"
+          >
+            <Phone size={16} strokeWidth={1.5} />
+            <span>Gọi thoại</span>
+          </button>
+        </div>
 
         <div className="mb-6">
           <div className="mb-3 flex items-center justify-between">

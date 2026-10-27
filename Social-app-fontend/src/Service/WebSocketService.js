@@ -393,6 +393,23 @@ class WebSocketService {
     return Promise.resolve().then(send);
   }
 
+  sendGroupVideoSignal(conversationId, payload) {
+    if (!conversationId) {
+      return Promise.reject(new Error("Missing conversationId"));
+    }
+    const send = () => {
+      this.client.publish({
+        destination: `/app/video-call/group/${conversationId}`,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload || {}),
+      });
+    };
+    if (!this.isConnected()) {
+      return this.connect().then(send);
+    }
+    return Promise.resolve().then(send);
+  }
+
   on(event, handler) {
     if (typeof handler !== "function") {
       return () => {};

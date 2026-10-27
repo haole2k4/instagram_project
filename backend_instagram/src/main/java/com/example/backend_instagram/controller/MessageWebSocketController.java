@@ -2,6 +2,7 @@ package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.message.ChatSendRequest;
 import com.example.backend_instagram.entity.User;
+import com.example.backend_instagram.repository.ConversationParticipantRepository;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.ChatRealtimePublisher;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +32,18 @@ public class MessageWebSocketController {
     private final ChatRealtimePublisher realtimePublisher;
     private final UserRepository userRepository;
     private final AccountStatusService accountStatusService;
+    private final ConversationParticipantRepository conversationParticipantRepository;
 
     public MessageWebSocketController(MessageService messageService,
             ChatRealtimePublisher realtimePublisher,
             UserRepository userRepository,
-            AccountStatusService accountStatusService) {
+            AccountStatusService accountStatusService,
+            ConversationParticipantRepository conversationParticipantRepository) {
         this.messageService = messageService;
         this.realtimePublisher = realtimePublisher;
         this.userRepository = userRepository;
         this.accountStatusService = accountStatusService;
+        this.conversationParticipantRepository = conversationParticipantRepository;
     }
 
     /**
@@ -59,7 +64,7 @@ public class MessageWebSocketController {
     }
 
     /**
-     * Chuyển tiếp tín hiệu video call. Chỉ nhận các trường cần thiết và luôn
+     * Chuyển tiếp tín hiệu video call (1-1). Chỉ nhận các trường cần thiết và luôn
      * ghi đè người gửi bằng Principal, không tin "from" từ client.
      */
     @MessageMapping("/video-call/{toUserId}")
@@ -76,7 +81,52 @@ public class MessageWebSocketController {
         safePayload.put("name", payload.getOrDefault("name", ""));
         safePayload.put("action", payload.get("action"));
         safePayload.put("signal", payload.get("signal"));
+        safePayload.put("conversationId", payload.get("conversationId"));
+        safePayload.put("hasVideo", payload.get("hasVideo"));
+        safePayload.put("userImage", payload.get("userImage"));
+        safePayload.put("isGroup", payload.get("isGroup"));
+        safePayload.put("groupName", payload.get("groupName"));
+        safePayload.put("callId", payload.get("callId"));
         realtimePublisher.sendVideoCallSignal(toUserId, safePayload);
+    }
+
+    /**
+     * Chuyển tiếp tín hiệu call trong nhóm tới tất cả thành viên khác của cuộc trò chuyện.
+     */
+    @MessageMapping("/video-call/group/{conversationId}")
+    public void forwardGroupVideoCall(@DestinationVariable Long conversationId,
+            @Payload Map<String, Object> payload,
+            Principal principal) {
+        Long fromUserId = writableUserId(principal);
+        if (conversationId == null || payload == null) {
+            return;
+        }
+        boolean isParticipant = conversationParticipantRepository
+                .existsByConversationIdAndUserId(conversationId, fromUserId);
+        if (!isParticipant) {
+            return;
+        }
+
+        List<Long> memberIds = conversationParticipantRepository
+                .findUserIdsByConversationId(conversationId);
+
+        Map<String, Object> safePayload = new HashMap<>();
+        safePayload.put("from", fromUserId.toString());
+        safePayload.put("conversationId", conversationId.toString());
+        safePayload.put("name", payload.getOrDefault("name", ""));
+        safePayload.put("action", payload.get("action"));
+        safePayload.put("signal", payload.get("signal"));
+        safePayload.put("hasVideo", payload.get("hasVideo"));
+        safePayload.put("userImage", payload.get("userImage"));
+        safePayload.put("isGroup", true);
+        safePayload.put("groupName", payload.getOrDefault("groupName", ""));
+        safePayload.put("callId", payload.get("callId"));
+
+        for (Long memberId : memberIds) {
+            if (!memberId.equals(fromUserId)) {
+                realtimePublisher.sendVideoCallSignal(memberId, safePayload);
+            }
+        }
     }
 
     /**

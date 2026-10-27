@@ -20,6 +20,7 @@ export function useWebSocket() {
   const [stream, setStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [receivingCall, setReceivingCall] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [followNotifications, setFollowNotifications] = useState(null);
   const [peer, setPeer] = useState(null);
@@ -78,16 +79,30 @@ export function useWebSocket() {
       if (!active || !signal) {
         return;
       }
-      if (signal.action === "endCall") {
+      if (signal.action === "endCall" || signal.action === "call-reject") {
+        setIncomingCall(null);
+        setReceivingCall(false);
         cleanupMedia();
         return;
       }
-      if (signal.signal?.type === "offer") {
+      if (
+        signal.signal?.type === "offer" ||
+        signal.action === "call-invite" ||
+        signal.action === "group-call-ring"
+      ) {
         remoteUserIdRef.current = signal.from;
         setReceivingCall(true);
         setCaller(signal.from);
         setName(signal.name || "");
         setCallerSignal(signal.signal);
+        setIncomingCall({
+          from: signal.from,
+          name: signal.name || "",
+          userImage: signal.userImage,
+          conversationId: signal.conversationId,
+          hasVideo: signal.hasVideo !== false,
+          isGroup: !!signal.isGroup,
+        });
       } else if (signal.signal?.type === "answer") {
         setCallerSignal(signal.signal);
         if (peerRef.current) {
@@ -265,6 +280,9 @@ export function useWebSocket() {
     name,
     callerSignal,
     receivingCall,
+    incomingCall,
+    setIncomingCall,
+    setReceivingCall,
     callAccepted,
     isVideoCallActive,
     stream,
