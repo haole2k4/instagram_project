@@ -12,7 +12,7 @@ import { userLogin } from "../../Service/AuthApi";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
 import AuthSplashScreen, {
   InstagramGradientGlyph,
-  MetaBrandLogo,
+  BrandLogo,
 } from "../Common/AuthSplashScreen";
 
 const Login = () => {
@@ -250,35 +250,8 @@ const Login = () => {
                   </a>
                 </div>
 
-                {/* Divider */}
-                <div className="my-5 flex items-center gap-3">
-                  <div className="h-[1px] flex-1 bg-[#262626]" />
-                  <span className="text-[12px] font-semibold text-[#737373]">
-                    OR
-                  </span>
-                  <div className="h-[1px] flex-1 bg-[#262626]" />
-                </div>
-
-                {/* Facebook Login */}
-                <button
-                  type="button"
-                  onClick={() => toast.info("Tính năng đăng nhập Facebook đang thử nghiệm.")}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-semibold text-[#1877f2] hover:text-[#385898] transition"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                  <span>Log in with Facebook</span>
-                </button>
-
                 {/* Create Account Outline Button */}
-                <div className="pt-3">
+                <div className="pt-6">
                   <Link
                     to="/register"
                     className="ig-press block w-full rounded-xl border border-[#0095f6] py-2.5 text-center text-[14px] font-semibold text-[#0095f6] hover:bg-[#0095f6]/10"
@@ -288,47 +261,13 @@ const Login = () => {
                 </div>
               </form>
 
-              {/* Meta Branding */}
+              {/* Brand Logo */}
               <div className="mt-8 flex justify-center">
-                <MetaBrandLogo />
+                <BrandLogo />
               </div>
             </div>
           </div>
         </main>
-
-        {/* Footer */}
-        <footer className="border-t border-[#1a1a1a] px-4 py-6 text-center text-[12px] text-[#737373]">
-          <nav className="mb-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
-            {[
-              "Meta",
-              "About",
-              "Blog",
-              "Jobs",
-              "Help",
-              "API",
-              "Privacy",
-              "Terms",
-              "Locations",
-              "Instagram Lite",
-              "Threads",
-              "Contact Uploading & Non-Users",
-              "Meta Verified",
-            ].map((link) => (
-              <span
-                key={link}
-                className="cursor-pointer transition-colors hover:text-neutral-400"
-              >
-                {link}
-              </span>
-            ))}
-          </nav>
-          <div className="flex items-center justify-center gap-4">
-            <span className="cursor-pointer hover:text-neutral-400">
-              English ⌵
-            </span>
-            <span>© 2026 Instagram from Meta</span>
-          </div>
-        </footer>
       </div>
     </>
   );
