@@ -23,3 +23,56 @@ export const formatTime = (dateString, t) => {
     return postDate.toLocaleDateString("vi-VN", options);
   }
 };
+
+export const cleanMojibake = (text) => {
+  if (!text || typeof text !== "string") return text;
+
+  // Direct mapping of common UTF-8 emoji mojibake caused by Latin-1/Windows-1252 seed import
+  const knownReplacements = [
+    [/ðŸ¥[\u0080-\u00BF]?/g, "🥐"],
+    [/ðŸŒ…/g, "🌅"],
+    [/ðŸ–¥/g, "🖥️"],
+    [/ðŸŽž/g, "🎞️"],
+    [/ðŸ“¸/g, "📸"],
+    [/ðŸŽ¹/g, "🎹"],
+    [/ðŸ ³/g, "🍜"],
+    [/ðŸ °/g, "🍰"],
+    [/ðŸŽ¨/g, "🎨"],
+    [/ðŸ’»/g, "💻"],
+    [/âœ¨/g, "✨"],
+    [/âœˆï¸/g, "✈️"],
+    [/ðŸ ‹ï¸/g, "🏋️‍♂️"],
+    [/ðŸ¥—/g, "🥗"],
+    [/ðŸŒ¸/g, "🌸"],
+    [/ðŸŽ§/g, "🎧"],
+    [/ðŸŽµ/g, "🎵"],
+    [/ðŸ“š/g, "📚"],
+    [/ðŸ🏛/g, "🏛️"],
+    [/ðŸ“\u0090/g, "📐"],
+  ];
+
+  let cleaned = text;
+  for (const [pattern, replacement] of knownReplacements) {
+    cleaned = cleaned.replace(pattern, replacement);
+  }
+
+  // Generic repair attempt if any residual mojibake markers remain (e.g. ðŸ)
+  if (/ðŸ/.test(cleaned)) {
+    try {
+      const bytes = new Uint8Array(
+        [...cleaned].map((char) => {
+          const code = char.charCodeAt(0);
+          return code === 0x178 ? 0x9f : code & 0xff;
+        })
+      );
+      const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      if (!decoded.includes("\uFFFD")) {
+        cleaned = decoded;
+      }
+    } catch (_) {
+      // ignore decoding fallback error
+    }
+  }
+
+  return cleaned;
+};

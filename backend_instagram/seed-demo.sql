@@ -1,10 +1,12 @@
 -- Run after the Spring application has created/updated its tables:
--- mysql -h 127.0.0.1 -P 3306 -u instagram_user -p backend_instagram < seed-demo.sql
+-- mysql --default-character-set=utf8mb4 -h 127.0.0.1 -P 3306 -u instagram_user -p backend_instagram < seed-demo.sql
 -- Demo password for all seeded accounts: InstagramDemo!2026
 -- Roles:
 --   admin@instagram.local     USER + ADMIN
 --   moderator@instagram.local USER + MODERATOR
 --   linh/minh                 USER
+
+SET NAMES utf8mb4;
 
 INSERT INTO roles (code) VALUES ('USER'), ('MODERATOR'), ('ADMIN')
 ON DUPLICATE KEY UPDATE code = VALUES(code);
@@ -305,11 +307,81 @@ AND p.title LIKE 'Sunset over the coastal%'
 AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Stunning capture%');
 
 INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Golden hour perfection ✨', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'mai@instagram.local' AND owner.user_email = 'an@instagram.local'
+AND p.title LIKE 'Sunset over the coastal%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Golden hour perfection%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
 SELECT actor.id, p.id, 'Love the color scheme and desk mat!', NOW()
 FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
 WHERE actor.user_email = 'duc@instagram.local' AND owner.user_email = 'hoa@instagram.local'
 AND p.title LIKE 'New minimalist workstation%'
 AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Love the color%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Where did you get that monitor arm?', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'an@instagram.local' AND owner.user_email = 'hoa@instagram.local'
+AND p.title LIKE 'New minimalist workstation%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Where did you get%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Super clean aesthetic, love the plant on the side 🪴', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'lan@instagram.local' AND owner.user_email = 'hoa@instagram.local'
+AND p.title LIKE 'New minimalist workstation%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Super clean aesthetic%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Nothing beats the feeling of a late night fix 🎉', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'hoa@instagram.local' AND owner.user_email = 'duc@instagram.local'
+AND p.title LIKE 'Late night coding%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Nothing beats the feeling%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'That croissant looks delightfully flaky! Which bakery?', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'an@instagram.local' AND owner.user_email = 'mai@instagram.local'
+AND p.title LIKE 'Best artisan pastries%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'That croissant looks%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'The sourdough loaf on the left looks incredible too!', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'linh@instagram.local' AND owner.user_email = 'mai@instagram.local'
+AND p.title LIKE 'Best artisan pastries%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'The sourdough loaf%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Love the moody tone and grain!', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'lan@instagram.local' AND owner.user_email = 'phuong@instagram.local'
+AND p.title LIKE 'Quiet rainy afternoon%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Love the moody tone%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Can not wait to hear the new tracks!', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'thu@instagram.local' AND owner.user_email = 'nam@instagram.local'
+AND p.title LIKE 'Studio vibes%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Can not wait to hear%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Adding this to my workout playlist as soon as it drops 🔥', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'quang@instagram.local' AND owner.user_email = 'nam@instagram.local'
+AND p.title LIKE 'Studio vibes%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Adding this to my workout%');
+
+INSERT INTO comments (user_id, post_id, content, created_at)
+SELECT actor.id, p.id, 'Drop the release date soon please!', NOW()
+FROM users actor CROSS JOIN posts p JOIN users owner ON owner.id = p.user_id
+WHERE actor.user_email = 'linh@instagram.local' AND owner.user_email = 'nam@instagram.local'
+AND p.title LIKE 'Studio vibes%'
+AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = actor.id AND c.post_id = p.id AND c.content LIKE 'Drop the release date%');
 
 -- Follow relationships:
 -- 1) Admin follows: linh_demo, an_traveler, hoa_designer, duc_coder, mai_foodie, nam_music (creates rich feed & stories)
@@ -355,4 +427,42 @@ FROM users u
 WHERE u.user_email = 'admin@instagram.local'
 AND NOT EXISTS (
   SELECT 1 FROM audit_logs a WHERE a.action = 'ROLE_BOOTSTRAP' AND a.target_id = u.id
+);
+
+-- Fix any mojibake in existing posts/users from past non-utf8mb4 seeds
+UPDATE posts SET title = 'Sunset over the coastal cliffs 🌅 Can never get tired of this view.'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'an@instagram.local') AND (title LIKE 'Sunset over the coastal%' OR title LIKE '%cliffs%');
+
+UPDATE posts SET title = 'New minimalist workstation setup for the week ahead 🖥️✨ Keeping it clean and distraction-free.'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'hoa@instagram.local') AND (title LIKE 'New minimalist workstation%' OR title LIKE '%workstation%');
+
+UPDATE posts SET title = 'Late night coding session fueled by cold brew ☕ Bug resolved at 1 AM!'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'duc@instagram.local') AND (title LIKE 'Late night coding%' OR title LIKE '%coding session%');
+
+UPDATE posts SET title = 'Best artisan pastries in town 🥐 Crispy outside, pillowy inside.'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'mai@instagram.local') AND (title LIKE 'Best artisan pastries%' OR title LIKE '%artisan pastries%');
+
+UPDATE posts SET title = 'Quiet rainy afternoon through a 35mm lens 🎞️📸'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'phuong@instagram.local') AND (title LIKE 'Quiet rainy afternoon%' OR title LIKE '%rainy afternoon%');
+
+UPDATE posts SET title = 'Studio vibes 🎹 Working on something special for the upcoming EP.'
+WHERE user_id = (SELECT id FROM users WHERE user_email = 'nam@instagram.local') AND (title LIKE 'Studio vibes%' OR title LIKE '%upcoming EP%');
+
+UPDATE users SET user_bio = 'Exploring the world one coffee at a time ✈️☕' WHERE user_email = 'an@instagram.local';
+UPDATE users SET user_bio = 'Product Designer & Visual Creator 🎨✨' WHERE user_email = 'hoa@instagram.local';
+UPDATE users SET user_bio = 'Building with Spring Boot & React 💻☕' WHERE user_email = 'duc@instagram.local';
+UPDATE users SET user_bio = 'Chasing flavors & Saigon street food 🍜🍰' WHERE user_email = 'mai@instagram.local';
+UPDATE users SET user_bio = 'Film cameras & candid street memories 🎞️📸' WHERE user_email = 'phuong@instagram.local';
+UPDATE users SET user_bio = 'Fitness & healthy lifestyle coach 🏋️‍♂️🥗' WHERE user_email = 'quang@instagram.local';
+UPDATE users SET user_bio = 'Digital art & whimsical sketches 🖌️🌸' WHERE user_email = 'lan@instagram.local';
+UPDATE users SET user_bio = 'Indie music producer & vinyl collector 🎧🎵' WHERE user_email = 'nam@instagram.local';
+UPDATE users SET user_bio = 'Book lover & cozy afternoon reader 📚☕' WHERE user_email = 'thu@instagram.local';
+UPDATE users SET user_bio = 'Architecture enthusiast & urban lines 🏛️📐' WHERE user_email = 'bao@instagram.local';
+
+-- Resync comments_count for all posts with actual public comments
+UPDATE posts p
+SET comments_count = (
+  SELECT COUNT(*) FROM comments c
+  WHERE c.post_id = p.id
+    AND (c.moderation_state IS NULL OR c.moderation_state = 'VISIBLE')
 );
