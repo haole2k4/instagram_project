@@ -121,6 +121,12 @@ PORT=3001 REACT_APP_API_URL=http://localhost:8082 pnpm start
 - Danh sách duy nhất: [scripts/agent/shared-paths.txt](scripts/agent/shared-paths.txt). Không tự ý sửa. Sửa trực tiếp mà không theo quy trình thì dễ conflict lockfile, schema và route.
 - Cần đổi shared: ghi đề xuất vào báo cáo cuối (file, dòng cần thêm). Không sửa.
 - Bắt buộc sửa: commit riêng, `AGENT_ALLOW_SHARED=1`, message bắt đầu `shared:`. Sửa tối thiểu.
+- `Layout` và `Redux` (trừ `store.js`, `appReducer.js`, `UserAppDeucer.js`) giờ giao theo vùng qua `.agent-scope` và claims, không còn là shared.
+- Quy ước thêm key dịch vào `Social-app-fontend/public/locales/*/translation.json`:
+  - Đặt key mới trong một nhóm cấp cao nhất theo tên tính năng, chèn theo thứ tự chữ cái, không nối vào cuối file.
+  - Chỉ thêm key, không sửa hoặc xoá key của tính năng khác.
+  - Cả `en` và `vi` đều phải có key.
+  - Commit riêng, `AGENT_ALLOW_SHARED=1`, message bắt đầu `shared:`.
 - Không thêm dependency. Ghi tên package và lý do vào báo cáo; integrator sẽ cài.
 - Không sửa schema (`entity/*`, `migration/*`). `ddl-auto=update` tự đổi DB, nên entity sai sẽ đổi DB của mọi người.
 
