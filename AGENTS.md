@@ -2,6 +2,13 @@
 
 Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram_project`.
 
+## Quy tắc bắt buộc trước khi sửa file (Mỗi việc = 1 worktree + 1 nhánh + 1 window tmux)
+
+- **Mọi tác vụ có sửa file đều phải chạy trong một worktree riêng**, không có ngoại lệ (áp dụng cả khi chỉ có một agent chạy một mình lẫn khi nhiều agent chạy song song).
+- **Kiểm tra `pwd` ngay trước khi sửa file**: nếu đang đứng ở checkout chính (`git rev-parse --git-dir` trùng `git rev-parse --git-common-dir`), **phải dừng lại ngay và tạo worktree mới trước** bằng `scripts/agent/new-worktree.sh` hoặc `scripts/agent/tmux-worktree.sh`. Hook `pre-commit` chặn mọi commit từ checkout chính.
+- **Nhánh làm việc phải khác `master` và chưa từng được merge vào `master`**. Không dùng lại nhánh đã merge; mỗi công việc tạo một nhánh mới từ `origin/master` mới nhất.
+- Bật git hooks ngay sau khi clone bằng `make hooks` (đặt `core.hooksPath=scripts/githooks`).
+
 ## Bối cảnh repo
 
 - Đây là **fork** của `doanhdai/instagram_project` (upstream). Repo làm việc chính là `haole2k4/instagram_project`.
@@ -13,7 +20,7 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 
 ## Quy trình Git (bắt buộc)
 
-1. **Không commit trực tiếp lên `master`.** Mọi thay đổi, kể cả sửa nhỏ hoặc chỉ sửa tài liệu, đều làm trên một nhánh mới tạo từ `master` mới nhất.
+1. **Không commit trực tiếp lên `master` hoặc ở checkout chính.** Mọi thay đổi, kể cả sửa nhỏ hoặc chỉ sửa tài liệu, đều làm trên một worktree và nhánh mới tạo từ `origin/master` mới nhất.
 2. Đặt tên nhánh theo dạng `<loại>/<mô-tả-ngắn-kebab-case>`, ví dụ `feature/redis-kubernetes`, `fix/login-cookie`, `docs/add-agents-md`. Loại thường dùng: `feature`, `fix`, `docs`, `chore`, `refactor`, `test`.
 3. Khi push nhánh, **tạo Pull Request trên chính repo này**:
    - base: `haole2k4/instagram_project` nhánh `master`
@@ -26,13 +33,15 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 5. Không `push --force` lên `master`.
 6. Mỗi PR tập trung vào một mục đích, mô tả rõ thay đổi gì và cách kiểm tra.
 7. Chỉ merge PR (trên repo này) khi build/test liên quan đã pass; nếu chưa chạy được test hoặc test fail thì để PR mở và báo lại.
-8. **Bắt buộc xoá nhánh sau khi merge PR.** Ngay sau khi PR được merge, xoá cả nhánh remote lẫn nhánh local:
+8. **Bắt buộc xoá nhánh và worktree sau khi merge PR.** Ngay sau khi PR được merge, xoá claim, worktree, nhánh remote/local và đóng window tmux:
    ```bash
    gh pr merge <số-PR> --repo haole2k4/instagram_project --merge --delete-branch
+   ./scripts/agent/claims.sh rm
+   git worktree remove ../instagram_project.worktrees/<loại>-<mô-tả>
    git branch -d <nhánh>   # hoặc `-D` nếu nhánh chưa được merge fast-forward
    git fetch --prune
    ```
-   Không để lại nhánh đã merge (remote hoặc local). Nếu merge qua giao diện GitHub, nhớ xoá nhánh ở cả hai nơi sau đó.
+   Không để lại nhánh hoặc worktree đã merge. Nếu merge qua giao diện GitHub, nhớ xoá ở cả hai nơi sau đó.
 
 ## Repo gốc (upstream)
 
@@ -67,15 +76,40 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
 - Commit message và mô tả PR ngắn gọn, rõ ý; không ràng buộc định dạng hay ngôn ngữ.
 
-## Làm việc song song nhiều worktree
+## Quy trình Worktree + Tmux
 
-Áp dụng khi nhiều agent chạy cùng lúc. Một agent làm một mình vẫn theo các mục trên.
-Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/githooks/). Hook chạy khi `core.hooksPath=scripts/githooks` (script tạo worktree tự đặt).
+Áp dụng bắt buộc cho mọi công việc sửa file. Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/githooks/). Hook chạy khi `core.hooksPath=scripts/githooks` (bật bằng `make hooks` hoặc khi chạy script tạo worktree).
 
-### Khởi tạo
-- Tạo worktree bằng `scripts/agent/new-worktree.sh <loại/mô-tả> <agent> '<glob>'...`. Không dùng `git worktree add` tay.
-- Script tạo worktree ở `../instagram_project.worktrees/<loại>-<mô-tả>`, branch từ `origin/master`. Sai gốc thì rebase khó và lẫn commit của người khác.
-- Branch đặt theo `<loại>/<kebab-case>` như mục Git ở trên. Script từ chối tên sai.
+### Khởi tạo một việc mới
+- Tạo worktree kèm window tmux (khuyên dùng):
+  ```bash
+  ./scripts/agent/tmux-worktree.sh <loại/mô-tả> <agent> '<glob>'...
+  ```
+  Hoặc tạo worktree trước rồi mở tmux sau:
+  ```bash
+  ./scripts/agent/new-worktree.sh <loại/mô-tả> <agent> '<glob>'...
+  ./scripts/agent/tmux-worktree.sh <loại/mô-tả> [lệnh-agent]
+  ```
+  Không dùng `git worktree add` tay.
+- Script tạo worktree ở `../instagram_project.worktrees/<loại>-<mô-tả>`, branch từ `origin/master`, tự symlink `.env` từ checkout chính và cài `Social-app-fontend/node_modules` bằng `pnpm install --frozen-lockfile --prefer-offline` (có thể đặt `AGENT_SKIP_INSTALL=1` để bỏ qua khi chỉ sửa backend).
+- Mỗi worktree có một window tmux riêng (tên `<loại>-<mô-tả>` trong session `instagram_project`), `cwd` đặt tại worktree, **pane trái chạy agent**, **pane phải là shell**.
+- Phím tmux cơ bản:
+  - `Ctrl-b n` / `Ctrl-b p` / `Ctrl-b <số>`: chuyển giữa các window công việc.
+  - `Ctrl-b ←` / `Ctrl-b →` (hoặc `Ctrl-b o`): chuyển giữa pane trái (agent) và pane phải (shell).
+  - `Ctrl-b d`: detach khỏi session (công việc vẫn chạy nền); `tmux attach -t instagram_project` để vào lại.
+  - `Ctrl-b &`: đóng window hiện tại.
+
+### Chạy nhiều dev server cùng lúc (khác cổng)
+Khi nhiều worktree cần chạy dev server song song, đổi cổng để không đụng cổng mặc định (`8081` cho backend, `3000` cho frontend):
+```bash
+# Backend ở cổng 8082 (cho phép CORS từ frontend cổng 3001)
+cd backend_instagram
+SERVER_PORT=8082 CORS_ALLOWED_ORIGINS=http://localhost:3001 ./mvnw spring-boot:run
+
+# Frontend ở cổng 3001 (trỏ API về backend cổng 8082)
+cd Social-app-fontend
+PORT=3001 REACT_APP_API_URL=http://localhost:8082 pnpm start
+```
 
 ### Vùng sở hữu
 - Vùng sửa ghi trong `.agent-scope` ở gốc worktree (một glob mỗi dòng, `*` khớp cả `/`). File này không bị commit.
@@ -101,7 +135,7 @@ Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/gith
 - Không `git log`/`git diff`/`git checkout` vào branch khác. Việc đó làm lộ thay đổi dở dang và dễ copy code chưa merge.
 
 ### Đồng bộ
-- Commit nhỏ, đúng vùng. Hook `pre-commit` kiểm tra scope, shared, claim, `.env`.
+- Commit nhỏ, đúng vùng. Hook `pre-commit` kiểm tra checkout chính, nhánh `master`, scope, shared, claim, `.env`.
 - Trước khi báo xong: `git fetch origin && git rebase origin/master`, rồi chạy `./mvnw test` (backend) hoặc `pnpm build` (frontend).
 - Conflict ở file ngoài vùng: dừng và báo. Không tự giải.
 
@@ -111,6 +145,19 @@ Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/gith
 - Migration: agent không viết SQL. Integrator tạo `backend_instagram/migration/YYYY-MM-<tên>.sql` theo mẫu file hiện có.
 - `target/`, `build/`, `node_modules/` đã bị gitignore. Không commit.
 
-### Kết thúc
-- `scripts/agent/claims.sh rm`, rồi sau khi PR merge: `git worktree remove <đường dẫn>`.
+### Kết thúc và dọn dẹp
+Sau khi PR đã được merge:
+```bash
+# 1. Xoá claim (chạy trong worktree của nhánh đó hoặc truyền AGENT_BRANCH=<nhánh>)
+./scripts/agent/claims.sh rm
+
+# 2. Về checkout chính, xoá worktree (dùng --force nếu có node_modules/.env symlink), xoá nhánh local và prune nhánh remote
+cd "$(dirname "$(git rev-parse --git-common-dir)")"
+git worktree remove --force ../instagram_project.worktrees/<loại>-<mô-tả>
+git branch -d <loại/mô-tả>
+git fetch --prune
+
+# 3. Đóng window tmux của công việc (nếu đang mở)
+tmux kill-window -t "instagram_project:<loại>-<mô-tả>" 2>/dev/null || true
+```
 - Báo cáo ngắn: file đã đổi, đề xuất cho shared, điều agent khác cần biết.
