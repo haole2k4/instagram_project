@@ -5,11 +5,13 @@ BACKEND_IMAGE ?= instagram-backend:local
 FRONTEND_IMAGE ?= instagram-frontend:local
 PUBLIC_HOST ?= instagram.local
 PUBLIC_URL ?= http://$(PUBLIC_HOST)
+_HOOKS := $(shell git config core.hooksPath scripts/githooks 2>/dev/null)
 
-.PHONY: help k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down auto-deploy auto-deploy-install auto-deploy-uninstall auto-deploy-logs
+.PHONY: help hooks k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down auto-deploy auto-deploy-install auto-deploy-uninstall auto-deploy-logs
 
 help:
 	@echo "Các target:"
+	@echo "  make hooks        Bật git hooks (core.hooksPath=scripts/githooks)"
 	@echo "  make k8s-up       Tạo kind cluster, build image, deploy toàn bộ stack"
 	@echo "  make k8s-redeploy Build lại image và rollout bản mới"
 	@echo "  make k8s-down     Xoá kind cluster"
@@ -18,6 +20,10 @@ help:
 	@echo "  make compose-up   Chạy stack bằng Docker Compose (có Redis)"
 	@echo "  make compose-down Dừng stack Docker Compose"
 	@echo "  make auto-deploy-install  Bật timer tự pull + deploy bản mới nhất"
+
+hooks:
+	git config core.hooksPath scripts/githooks
+	@echo "Đã bật git hooks: scripts/githooks"
 
 k8s-cluster:
 	kind get clusters | grep -qx "$(KIND_CLUSTER)" || kind create cluster --config k8s/kind-config.yaml
