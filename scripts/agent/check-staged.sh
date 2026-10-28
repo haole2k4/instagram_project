@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Kiểm tra file staged. Gọi từ scripts/githooks/pre-commit.
-# Luôn chặn: file .env, commit trực tiếp lên master.
+# Luôn chặn: commit ở checkout chính, file .env, commit trực tiếp lên master.
 # Worktree có .agent-scope: file phải nằm trong scope, không đụng shared (trừ AGENT_ALLOW_SHARED=1
 # và commit chỉ chứa shared), không đụng vùng claim của branch khác.
 set -euo pipefail
@@ -10,6 +10,7 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 fail=0
 err() { echo "✗ $*" >&2; fail=1; }
 
+is_main_checkout && err "Không commit trực tiếp ở checkout chính ($AGENT_MAIN). Hãy tạo worktree riêng bằng scripts/agent/new-worktree.sh."
 [[ "$branch" == master ]] && err "Không commit trực tiếp lên master. Tạo branch riêng."
 
 mapfile -t files < <(git diff --cached --name-only --no-renames)
