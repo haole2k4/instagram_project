@@ -35,7 +35,8 @@ Social-app-fontend/src/App.js
 Social-app-fontend/src/index.css
 Social-app-fontend/src/Routes/*
 Social-app-fontend/src/Components/Routes/*
-Social-app-fontend/src/Redux/*
-Social-app-fontend/src/Layout/*
+Social-app-fontend/src/Redux/store.js
+Social-app-fontend/src/Redux/Reducer/appReducer.js
+Social-app-fontend/src/Redux/Reducer/UserAppDeucer.js
 Social-app-fontend/src/Utils/AxiosApi/Axios.js
 Social-app-fontend/src/Utils/i88n.js
