@@ -3,7 +3,6 @@ package com.example.backend_instagram.dto.admin;
 import com.example.backend_instagram.entity.ContentAction;
 import com.example.backend_instagram.entity.ModerationAction;
 import com.example.backend_instagram.entity.ReasonCode;
-import com.example.backend_instagram.entity.ReportStatus;
 import com.example.backend_instagram.entity.ReportTargetType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
