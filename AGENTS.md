@@ -2,10 +2,10 @@
 
 Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram_project`.
 
-## Quy tắc bắt buộc trước khi sửa file (Mỗi việc = 1 worktree + 1 nhánh + 1 window tmux)
+## Quy tắc bắt buộc trước khi sửa file (Mỗi việc = 1 worktree + 1 nhánh)
 
 - **Mọi tác vụ có sửa file đều phải chạy trong một worktree riêng**, không có ngoại lệ (áp dụng cả khi chỉ có một agent chạy một mình lẫn khi nhiều agent chạy song song).
-- **Kiểm tra `pwd` ngay trước khi sửa file**: nếu đang đứng ở checkout chính (`git rev-parse --git-dir` trùng `git rev-parse --git-common-dir`), **phải dừng lại ngay và tạo worktree mới trước** bằng `scripts/agent/new-worktree.sh` hoặc `scripts/agent/tmux-worktree.sh`. Hook `pre-commit` chặn mọi commit từ checkout chính.
+- **Kiểm tra `pwd` ngay trước khi sửa file**: nếu đang đứng ở checkout chính (`git rev-parse --git-dir` trùng `git rev-parse --git-common-dir`), **phải dừng lại ngay và tạo worktree mới trước** bằng `scripts/agent/new-worktree.sh`. Hook `pre-commit` chặn mọi commit từ checkout chính.
 - **Nhánh làm việc phải khác `master` và chưa từng được merge vào `master`**. Không dùng lại nhánh đã merge; mỗi công việc tạo một nhánh mới từ `origin/master` mới nhất.
 - Bật git hooks ngay sau khi clone bằng `make hooks` (đặt `core.hooksPath=scripts/githooks`).
 
@@ -33,7 +33,7 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 5. Không `push --force` lên `master`.
 6. Mỗi PR tập trung vào một mục đích, mô tả rõ thay đổi gì và cách kiểm tra.
 7. Chỉ merge PR (trên repo này) khi build/test liên quan đã pass; nếu chưa chạy được test hoặc test fail thì để PR mở và báo lại.
-8. **Bắt buộc xoá nhánh và worktree sau khi merge PR.** Ngay sau khi PR được merge, xoá claim, worktree, nhánh remote/local và đóng window tmux:
+8. **Bắt buộc xoá nhánh và worktree sau khi merge PR.** Ngay sau khi PR được merge, xoá claim, worktree, nhánh remote/local:
    ```bash
    gh pr merge <số-PR> --repo haole2k4/instagram_project --merge --delete-branch
    ./scripts/agent/claims.sh rm
@@ -76,28 +76,18 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
 - Commit message và mô tả PR ngắn gọn, rõ ý; không ràng buộc định dạng hay ngôn ngữ.
 
-## Quy trình Worktree + Tmux
+## Quy trình Worktree
 
 Áp dụng bắt buộc cho mọi công việc sửa file. Cơ chế: [scripts/agent/](scripts/agent/) và [scripts/githooks/](scripts/githooks/). Hook chạy khi `core.hooksPath=scripts/githooks` (bật bằng `make hooks` hoặc khi chạy script tạo worktree).
 
 ### Khởi tạo một việc mới
-- Tạo worktree kèm window tmux (khuyên dùng):
-  ```bash
-  ./scripts/agent/tmux-worktree.sh <loại/mô-tả> <agent> '<glob>'...
-  ```
-  Hoặc tạo worktree trước rồi mở tmux sau:
+- Tạo worktree:
   ```bash
   ./scripts/agent/new-worktree.sh <loại/mô-tả> <agent> '<glob>'...
-  ./scripts/agent/tmux-worktree.sh <loại/mô-tả> [lệnh-agent]
   ```
   Không dùng `git worktree add` tay.
 - Script tạo worktree ở `../instagram_project.worktrees/<loại>-<mô-tả>`, branch từ `origin/master`, tự symlink `.env` từ checkout chính và cài `Social-app-fontend/node_modules` bằng `pnpm install --frozen-lockfile --prefer-offline` (có thể đặt `AGENT_SKIP_INSTALL=1` để bỏ qua khi chỉ sửa backend).
-- Mỗi worktree có một window tmux riêng (tên `<loại>-<mô-tả>` trong session `instagram_project`), `cwd` đặt tại worktree, **pane trái chạy agent**, **pane phải là shell**.
-- Phím tmux cơ bản:
-  - `Ctrl-b n` / `Ctrl-b p` / `Ctrl-b <số>`: chuyển giữa các window công việc.
-  - `Ctrl-b ←` / `Ctrl-b →` (hoặc `Ctrl-b o`): chuyển giữa pane trái (agent) và pane phải (shell).
-  - `Ctrl-b d`: detach khỏi session (công việc vẫn chạy nền); `tmux attach -t instagram_project` để vào lại.
-  - `Ctrl-b &`: đóng window hiện tại.
+- Mở thư mục worktree vừa tạo bằng terminal multiplexer của bạn (tmux, zellij, wezterm, kitty, terminal tabs, ...).
 
 ### Chạy nhiều dev server cùng lúc (khác cổng)
 Khi nhiều worktree cần chạy dev server song song, đổi cổng để không đụng cổng mặc định (`8081` cho backend, `3000` cho frontend):
@@ -162,8 +152,5 @@ cd "$(dirname "$(git rev-parse --git-common-dir)")"
 git worktree remove --force ../instagram_project.worktrees/<loại>-<mô-tả>
 git branch -d <loại/mô-tả>
 git fetch --prune
-
-# 3. Đóng window tmux của công việc (nếu đang mở)
-tmux kill-window -t "instagram_project:<loại>-<mô-tả>" 2>/dev/null || true
 ```
 - Báo cáo ngắn: file đã đổi, đề xuất cho shared, điều agent khác cần biết.
