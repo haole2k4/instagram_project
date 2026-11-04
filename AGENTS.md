@@ -16,7 +16,19 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - Cấu trúc:
   - `backend_instagram/`: Spring Boot 4.1 (Java 25, Maven wrapper `./mvnw`), MySQL, Redis cache, S3 (LocalStack), WebSocket/STOMP.
   - `Social-app-fontend/`: React 19 (react-app-rewired, pnpm), Tailwind.
+  - `docs/`: tài liệu thiết kế UI, đặc tả Admin và giao thức WebSocket/STOMP.
   - `k8s/`: manifest kind + ingress-nginx. `docker-compose.yml`, `Makefile`, `localstack-init/` ở thư mục gốc.
+
+## Tài liệu và cấu hình tham khảo
+
+- [README.md](README.md): tổng quan hệ thống, cách chạy Docker Compose / Kubernetes (kind), Redis cache, RabbitMQ, auto-deploy và các biến môi trường.
+- [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md): hướng thẩm mỹ đã chốt cho UI (palette true-black, typography, layout, motion, anti-pattern và bề mặt Admin).
+- [docs/ADMIN_SPEC.md](docs/ADMIN_SPEC.md): đặc tả phần quản trị (RBAC, trạng thái tài khoản, kiểm duyệt nội dung/báo cáo, audit log, database schema và API `/api/v1/admin/**`).
+- [docs/WEBSOCKET.md](docs/WEBSOCKET.md): giao thức WebSocket / STOMP realtime (xác thực JWT, user destination, luồng gửi tin nhắn và thông báo).
+- Cấu hình mẫu & hạ tầng:
+  - [backend_instagram/.env.example](backend_instagram/.env.example), [Social-app-fontend/.env.example](Social-app-fontend/.env.example): mẫu biến môi trường cho backend và frontend.
+  - [k8s/configmap.yaml](k8s/configmap.yaml), [k8s/secret.example.yaml](k8s/secret.example.yaml): cấu hình và mẫu secret cho Kubernetes.
+  - [docker-compose.yml](docker-compose.yml), [Makefile](Makefile): cấu hình chạy dịch vụ local và các lệnh tắt.
 
 ## Quy trình Git (bắt buộc)
 
@@ -72,7 +84,8 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 ## Phong cách làm việc
 
 - Đọc code liên quan trước khi sửa; theo convention hiện có (package `controller`/`service`/`repository`/`entity`/`dto` ở backend, cấu trúc `Pages`/`Components` ở frontend).
-- Trước khi thiết kế hoặc sửa UI, đọc `ART_DIRECTION.md` ở thư mục gốc và giữ đúng hướng thẩm mỹ đã chốt (palette, typography, layout, motion, anti-pattern).
+- Trước khi thiết kế hoặc sửa UI, đọc [`docs/ART_DIRECTION.md`](docs/ART_DIRECTION.md) và giữ đúng hướng thẩm mỹ đã chốt (palette, typography, layout, motion, anti-pattern).
+- Khi làm việc với phần quản trị (Admin/Moderator/Report/Audit) hoặc realtime WebSocket, đọc [`docs/ADMIN_SPEC.md`](docs/ADMIN_SPEC.md) và [`docs/WEBSOCKET.md`](docs/WEBSOCKET.md).
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
 - Commit message và mô tả PR ngắn gọn, rõ ý; không ràng buộc định dạng hay ngôn ngữ.
 
