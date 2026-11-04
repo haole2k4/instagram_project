@@ -1,4 +1,4 @@
-package com.example.backend_instagram.utils;
+package com.example.backend_instagram.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;

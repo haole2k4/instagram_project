@@ -8,7 +8,7 @@ import com.example.backend_instagram.entity.UserStatus;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.RoleService;
 import com.example.backend_instagram.service.UserService;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.constant.ApiMessage;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import jakarta.validation.Valid;
@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthenticationManagerBuilder authenticationManagerBuilder;
-  private final SecurityUntil securityUntil;
+  private final SecurityUtils securityUtils;
   private final UserService userService;
   private final PasswordEncoder passwordEncoder;
   private final RoleService roleService;
@@ -50,14 +50,14 @@ public class AuthController {
 
   public AuthController(
     AuthenticationManagerBuilder authenticationManagerBuilder,
-    SecurityUntil securityUntil,
+    SecurityUtils securityUtils,
     UserService userService,
     PasswordEncoder passwordEncoder,
     RoleService roleService,
     AccountStatusService accountStatusService
   ) {
     this.authenticationManagerBuilder = authenticationManagerBuilder;
-    this.securityUntil = securityUntil;
+    this.securityUtils = securityUtils;
     this.userService = userService;
     this.passwordEncoder = passwordEncoder;
     this.roleService = roleService;
@@ -97,9 +97,9 @@ public class AuthController {
     restLogin.setSuspendedUntil(currentuserDb.getSuspendedUntil());
 
     restLogin.setAccessToken(
-      this.securityUntil.createToken(authentication.getName(), restLogin.getUser(), roles)
+      this.securityUtils.createToken(authentication.getName(), restLogin.getUser(), roles)
     );
-    String refreshToken = this.securityUntil.refreshToken(
+    String refreshToken = this.securityUtils.refreshToken(
       loginDTO.getUsername(),
       restLogin,
       roles
@@ -118,7 +118,7 @@ public class AuthController {
   @GetMapping("/auth/account")
   @ApiMessage("fetch account")
   public ResponseEntity<RestLogin.UserGetAccout> getAccount() {
-    String email = SecurityUntil.getCurrentUserLogin().orElse("");
+    String email = SecurityUtils.getCurrentUserLogin().orElse("");
     User currentuserDb = this.userService.handleGetUserByUserNawm(email);
     RestLogin.UserGetAccout result = new RestLogin.UserGetAccout();
     if (currentuserDb != null) {
@@ -137,7 +137,7 @@ public class AuthController {
     @CookieValue(name = "refresh_token") String refreshToken
   ) throws IdInvalidException {
     org.springframework.security.oauth2.jwt.Jwt decoded =
-      this.securityUntil.checkValidRefreshToken(refreshToken);
+      this.securityUtils.checkValidRefreshToken(refreshToken);
     String email = decoded.getSubject();
 
     User currentuserDb = this.userService.handleGetUserByUserNawm(email);
@@ -154,9 +154,9 @@ public class AuthController {
     restLogin.setRoles(roles);
     restLogin.setStatus(accountStatusService.effectiveStatus(currentuserDb));
     restLogin.setSuspendedUntil(currentuserDb.getSuspendedUntil());
-    restLogin.setAccessToken(this.securityUntil.createToken(email, restLogin.getUser(), roles));
+    restLogin.setAccessToken(this.securityUtils.createToken(email, restLogin.getUser(), roles));
 
-    String newRefreshToken = this.securityUntil.refreshToken(email, restLogin, roles);
+    String newRefreshToken = this.securityUtils.refreshToken(email, restLogin, roles);
     this.userService.updateUserToken(newRefreshToken, email);
 
     return ResponseEntity
@@ -171,7 +171,7 @@ public class AuthController {
   @PostMapping("/auth/logout")
   @ApiMessage("loout User")
   public ResponseEntity<Void> logout() throws IdInvalidException {
-    String email = SecurityUntil.getCurrentUserLogin().orElse("");
+    String email = SecurityUtils.getCurrentUserLogin().orElse("");
     if (email.isBlank()) {
       throw new IdInvalidException("Access Token khong hop le");
     }

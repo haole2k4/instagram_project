@@ -6,7 +6,7 @@ import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.StoryRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.utils.AwsS3Service;
+import com.example.backend_instagram.service.AwsS3Service;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.io.IOException;
 import java.time.LocalDateTime;

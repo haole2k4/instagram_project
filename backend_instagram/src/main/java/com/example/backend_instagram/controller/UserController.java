@@ -5,8 +5,8 @@ import com.example.backend_instagram.dto.user.UserStatsDTO;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.UserService;
-import com.example.backend_instagram.utils.AwsS3Service;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.service.AwsS3Service;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import jakarta.validation.Valid;
@@ -53,7 +53,7 @@ public class UserController {
   public ResponseEntity<RestUpdateUser> updateUser(
     @Valid @RequestBody User postUser
   ) throws IdInvalidException {
-    Long currentId = SecurityUntil
+    Long currentId = SecurityUtils
       .getCurrentUserId()
       .orElseThrow(() ->
         new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required")
@@ -92,8 +92,8 @@ public class UserController {
     if (user == null) {
       throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
     }
-    Long currentId = SecurityUntil.getCurrentUserId().orElse(null);
-    boolean staff = SecurityUntil.hasRole("ADMIN") || SecurityUntil.hasRole("MODERATOR");
+    Long currentId = SecurityUtils.getCurrentUserId().orElse(null);
+    boolean staff = SecurityUtils.hasRole("ADMIN") || SecurityUtils.hasRole("MODERATOR");
     if (
       accountStatusService.isRestricted(user) &&
       !staff &&
@@ -106,7 +106,7 @@ public class UserController {
 
   @GetMapping("/user/privacy-settings")
   public ResponseEntity<Map<String, Object>> getPrivacySettings() {
-    Long currentId = SecurityUntil
+    Long currentId = SecurityUtils
       .getCurrentUserId()
       .orElseThrow(() ->
         new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required")
@@ -117,7 +117,7 @@ public class UserController {
 
   @PutMapping("/user/privacy-settings")
   public ResponseEntity<Map<String, Object>> updatePrivacySettings(@RequestBody Map<String, Object> body) {
-    Long currentId = SecurityUntil
+    Long currentId = SecurityUtils
       .getCurrentUserId()
       .orElseThrow(() ->
         new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required")

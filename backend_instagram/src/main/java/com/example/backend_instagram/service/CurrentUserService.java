@@ -2,7 +2,7 @@ package com.example.backend_instagram.service;
 
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.error.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,7 @@ public class CurrentUserService {
   }
 
   public User requireCurrentUser() {
-    Long id = SecurityUntil.getCurrentUserId().orElse(null);
+    Long id = SecurityUtils.getCurrentUserId().orElse(null);
     if (id != null) {
       return userRepository
         .findById(id)
@@ -24,7 +24,7 @@ public class CurrentUserService {
           new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "User not found")
         );
     }
-    String email = SecurityUntil.getCurrentUserLogin().orElse(null);
+    String email = SecurityUtils.getCurrentUserLogin().orElse(null);
     if (email == null || email.isBlank()) {
       throw new ApiException(
         HttpStatus.UNAUTHORIZED,
@@ -44,11 +44,11 @@ public class CurrentUserService {
   }
 
   public Long currentUserIdOrNull() {
-    Long id = SecurityUntil.getCurrentUserId().orElse(null);
+    Long id = SecurityUtils.getCurrentUserId().orElse(null);
     if (id != null) {
       return id;
     }
-    String email = SecurityUntil.getCurrentUserLogin().orElse(null);
+    String email = SecurityUtils.getCurrentUserLogin().orElse(null);
     if (email == null || email.isBlank()) {
       return null;
     }
