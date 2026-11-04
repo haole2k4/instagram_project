@@ -9,7 +9,7 @@ import com.example.backend_instagram.entity.UserStatus;
 import com.example.backend_instagram.repository.PostRepository;
 import com.example.backend_instagram.repository.ReportRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.constant.CacheNames;
 import com.example.backend_instagram.utils.error.ApiException;
 import jakarta.persistence.criteria.Join;
@@ -114,14 +114,14 @@ public class AdminUserService {
         Sort.by(Sort.Direction.DESC, "createdAt")
       )
     );
-    boolean admin = SecurityUntil.hasRole("ADMIN");
+    boolean admin = SecurityUtils.hasRole("ADMIN");
     return users.map(user -> toSummary(user, admin));
   }
 
   @Transactional(readOnly = true)
   public AdminDtos.UserDetail get(Long id) {
     User user = findUser(id);
-    boolean admin = SecurityUntil.hasRole("ADMIN");
+    boolean admin = SecurityUtils.hasRole("ADMIN");
     List<AdminDtos.ReportBrief> reports = reportRepository
       .findByTargetTypeAndTargetIdOrderByCreatedAtDesc(ReportTargetType.USER, id)
       .stream()

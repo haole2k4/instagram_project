@@ -26,7 +26,7 @@ import {
   getLikedPostIdsByUser,
 } from "../../../Service/postApi";
 import { formatTime, cleanMojibake } from "../../../Utils";
-import notificationSocket from "../../../Service/NotificationSocket";
+import notificationSocket from "../../../Service/notificationSocket";
 import Route from "../../../Components/Routes/index";
 import { PostCardSkeleton } from "../../Common/FlatSkeleton";
 import EmptyState from "../../Common/EmptyState";

@@ -23,12 +23,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SecurityUntil {
+public class SecurityUtils {
 
   private static JwtEncoder jwtEncoder;
 
-  public SecurityUntil(JwtEncoder jwtEncoder) {
-    SecurityUntil.jwtEncoder = jwtEncoder;
+  public SecurityUtils(JwtEncoder jwtEncoder) {
+    SecurityUtils.jwtEncoder = jwtEncoder;
   }
 
   public static final org.springframework.security.oauth2.jose.jws.MacAlgorithm JWT_ALGORITHM =
@@ -61,7 +61,7 @@ public class SecurityUntil {
       .claim("roles", roles == null ? List.of() : roles)
       .build();
 
-    return SecurityUntil.jwtEncoder.encode(
+    return SecurityUtils.jwtEncoder.encode(
         JwtEncoderParameters.from(JwsHeader.with(() -> "HS512").build(), claims)
       )
       .getTokenValue();
@@ -83,7 +83,7 @@ public class SecurityUntil {
       .claim("userId", restLogin.getUser() != null ? restLogin.getUser().getId() : null)
       .claim("roles", roles == null ? List.of() : roles)
       .build();
-    return SecurityUntil.jwtEncoder.encode(
+    return SecurityUtils.jwtEncoder.encode(
         JwtEncoderParameters.from(JwsHeader.with(() -> "HS512").build(), claims)
       )
       .getTokenValue();
@@ -182,7 +182,7 @@ public class SecurityUntil {
       keyBytes,
       0,
       keyBytes.length,
-      SecurityUntil.JWT_ALGORITHM.getName()
+      SecurityUtils.JWT_ALGORITHM.getName()
     );
   }
 
@@ -191,7 +191,7 @@ public class SecurityUntil {
   ) {
     NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
       .withSecretKey(getSecretKey())
-      .macAlgorithm(SecurityUntil.JWT_ALGORITHM)
+      .macAlgorithm(SecurityUtils.JWT_ALGORITHM)
       .build();
 
     try {

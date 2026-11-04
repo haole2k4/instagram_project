@@ -6,7 +6,7 @@ import * as yup from "yup";
 import { toast } from "react-toastify";
 import { useTranslation } from "react-i18next";
 import { Instagram } from "lucide-react";
-import { userRegister } from "../../Service/AuthApi";
+import { userRegister } from "../../Service/authApi";
 
 const Register = () => {
   const navi = useNavigate();

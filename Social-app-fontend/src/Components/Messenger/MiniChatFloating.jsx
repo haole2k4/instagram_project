@@ -27,7 +27,7 @@ import {
   setActiveMiniConversation,
   closeMiniChat,
 } from "../../Redux/Reducer/chatSlice";
-import webSocketService from "../../Service/WebSocketService";
+import webSocketService from "../../Service/webSocketService";
 import { RowListSkeleton } from "../Common/FlatSkeleton";
 
 const formatShortRelativeTime = (timestamp, isEn = false) => {

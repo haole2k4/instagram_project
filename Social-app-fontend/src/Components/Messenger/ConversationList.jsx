@@ -5,7 +5,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useSelector } from "react-redux";
 import { ChevronRight, Plus, Search, Sparkles, Users } from "lucide-react";
-import { handleGetFollowingByUser } from "../../Service/UserAPI";
+import { handleGetFollowingByUser } from "../../Service/userApi";
 import Route from "../../Components/Routes/index";
 import { RowListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";

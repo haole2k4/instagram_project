@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { handleGetUserById } from "../../../Service/UserAPI";
+import { handleGetUserById } from "../../../Service/userApi";
 import { getAllStoryByUserId } from "../../../Service/storyApi";
 import {
   handleGetAllPostByUserId,

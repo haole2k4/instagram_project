@@ -5,7 +5,7 @@ import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.service.MessageService;
 import com.example.backend_instagram.service.UserService;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.constant.ApiMessage;
 import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
@@ -91,12 +91,12 @@ public class MessageController {
     }
 
     private Long resolveCurrentUserId() throws IdInvalidException {
-        Optional<Long> userId = SecurityUntil.getCurrentUserId();
+        Optional<Long> userId = SecurityUtils.getCurrentUserId();
         if (userId.isPresent()) {
             return userId.get();
         }
 
-        String email = SecurityUntil.getCurrentUserLogin()
+        String email = SecurityUtils.getCurrentUserLogin()
                 .orElseThrow(() -> new IdInvalidException("Unauthenticated"));
         User user = userService.handleGetUserByUserNawm(email);
         if (user == null) {

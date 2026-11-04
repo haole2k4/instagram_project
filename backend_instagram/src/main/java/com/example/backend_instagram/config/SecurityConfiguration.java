@@ -1,6 +1,6 @@
 package com.example.backend_instagram.config;
 
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.util.Base64;
 import javax.crypto.SecretKey;
@@ -100,7 +100,7 @@ public class SecurityConfiguration {
       keyBytes,
       0,
       keyBytes.length,
-      SecurityUntil.JWT_ALGORITHM.getName()
+      SecurityUtils.JWT_ALGORITHM.getName()
     );
   }
 
@@ -113,7 +113,7 @@ public class SecurityConfiguration {
   public JwtDecoder jwtDecoder() {
     NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
       .withSecretKey(getSecretKey())
-      .macAlgorithm(SecurityUntil.JWT_ALGORITHM)
+      .macAlgorithm(SecurityUtils.JWT_ALGORITHM)
       .build();
     return token -> {
       try {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Peer from "simple-peer";
-import webSocketService from "../../Service/WebSocketService";
+import webSocketService from "../../Service/webSocketService";
 import {
   playOutgoingRingtone,
   playEndCallSound,

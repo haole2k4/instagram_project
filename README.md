@@ -272,3 +272,14 @@ Makefile             Lệnh tắt cho Compose và Kubernetes
 ```
 
 Frontend source hiện được giữ trong `Social-app-fontend` (tên thư mục giữ nguyên như repo gốc). Backend standalone hướng dẫn cài đặt nằm trong `backend_instagram/README.md`.
+
+Quy ước trong `Social-app-fontend/src`:
+
+```text
+Components/<tính năng>/  Màn hình và component của tính năng (Home, NewsFeed, Messenger, Settings, ...)
+Admin/                   Toàn bộ app quản trị: route guard, trang và API riêng
+Layout/                  Khung trang (DefaultLayout, AdminLayout) và điều hướng
+Routes/                  Bảng route (config.jsx) và component router
+Service/                 Lớp gọi API và WebSocket, tên file camelCase
+Redux/, Utils/           State dùng chung và tiện ích
+```

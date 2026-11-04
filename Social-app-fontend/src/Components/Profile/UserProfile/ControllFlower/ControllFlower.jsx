@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Route from "../../../../Components/Routes/index";
-import { handleGetAllFollower } from "../../../../Service/Folower";
+import { handleGetAllFollower } from "../../../../Service/followApi";
 import { useSelector } from "react-redux";
-import { handlePostFollower } from "../../../../Service/UserAPI";
+import { handlePostFollower } from "../../../../Service/userApi";
 import { useWebSocket } from "../../../../Utils/configCallVideo/websocket";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";

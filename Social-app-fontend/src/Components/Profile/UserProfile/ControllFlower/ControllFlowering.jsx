@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Route from "../../../../Components/Routes/index";
-import { handleGetAllFollowing } from "../../../../Service/Folower";
+import { handleGetAllFollowing } from "../../../../Service/followApi";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 

@@ -12,7 +12,7 @@ import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.MediaRepository;
 import com.example.backend_instagram.repository.PostRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.utils.AwsS3Service;
+import com.example.backend_instagram.service.AwsS3Service;
 import com.example.backend_instagram.utils.constant.CacheNames;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.io.IOException;

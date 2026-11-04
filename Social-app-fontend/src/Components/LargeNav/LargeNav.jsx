@@ -18,7 +18,7 @@ import Route from "../../Components/Routes/index";
 import SearchPanel from "../../Components/SearchBar/SearchBar";
 import NotificationsPanel from "../../Components/Notifications/Notifications";
 import CreatePostModal from "../CreateModal/CreatePostModal";
-import notificationSocket from "../../Service/NotificationSocket";
+import notificationSocket from "../../Service/notificationSocket";
 
 const LargeNav = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import Peer from "simple-peer";
-import webSocketService from "../../Service/WebSocketService";
+import webSocketService from "../../Service/webSocketService";
 
 /**
  * Hook video call dùng chung STOMP client với Messenger/Notification.

@@ -4,7 +4,7 @@ import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.entity.UserStatus;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.service.AccountStatusService;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -71,11 +71,11 @@ public class AccountRestrictionInterceptor implements HandlerInterceptor {
   }
 
   private User currentUser() {
-    Long id = SecurityUntil.getCurrentUserId().orElse(null);
+    Long id = SecurityUtils.getCurrentUserId().orElse(null);
     if (id != null) {
       return userRepository.findById(id).orElse(null);
     }
-    String email = SecurityUntil.getCurrentUserLogin().orElse(null);
+    String email = SecurityUtils.getCurrentUserLogin().orElse(null);
     if (email == null || email.isBlank()) {
       return null;
     }

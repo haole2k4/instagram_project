@@ -4,7 +4,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useTranslation } from "react-i18next";
 import Select from "react-select";
 import * as yup from "yup";
-import { handleEditProfile, handleGetById } from "../../../Service/UserAPI";
+import { handleEditProfile, handleGetById } from "../../../Service/userApi";
 import { useDispatch, useSelector } from "react-redux";
 import _ from "lodash";
 import { useNavigate, useParams } from "react-router-dom";

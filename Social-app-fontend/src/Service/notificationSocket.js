@@ -1,4 +1,4 @@
-import webSocketService from "./WebSocketService";
+import webSocketService from "./webSocketService";
 
 /**
  * Facade tương thích cho các component cũ đang dùng notificationSocket.

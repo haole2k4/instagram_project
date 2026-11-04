@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import instance from "../../Utils/AxiosApi/Axios";
-import webSocketService from "../../Service/WebSocketService";
+import webSocketService from "../../Service/webSocketService";
 import CallLobby from "../../Components/Call/CallLobby";
 import CallActive from "../../Components/Call/CallActive";
 import CallSettingsModal from "../../Components/Call/CallSettingsModal";

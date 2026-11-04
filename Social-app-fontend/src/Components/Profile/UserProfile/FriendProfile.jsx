@@ -5,7 +5,7 @@ import {
   handleGetFollowersByUser,
   handlePostFollower,
   handlePostUnfollower,
-} from "../../../Service/UserAPI";
+} from "../../../Service/userApi";
 import {
   handleGetAllPostByUserId,
   getLikedPostIdsByUser,

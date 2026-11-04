@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 
-import { userLogin } from "../../Service/AuthApi";
+import { userLogin } from "../../Service/authApi";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
 import AuthSplashScreen, {
   InstagramGradientGlyph,

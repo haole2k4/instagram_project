@@ -2,7 +2,7 @@ package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.notification.NotificationDTO;
 import com.example.backend_instagram.service.NotificationService;
-import com.example.backend_instagram.utils.SecurityUntil;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -56,7 +56,7 @@ public class NotificationController {
   }
 
   private Long currentUserId() {
-    return SecurityUntil
+    return SecurityUtils
       .getCurrentUserId()
       .orElseThrow(() ->
         new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required")

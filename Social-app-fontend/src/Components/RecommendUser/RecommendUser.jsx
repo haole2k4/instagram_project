@@ -6,7 +6,7 @@ import {
   handleGetAllUser,
   handleGetFollowingByUser,
   handlePostFollower,
-} from "../../Service/UserAPI";
+} from "../../Service/userApi";
 import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import { useTranslation } from "react-i18next";
 import { RowListSkeleton } from "../Common/FlatSkeleton";

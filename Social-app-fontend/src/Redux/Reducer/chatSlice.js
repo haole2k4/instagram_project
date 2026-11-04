@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import instance from '../../Utils/AxiosApi/Axios';
-import webSocketService from '../../Service/WebSocketService'; 
+import webSocketService from '../../Service/webSocketService'; 
 
 export const getConversations = createAsyncThunk(
   'chat/getConversations',
