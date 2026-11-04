@@ -19,7 +19,7 @@ const UserProfile = () => {
   const [dataUser, setDataUser] = useState({});
   const [dataStory, setDataStory] = useState([]);
   const [dataPost, setDataPost] = useState([]);
-  const userredux = useSelector((state) => state.login.userInfo);
+  const userredux = useSelector((state) => state.login?.userInfo);
   const [showModal, setShowModal] = useState(false);
   const [showModalFlowering, setShowModalFlowering] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
