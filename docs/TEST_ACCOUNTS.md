@@ -2,6 +2,10 @@
 
 Tài liệu này liệt kê tất cả các tài khoản được tạo sẵn trong hệ thống để phục vụ mục đích kiểm thử và phát triển.
 
+> [!CAUTION]
+> **CHỈ SỬ DỤNG CHO MÔI TRƯỜNG PHÁT TRIỂN CỤC BỘ (LOCAL DEV & TESTING)**
+> Tuyệt đối không chạy `backend_instagram/seed-demo.sql` hoặc giữ các tài khoản/mật khẩu mẫu này trên môi trường staging hay production. Tài khoản `admin@instagram.local` có toàn quyền quản trị hệ thống.
+
 ## 🔑 Thông tin chung
 - **Mật khẩu dùng chung cho mọi tài khoản demo:** `InstagramDemo!2026`
 - **Môi trường áp dụng:** Dữ liệu được nạp thông qua script `backend_instagram/seed-demo.sql`.

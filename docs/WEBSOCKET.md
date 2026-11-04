@@ -34,7 +34,8 @@ Client gửi:
 | --- | --- | --- |
 | Gửi tin nhắn | `/app/chat/{conversationId}` | `{ "content": "..." }` |
 | Đánh dấu đã đọc | `/app/chat/{conversationId}/read` | rỗng |
-| Video call | `/app/video-call/{toUserId}` | `{ action, signal }` |
+| Video call | `/app/video-call/{toUserId}` | `{ action, signal, name, conversationId, hasVideo, userImage, isGroup, groupName, callId }` |
+| Video call nhóm | `/app/video-call/group/{conversationId}` | `{ action, signal, name, conversationId, hasVideo, userImage, isGroup, groupName, callId }` |
 | Follow notification | `/app/notifications/{toUserId}` | `{ fromUserName, message, sentAt }` |
 
 Server **luôn** lấy người gửi từ `Principal`; không tin `senderId` / `from` do
@@ -64,6 +65,8 @@ môi trường:
 | `APP_WEBSOCKET_MESSAGE_SIZE_LIMIT` | `65536` | Giới hạn frame STOMP |
 | `APP_WEBSOCKET_SEND_BUFFER_SIZE_LIMIT` | `524288` | Buffer gửi mỗi session |
 | `APP_WEBSOCKET_SEND_TIME_LIMIT` | `20000` | ms trước khi session bị đóng do gửi chậm |
+
+Biến `APP_WEBSOCKET_ALLOWED_ORIGINS` (`app.websocket.allowed-origins`) được kiểm tra độc lập với `CORS_ALLOWED_ORIGINS`. Vì vậy khi chạy trên Kubernetes (`http://instagram.local`) hoặc chạy cổng tùy chỉnh, bắt buộc phải thiết lập cả hai biến.
 
 ## 5. Lưu ý triển khai
 

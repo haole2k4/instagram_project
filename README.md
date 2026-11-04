@@ -54,7 +54,7 @@ docker compose logs -f backend frontend rabbitmq
 # Kiểm tra RabbitMQ
 
 docker compose exec rabbitmq rabbitmq-diagnostics -q ping
-docker compose exec rabbitmq rabbitmqctl list_queues name messages consumers
+docker compose exec rabbitmq rabbitmqctl list_queues -p /instagram name messages consumers
 
 # Dừng các dịch vụ, giữ dữ liệu trong volumes
 
@@ -88,7 +88,7 @@ docker compose exec redis redis-cli --scan
 docker compose exec redis redis-cli ttl "instagram:posts::all"
 ```
 
-Redis chỉ được dùng làm cache nên chạy với `--save "" --appendonly no`: không ghi ra đĩa và không có volume. Container dừng hoặc `docker compose down` sẽ làm mất cache; dữ liệu thật vẫn nằm trong MySQL.
+Redis chỉ được dùng làm cache: trên Docker Compose chạy với --save "" --appendonly no (không ghi đĩa); trên Kubernetes dùng volume emptyDir (xoá cache khi pod khởi động lại).
 
 Có thể tắt cache mà không cần sửa code bằng cách đặt `spring.cache.type=none` (ví dụ qua biến môi trường `SPRING_CACHE_TYPE=none`).
 
@@ -125,7 +125,7 @@ Khi có message trong `notification.dlq`:
 
 ```bash
 # Xem số message đang chờ ở từng queue
-docker compose exec rabbitmq rabbitmqctl list_queues name messages consumers
+docker compose exec rabbitmq rabbitmqctl list_queues -p /instagram name messages consumers
 
 # Xem log consumer để tìm eventId/notificationId lỗi
 docker compose logs --tail=200 backend
@@ -153,7 +153,7 @@ cd ~/deploy/instagram_project
 make auto-deploy-install          # cài + bật timer
 loginctl enable-linger "$USER"    # để timer chạy cả khi chưa đăng nhập
 make auto-deploy-logs             # xem log
-make auto-deploy-install          # deploy ngay, không cần chờ có commit mới
+make auto-deploy                  # deploy ngay, không cần chờ có commit mới
 make auto-deploy-uninstall        # tắt
 ```
 
@@ -162,7 +162,7 @@ make auto-deploy-uninstall        # tắt
 - Commit chỉ sửa file `.md` hoặc thư mục `.github/` thì không build lại.
 - PR và nhánh `master` được kiểm tra tự động qua GitHub Actions (`.github/workflows/ci.yml`: `./mvnw test` + `pnpm build`) trên runner của GitHub.
 - Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử push lại khi có commit mới hoặc chạy `make auto-deploy`. Script không tự rollback.
-- Compose project name lấy theo tên thư mục. Clone vào thư mục cùng tên `instagram_project` thì stack dùng dùng lại container và volume dữ liệu hiện có.
+- Compose project name lấy theo tên thư mục. Clone vào thư mục cùng tên `instagram_project` thì stack dùng lại container và volume dữ liệu hiện có.
 
 ## Kubernetes local với kind
 
@@ -201,7 +201,7 @@ make k8s-redeploy
 | `mysql` | StatefulSet + PVC 10Gi | dữ liệu được giữ khi pod restart |
 | `redis` | Deployment + Service | cache tạm, dùng `emptyDir` |
 | `rabbitmq` | StatefulSet + Service + PVC 1Gi | broker cho notification, 1 replica, probe `rabbitmq-diagnostics -q ping` |
-| `localstack` | Deployment + Service | Job | tạo bucket `instagram-media` và policy public-read |
+| `localstack` | Deployment + Service + Job | tạo bucket `instagram-media` và policy public-read |
 | `seed-demo` | Job | nạp dữ liệu demo sau khi backend tạo schema |
 | Ingress | `instagram`, `instagram-websocket`, `instagram-s3` | định tuyến `/`, `/api`, `/ws`, `/s3` |
 
@@ -236,6 +236,7 @@ Compose dùng file `.env` ở thư mục gốc cho cấu hình local; không com
 - `GEMINI_API_KEY` để bật tính năng Gemini
 - `REDIS_PORT`, `CACHE_TTL_POSTS`, `CACHE_TTL_COMMENTS`, `CACHE_TTL_USER_STATS`
 - `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD`, `RABBITMQ_VHOST`, `RABBITMQ_PORT`, `RABBITMQ_MANAGEMENT_PORT`, `MQ_ENABLED`, `MQ_NOTIFICATION_CONCURRENCY`
+- CORS_ALLOWED_ORIGINS, APP_WEBSOCKET_ALLOWED_ORIGINS (origin frontend được phép gọi API và WebSocket, mặc định http://localhost:3000)
 
 Access token mặc định sống 30 phút, refresh token 7 ngày. Khi triển khai bản có RBAC, hãy đổi `JWT_BASE64_SECRET` để vô hiệu hoá token cũ; token phát hành trước đó không có claim `roles`.
 
@@ -266,7 +267,7 @@ docs/                Tài liệu thiết kế UI, đặc tả Admin và giao th�
 localstack-init/     Khởi tạo bucket S3 local
 k8s/                 Manifest Kubernetes (kind) + script tạo secret
 scripts/             auto-deploy.sh (tự pull + deploy) và công cụ worktree agent
-deploy/systemd/      Unit systemd cho thể auto-deploy
+deploy/systemd/      Unit systemd cho timer auto-deploy
 docker-compose.yml   Bộ dịch vụ phát triển local
 Makefile             Lệnh tắt cho Compose và Kubernetes
 ```
