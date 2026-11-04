@@ -49,6 +49,9 @@ public class ChatService {
     @Autowired
     private AccountStatusService accountStatusService;
 
+    @Autowired
+    private UserPrivacyService userPrivacyService;
+
     /**
      * Lấy hoặc tạo mới cuộc trò chuyện giữa hai người dùng
      */
@@ -67,16 +70,11 @@ public class ChatService {
         Optional<Follow> followOpt = followRepository.findByFollowerAndFollowing(user, otherUser);
         Optional<Follow> reverseFollowOpt = followRepository.findByFollowerAndFollowing(otherUser, user);
 
-        boolean isFriend = followOpt.map(Follow::getFriend).orElse(false)
-                && reverseFollowOpt.map(Follow::getFriend).orElse(false);
         boolean isBlocking = followOpt.map(Follow::isBlocking).orElse(false)
                 || reverseFollowOpt.map(Follow::isBlocking).orElse(false);
 
         if (isBlocking) {
             throw new IdInvalidException("Một trong hai người đã chặn, không thể tạo cuộc trò chuyện");
-        }
-        if (!isFriend) {
-            throw new IdInvalidException("Hai người chưa theo dõi nhau, không thể tạo cuộc trò chuyện");
         }
 
         Optional<Conversation> existingConversation = conversationRepository.findConversationBetweenUsers(userId,
@@ -95,6 +93,12 @@ public class ChatService {
         addUserToConversation(savedConversation, otherUser);
         savedConversation.setParticipants(participantRepository.findByConversationId(savedConversation.getId()));
         return savedConversation;
+    }
+
+    @Transactional
+    public ConversationDTO getOrCreateConversationDTO(Long userId, Long otherUserId) throws IdInvalidException {
+        Conversation conversation = getOrCreateConversation(userId, otherUserId);
+        return getConversationById(conversation.getId(), userId);
     }
 
     /**
@@ -140,12 +144,10 @@ public class ChatService {
                 }
 
                 List<Follow> relations = followRepository.findBetweenUsers(userId, otherUserId);
-                boolean isFriend = relations.size() == 2
-                        && relations.stream().allMatch(f -> Boolean.TRUE.equals(f.getFriend()));
                 boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
-                if (!isFriend || isBlocking) {
-                    continue; // Ẩn conversation nếu không còn là bạn bè hoặc bị block
+                if (isBlocking) {
+                    continue; // Ẩn conversation nếu bị block
                 }
             }
 
@@ -153,6 +155,7 @@ public class ChatService {
             dto.setParticipants(participants.stream()
                     .map(this::convertToParticipantDTO)
                     .collect(Collectors.toList()));
+            applyPrivacyRestrictions(dto, conversation, participants, userId);
             result.add(dto);
         }
 
@@ -303,7 +306,43 @@ public class ChatService {
         }
 
         dto.setParticipants(participantDTOs);
+        applyPrivacyRestrictions(dto, conversation, participants, userId);
         return dto;
+    }
+
+    private void applyPrivacyRestrictions(ConversationDTO dto, Conversation conversation,
+                                          List<ConversationParticipant> participants, Long currentUserId) {
+        if (Boolean.FALSE.equals(conversation.getIsGroupChat()) && participants.size() == 2) {
+            Long otherUserId = participants.stream()
+                    .map(cp -> cp.getUser().getId())
+                    .filter(id -> !id.equals(currentUserId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (otherUserId != null) {
+                List<Follow> relations = followRepository.findBetweenUsers(currentUserId, otherUserId);
+                boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
+
+                if (isBlocking) {
+                    dto.setCanReceiveMessage(false);
+                    dto.setRestrictionMessage("Một trong hai người đã chặn, không thể gửi tin nhắn");
+                    return;
+                }
+
+                boolean otherAllowsStrangers = userPrivacyService.allowsStrangerMessages(otherUserId);
+                boolean otherFollowsCurrent = relations.stream()
+                        .anyMatch(f -> f.getFollower().getId().equals(otherUserId)
+                                && f.getFollowing().getId().equals(currentUserId));
+
+                if (!otherAllowsStrangers && !otherFollowsCurrent) {
+                    dto.setCanReceiveMessage(false);
+                    dto.setRestrictionMessage(UserPrivacyService.RESTRICTION_MESSAGE);
+                    return;
+                }
+            }
+        }
+        dto.setCanReceiveMessage(true);
+        dto.setRestrictionMessage(null);
     }
 
     private ConversationDTO convertToDTO(Conversation conversation, Long userId) {

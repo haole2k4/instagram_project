@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { MoreVertical, UserPlus, X, Phone, Video } from "lucide-react";
+import { Bell, MoreVertical, UserPlus, X, Phone, Video } from "lucide-react";
 import { updateConversationName } from "../../Redux/Reducer/chatSlice";
 import instance from "../../Utils/AxiosApi/Axios";
 import { toast } from "react-toastify";
@@ -18,6 +18,66 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
   const [showUserOptions, setShowUserOptions] = useState(null);
   const [groupOwner, setGroupOwner] = useState(null);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showMuteModal, setShowMuteModal] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.id || !conversation?.id) return;
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(`ig_muted_convs_${currentUser.id}`) || "{}"
+      );
+      const expiry = stored[conversation.id];
+      if (expiry === -1 || (expiry && expiry > Date.now())) {
+        setIsMuted(true);
+      } else {
+        setIsMuted(false);
+      }
+    } catch {
+      setIsMuted(false);
+    }
+  }, [conversation?.id, currentUser?.id]);
+
+  const handleToggleMute = () => {
+    if (isMuted) {
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem(`ig_muted_convs_${currentUser?.id}`) || "{}"
+        );
+        delete stored[conversation.id];
+        localStorage.setItem(
+          `ig_muted_convs_${currentUser?.id}`,
+          JSON.stringify(stored)
+        );
+      } catch (err) {
+        console.error(err);
+      }
+      setIsMuted(false);
+      toast.info("Đã bật lại thông báo tin nhắn");
+    } else {
+      setShowMuteModal(true);
+    }
+  };
+
+  const applyMute = (durationMs) => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(`ig_muted_convs_${currentUser?.id}`) || "{}"
+      );
+      const expiry = durationMs === -1 ? -1 : Date.now() + durationMs;
+      stored[conversation.id] = expiry;
+      localStorage.setItem(
+        `ig_muted_convs_${currentUser?.id}`,
+        JSON.stringify(stored)
+      );
+      setIsMuted(true);
+      setShowMuteModal(false);
+      toast.success("Đã tắt thông báo tin nhắn");
+    } catch (err) {
+      console.error(err);
+      setShowMuteModal(false);
+    }
+  };
 
   const fetchGroupOwner = useCallback(async (conversationId) => {
     try {
@@ -211,6 +271,29 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
           </div>
         )}
 
+        {/* Mute Messages */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bell size={20} strokeWidth={1.5} className="text-ig-muted" />
+            <span className="text-[14px] font-medium text-ig-text">Mute messages</span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isMuted}
+            onClick={handleToggleMute}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              isMuted ? "bg-ig-accent" : "bg-ig-rule"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                isMuted ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
         {/* Quick Call Actions */}
         <div className="mb-6 flex gap-2">
           <button
@@ -348,34 +431,113 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
       </div>
 
       {/* Footer actions */}
-      <div className="border-t border-ig-border p-4">
-        {conversation.isGroupChat ? (
-          <div className="flex flex-col">
-            <button
-              type="button"
-              onClick={handleLeaveGroup}
-              className="ig-press self-start text-[14px] font-semibold text-ig-like hover:opacity-85"
-            >
-              {t("messenger.leaveGroup")}
-            </button>
-            <p className="mt-1 text-[12px] text-ig-muted">
-              {t("messenger.leaveGroupNote")}
-            </p>
-          </div>
-        ) : (
+      <div className="border-t border-ig-border p-4 space-y-3">
+        <button
+          type="button"
+          onClick={() => toast.info("Tính năng đổi biệt danh sẽ sớm khả dụng.")}
+          className="ig-press block w-full text-left text-[14px] font-medium text-ig-text hover:text-ig-muted"
+        >
+          Nicknames
+        </button>
+
+        {!conversation.isGroupChat && (
           <button
             type="button"
             onClick={handleBlockUser}
-            className={`ig-press self-start text-[14px] font-semibold hover:opacity-85 ${
-              blockStatus ? "text-ig-accent" : "text-ig-like"
+            className={`ig-press block w-full text-left text-[14px] font-medium ${
+              blockStatus ? "text-ig-accent" : "text-ig-text hover:text-ig-muted"
             }`}
           >
             {blockStatus
               ? t("messenger.unblockUser")
-              : t("messenger.blockUser")}
+              : "Block"}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => toast.info("Đã gửi báo cáo cuộc trò chuyện.")}
+          className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
+        >
+          Report
+        </button>
+
+        {conversation.isGroupChat ? (
+          <button
+            type="button"
+            onClick={handleLeaveGroup}
+            className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
+          >
+            {t("messenger.leaveGroup")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Bạn có chắc muốn xoá cuộc trò chuyện này không?")) {
+                toast.success("Đã xoá cuộc trò chuyện.");
+                onClose();
+              }
+            }}
+            className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
+          >
+            Delete chat
           </button>
         )}
       </div>
+
+      {showMuteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          onClick={() => setShowMuteModal(false)}
+        >
+          <div
+            className="w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#262626] text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="py-4 text-center border-b border-white/10">
+              <h3 className="text-[17px] font-semibold text-white">Mute messages</h3>
+            </div>
+            <div className="flex flex-col text-[14px]">
+              <button
+                type="button"
+                onClick={() => applyMute(1 * 60 * 60 * 1000)}
+                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+              >
+                For 1 hour
+              </button>
+              <button
+                type="button"
+                onClick={() => applyMute(8 * 60 * 60 * 1000)}
+                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+              >
+                For 8 hours
+              </button>
+              <button
+                type="button"
+                onClick={() => applyMute(24 * 60 * 60 * 1000)}
+                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+              >
+                For 24 hours
+              </button>
+              <button
+                type="button"
+                onClick={() => applyMute(-1)}
+                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+              >
+                Until I change it
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMuteModal(false)}
+                className="py-3.5 text-center font-medium text-neutral-400 hover:bg-white/5 active:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddMembersModal && (
         <UserSearchModal

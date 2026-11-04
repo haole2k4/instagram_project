@@ -19,4 +19,6 @@ public class ConversationDTO {
     private List<ParticipantDTO> participants;
     private MessageResponseDTO lastMessage;
     private Long unreadCount;
+    private Boolean canReceiveMessage = true;
+    private String restrictionMessage;
 }

@@ -6,14 +6,20 @@ import {
   handlePostFollower,
   handlePostUnfollower,
 } from "../../../Service/UserAPI";
-import { handleGetAllPostByUserId } from "../../../Service/postApi";
+import {
+  handleGetAllPostByUserId,
+  getLikedPostIdsByUser,
+} from "../../../Service/postApi";
 import { getAllStoryByUserId } from "../../../Service/storyApi";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ModalCart from "../../NewsFeed/NewsFeedCart/ModalCart/ModalCart";
 import EmptyState from "../../Common/EmptyState";
 import { Camera, Heart, MessageCircle } from "lucide-react";
-import { getOrCreateConversation } from "../../../Redux/Reducer/chatSlice";
+import {
+  getOrCreateConversation,
+  openMiniChatWithConversation,
+} from "../../../Redux/Reducer/chatSlice";
 import { useWebSocket } from "../../../Utils/configCallVideo/websocket";
 
 const FriendProfile = () => {
@@ -24,12 +30,43 @@ const FriendProfile = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [likedPostIds, setLikedPostIds] = useState([]);
 
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.login?.userInfo);
   const { sendFollowNotification } = useWebSocket();
+
+  const fetchLikedPosts = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await getLikedPostIdsByUser(currentUser.id);
+      if (Array.isArray(res?.data)) {
+        setLikedPostIds(res.data);
+      }
+    } catch (e) {
+      console.error("Error fetching liked posts:", e);
+    }
+  }, [currentUser?.id]);
+
+  const handleToggleLikePost = (postId, newCount, isNowLiked) => {
+    setDataPost((prev) =>
+      prev.map((item) =>
+        item.id === postId ? { ...item, likesCount: newCount } : item
+      )
+    );
+    setSelectedPost((prev) =>
+      prev && prev.id === postId ? { ...prev, likesCount: newCount } : prev
+    );
+    setLikedPostIds((prev) => {
+      if (isNowLiked) {
+        return prev.includes(postId) ? prev : [...prev, postId];
+      } else {
+        return prev.filter((i) => i !== postId);
+      }
+    });
+  };
 
   const fectDataUserbyId = useCallback(async () => {
     try {
@@ -85,7 +122,8 @@ const FriendProfile = () => {
     fectDataStory();
     fectDataPost();
     checkFollowingStatus();
-  }, [fectDataUserbyId, fectDataStory, fectDataPost, checkFollowingStatus]);
+    fetchLikedPosts();
+  }, [fectDataUserbyId, fectDataStory, fectDataPost, checkFollowingStatus, fetchLikedPosts]);
 
   const handleToggleFollow = async () => {
     if (!currentUser?.id) {
@@ -134,9 +172,9 @@ const FriendProfile = () => {
       );
       if (
         getOrCreateConversation.fulfilled.match(resultAction) &&
-        resultAction.payload?.id
+        resultAction.payload
       ) {
-        navigate(`/user/chat/${resultAction.payload.id}`);
+        dispatch(openMiniChatWithConversation(resultAction.payload));
       } else {
         navigate("/user/chat");
       }
@@ -339,7 +377,13 @@ const FriendProfile = () => {
         </div>
       )}
 
-      <ModalCart isOpen={isOpen} setIsOpen={setIsOpen} post={selectedPost} />
+      <ModalCart
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        post={selectedPost}
+        isLiked={selectedPost ? likedPostIds.includes(selectedPost.id) : false}
+        onToggleLikePost={handleToggleLikePost}
+      />
     </div>
   );
 };

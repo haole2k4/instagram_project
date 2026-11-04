@@ -3,20 +3,35 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { Play } from "lucide-react";
 import { MessageListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";
 
 export const parseMessageContent = (content) => {
-  if (!content) return { isStoryReply: false, text: "" };
+  if (!content) return { isStoryReply: false, isPostShare: false, text: "" };
   if (typeof content === "object") {
     if (content.type === "STORY_REPLY" || content.storyMedia) {
       return {
         isStoryReply: true,
+        isPostShare: false,
         storyMedia: content.storyMedia || content.storyUrl,
         storyType: content.storyType || "IMAGE",
         storyAuthor: content.storyAuthor || content.author || "",
         text: content.text || "",
         storyId: content.storyId,
+      };
+    }
+    if (content.type === "POST_SHARE") {
+      return {
+        isStoryReply: false,
+        isPostShare: true,
+        postId: content.postId,
+        authorName: content.authorName || "Người dùng",
+        authorAvatar: content.authorAvatar,
+        mediaUrl: content.mediaUrl,
+        mediaType: content.mediaType || "IMAGE",
+        caption: content.caption || "",
+        text: content.extraText || "",
       };
     }
   }
@@ -28,6 +43,7 @@ export const parseMessageContent = (content) => {
         if (parsed.type === "STORY_REPLY" || parsed.storyMedia) {
           return {
             isStoryReply: true,
+            isPostShare: false,
             storyMedia: parsed.storyMedia || parsed.storyUrl,
             storyType: parsed.storyType || "IMAGE",
             storyAuthor: parsed.storyAuthor || parsed.author || "",
@@ -35,12 +51,113 @@ export const parseMessageContent = (content) => {
             storyId: parsed.storyId,
           };
         }
+        if (parsed.type === "POST_SHARE") {
+          return {
+            isStoryReply: false,
+            isPostShare: true,
+            postId: parsed.postId,
+            authorName: parsed.authorName || "Người dùng",
+            authorAvatar: parsed.authorAvatar,
+            mediaUrl: parsed.mediaUrl,
+            mediaType: parsed.mediaType || "IMAGE",
+            caption: parsed.caption || "",
+            text: parsed.extraText || "",
+          };
+        }
       } catch {
         // Not a JSON story reply
       }
     }
   }
-  return { isStoryReply: false, text: content };
+  return { isStoryReply: false, isPostShare: false, text: content };
+};
+
+const PostShareCard = ({
+  postShare,
+  isSentByCurrentUser,
+  formatMessageTime,
+  createdAt,
+}) => {
+  const navigate = useNavigate();
+  const { authorName, authorAvatar, mediaUrl, mediaType, caption, text } =
+    postShare;
+  const isVideo = mediaType === "VIDEO" || mediaUrl?.endsWith(".mp4");
+
+  return (
+    <div
+      className={`flex flex-col ${
+        isSentByCurrentUser ? "items-end" : "items-start"
+      } max-w-[280px] sm:max-w-[320px]`}
+    >
+      <div
+        onClick={() => navigate("/user/home")}
+        className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#1c1c1c] shadow-lg transition-transform hover:scale-[1.01]"
+      >
+        {/* Author header */}
+        <div className="flex items-center gap-2.5 p-3">
+          <img
+            src={authorAvatar || "/default-avatar.png"}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "/default-avatar.png";
+            }}
+          />
+          <span className="truncate text-[13px] font-semibold text-white">
+            {authorName}
+          </span>
+        </div>
+
+        {/* Media Preview */}
+        <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-900">
+          {isVideo ? (
+            <video
+              src={mediaUrl}
+              className="h-full w-full object-cover"
+              muted
+            />
+          ) : (
+            <img
+              src={mediaUrl || "/default-placeholder.png"}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          )}
+
+          {isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm">
+                <Play size={20} fill="currentColor" />
+              </div>
+            </div>
+          )}
+
+          {/* Caption overlay */}
+          {caption && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-6">
+              <p className="line-clamp-2 text-[12px] leading-snug text-white font-medium">
+                {caption}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Extra user message if present */}
+      {text && (
+        <div
+          title={formatMessageTime ? formatMessageTime(createdAt) : ""}
+          className={`mt-1.5 max-w-full break-words rounded-2xl px-3.5 py-2 text-[13px] leading-5 ${
+            isSentByCurrentUser
+              ? "bg-ig-accent text-white"
+              : "border border-ig-border bg-ig-surface text-white"
+          }`}
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
 };
 
 const StoryReplyCard = ({
@@ -405,6 +522,17 @@ const MessageList = ({
                                 formatMessageTime={formatMessageTime}
                                 createdAt={msg.createdAt}
                                 processMessageContent={processMessageContent}
+                              />
+                            );
+                          }
+
+                          if (parsed.isPostShare) {
+                            return (
+                              <PostShareCard
+                                postShare={parsed}
+                                isSentByCurrentUser={isSentByCurrentUser}
+                                formatMessageTime={formatMessageTime}
+                                createdAt={msg.createdAt}
                               />
                             );
                           }

@@ -39,6 +39,7 @@ public class MessageService {
     private final ChatRealtimePublisher realtimePublisher;
     private final ApplicationEventPublisher eventPublisher;
     private final AccountStatusService accountStatusService;
+    private final UserPrivacyService userPrivacyService;
 
     public MessageService(MessageRepository messageRepository,
             UserRepository userRepository,
@@ -47,7 +48,8 @@ public class MessageService {
             FollowRepository followRepository,
             ChatRealtimePublisher realtimePublisher,
             ApplicationEventPublisher eventPublisher,
-            AccountStatusService accountStatusService) {
+            AccountStatusService accountStatusService,
+            UserPrivacyService userPrivacyService) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.conversationRepository = conversationRepository;
@@ -56,6 +58,7 @@ public class MessageService {
         this.realtimePublisher = realtimePublisher;
         this.eventPublisher = eventPublisher;
         this.accountStatusService = accountStatusService;
+        this.userPrivacyService = userPrivacyService;
     }
 
     /**
@@ -110,15 +113,19 @@ public class MessageService {
             if (otherUserId != null) {
                 // 1 query cho cả 2 chiều follow.
                 List<Follow> relations = followRepository.findBetweenUsers(senderId, otherUserId);
-                boolean isFriend = relations.size() == 2
-                        && relations.stream().allMatch(f -> Boolean.TRUE.equals(f.getFriend()));
                 boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
-                if (!isFriend) {
-                    throw new IdInvalidException("Hai người không còn là bạn bè, không thể gửi tin nhắn");
-                }
                 if (isBlocking) {
                     throw new IdInvalidException("Một trong hai người đã chặn, không thể gửi tin nhắn");
+                }
+
+                boolean recipientAllowsStrangers = userPrivacyService.allowsStrangerMessages(otherUserId);
+                boolean recipientFollowsSender = relations.stream()
+                        .anyMatch(f -> f.getFollower().getId().equals(otherUserId)
+                                && f.getFollowing().getId().equals(senderId));
+
+                if (!recipientAllowsStrangers && !recipientFollowsSender) {
+                    throw new IdInvalidException(UserPrivacyService.RESTRICTION_MESSAGE);
                 }
             }
         }
