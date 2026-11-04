@@ -1,7 +1,7 @@
 # Admin Dashboard — Specification
 
 Tài liệu này là nguồn sự thật cho phần quản trị: phân quyền, trạng thái tài khoản,
-kiểm duyệt nội dung, audit log và dashboard. Phần UI tuân theo `ART_DIRECTION.md`.
+kiểm duyệt nội dung, audit log và dashboard. Phần UI tuân theo [docs/ART_DIRECTION.md](ART_DIRECTION.md).
 
 ## 1. Quyết định đã chốt
 

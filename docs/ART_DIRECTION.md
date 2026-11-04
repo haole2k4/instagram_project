@@ -91,7 +91,7 @@ Cấm: entrance/scroll-reveal cho feed, shimmer skeleton, parallax, scroll-jack,
 
 ## Admin surface
 
-Admin là bề mặt vận hành, không phải feed. Giữ palette true-black và system grotesk; mục tiêu là đọc bảng nhanh, thao tác có chủ đích, không phải dashboard trình diễn. Spec chi tiết ở `ADMIN_SPEC.md`.
+Admin là bề mặt vận hành, không phải feed. Giữ palette true-black và system grotesk; mục tiêu là đọc bảng nhanh, thao tác có chủ đích, không phải dashboard trình diễn. Spec chi tiết ở [docs/ADMIN_SPEC.md](ADMIN_SPEC.md).
 
 ### Shell
 
@@ -165,4 +165,4 @@ Admin là bề mặt vận hành, không phải feed. Giữ palette true-black v
 
 - 2026-10-23 — Chốt hướng `true-black-flat` sau Taste Skill review; redraw shell thành icon rail, palette về xanh Instagram, typeface về system grotesk. Đổi nền `#0b1014` thành `#000`, bỏ skeleton shimmer và entrance animation so với plan đầu tiên.
 - 2026-10-23 — Làm rõ: đỏ `#ff3040` dùng cho cả chấm thông báo chưa đọc (trạng thái), không chỉ trạng thái liked.
-- 2026-10-23 — Chốt admin surface: sidebar 240/64, drawer mobile, bảng 52px, không gradient/chip màu; spec chi tiết ở `ADMIN_SPEC.md`.
+- 2026-10-23 — Chốt admin surface: sidebar 240/64, drawer mobile, bảng 52px, không gradient/chip màu; spec chi tiết ở [docs/ADMIN_SPEC.md](ADMIN_SPEC.md).

@@ -254,7 +254,7 @@ Access token mặc định sống 30 phút, refresh token 7 ngày. Khi triển k
 - `ADMIN` xem được audit log, ban/khôi phục tài khoản; `MODERATOR` xử lý báo cáo và ẩn nội dung.
 - Seed demo tạo `admin@instagram.local` và `moderator@instagram.local`; xem `backend_instagram/seed-demo.sql`.
 - Với database đang có dữ liệu, chạy một lần `backend_instagram/migration/2026-10-admin-rbac.sql` trước khi khởi động backend. Database mới do Hibernate tạo schema rồi seed.
-- Chi tiết quyền, trạng thái và API: `ADMIN_SPEC.md`.
+- Chi tiết quyền, trạng thái và API: [`docs/ADMIN_SPEC.md`](docs/ADMIN_SPEC.md).
 
 S3 được trỏ tới LocalStack và tự tạo bucket `instagram-media`. Mặc định AWS/Gemini credentials trong môi trường Compose chỉ dành cho local; cần thay bằng secrets riêng khi triển khai thật.
 
@@ -271,9 +271,10 @@ REACT_APP_API_URL=http://localhost:8081 pnpm start
 ```text
 Social-app-fontend/  React frontend, Dockerfile và nginx config
 backend_instagram/   Spring Boot API, Dockerfile và seed-demo.sql
+docs/                Tài liệu thiết kế UI, đặc tả Admin và giao thức WebSocket
 localstack-init/     Khởi tạo bucket S3 local
 k8s/                 Manifest Kubernetes (kind) + script tạo secret
-scripts/             auto-deploy.sh (tự pull + deploy)
+scripts/             auto-deploy.sh (tự pull + deploy) và công cụ worktree agent
 deploy/systemd/      Unit systemd cho auto-deploy
 docker-compose.yml   Bộ dịch vụ phát triển local
 Makefile             Lệnh tắt cho Compose và Kubernetes
