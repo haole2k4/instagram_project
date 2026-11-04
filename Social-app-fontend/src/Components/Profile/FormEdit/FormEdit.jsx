@@ -15,8 +15,8 @@ const EditProfileModal = () => {
   const { t } = useTranslation();
   const [previewImage, setPreviewImage] = useState(null);
   const [gender, setGender] = useState(null);
-  const userredux = useSelector((state) => state.login.userInfo);
-  const accessToken = useSelector((state) => state.login.accessToken);
+  const userredux = useSelector((state) => state.login?.userInfo);
+  const accessToken = useSelector((state) => state.login?. accessToken);
 
   const { id } = useParams();
   let navigate = useNavigate();

@@ -219,10 +219,10 @@ const MessengerPage = () => {
 
   useEffect(() => {
     if (currentUser?.id) {
-      dispatch(setCurrentUserId(currentUser.id));
-      localStorage.setItem("userId", currentUser.id);
-      webSocketService.init(dispatch, currentUser.id, accessToken);
-      dispatch(getConversations(currentUser.id));
+      dispatch(setCurrentUserId(currentUser?.id));
+      localStorage.setItem("userId", currentUser?.id);
+      webSocketService.init(dispatch, currentUser?.id, accessToken);
+      dispatch(getConversations(currentUser?.id));
     }
 
     return () => {
@@ -259,7 +259,7 @@ const MessengerPage = () => {
 
       instance
         .get(
-          `/chat/check-access?conversationId=${conversationIdInt}&userId=${currentUser.id}`
+          `/chat/check-access?conversationId=${conversationIdInt}&userId=${currentUser?.id}`
         )
         .then((response) => {
           if (response.data?.hasAccess) {
@@ -267,13 +267,13 @@ const MessengerPage = () => {
             dispatch(
               getConversationDetails({
                 conversationId: conversationIdInt,
-                userId: currentUser.id,
+                userId: currentUser?.id,
               })
             );
             dispatch(
               getMessagesByConversation({
                 conversationId: conversationIdInt,
-                userId: currentUser.id,
+                userId: currentUser?.id,
                 page: 0,
                 size: 20,
               })
@@ -306,13 +306,13 @@ const MessengerPage = () => {
       dispatch(
         getConversationDetails({
           conversationId: currentConversation.id,
-          userId: currentUser.id,
+          userId: currentUser?.id,
         })
       );
       dispatch(
         getMessagesByConversation({
           conversationId: currentConversation.id,
-          userId: currentUser.id,
+          userId: currentUser?.id,
           page: 0,
           size: 20,
         })
@@ -407,7 +407,7 @@ const MessengerPage = () => {
           dispatch(
             getMessagesByConversation({
               conversationId: currentConversation.id,
-              userId: currentUser.id,
+              userId: currentUser?.id,
               page: 0,
               size: 20,
             })
@@ -454,13 +454,13 @@ const MessengerPage = () => {
         dispatch(
           getConversationDetails({
             conversationId: conversation.id,
-            userId: currentUser.id,
+            userId: currentUser?.id,
           })
         );
         dispatch(
           getMessagesByConversation({
             conversationId: conversation.id,
-            userId: currentUser.id,
+            userId: currentUser?.id,
             page: 0,
             size: 20,
           })
@@ -476,7 +476,7 @@ const MessengerPage = () => {
           dispatch(
             markMessagesAsRead({
               conversationId: conversation.id,
-              userId: currentUser.id,
+              userId: currentUser?.id,
             })
           );
         });
@@ -492,7 +492,7 @@ const MessengerPage = () => {
       try {
         const resultAction = await dispatch(
           getOrCreateConversation({
-            userId: currentUser.id,
+            userId: currentUser?.id,
             otherUserId: userId,
           })
         );
@@ -532,11 +532,11 @@ const MessengerPage = () => {
     const messageData = {
       tempId,
       conversationId: currentConversation.id,
-      senderId: currentUser.id,
+      senderId: currentUser?.id,
       content: messageContent,
       createdAt: now,
-      senderName: currentUser.userFullname,
-      senderAvatar: currentUser.userImage || "/default-avatar.png",
+      senderName: currentUser?.userFullname,
+      senderAvatar: currentUser?.userImage || "/default-avatar.png",
       pending: true,
     };
 
@@ -547,7 +547,7 @@ const MessengerPage = () => {
     try {
       const apiMessage = {
         conversationId: currentConversation.id,
-        senderId: currentUser.id,
+        senderId: currentUser?.id,
         content: messageData.content,
       };
 
@@ -587,7 +587,7 @@ const MessengerPage = () => {
       const resultAction = await dispatch(
         getMoreMessagesByConversation({
           conversationId: currentConversation.id,
-          userId: currentUser.id,
+          userId: currentUser?.id,
           page: nextPage,
           size: 20,
         })
@@ -622,7 +622,7 @@ const MessengerPage = () => {
       if (res.data && res.data.id) {
         navigate(`/user/chat/${res.data.id}`);
         setShowNewConversation(false);
-        dispatch(getConversations(currentUser.id));
+        dispatch(getConversations(currentUser?.id));
       }
     } catch (e) {
       console.error("Error creating group:", e);
@@ -769,7 +769,7 @@ const MessengerPage = () => {
       dispatch(
         markMessagesAsRead({
           conversationId: currentConversation.id,
-          userId: currentUser.id,
+          userId: currentUser?.id,
         })
       );
     }
@@ -784,7 +784,7 @@ const MessengerPage = () => {
 
       try {
         const followingRes = await instance.get(
-          `/follow/following/${currentUser.id}`
+          `/follow/following/${currentUser?.id}`
         );
         const followingData = followingRes.data || [];
 
@@ -805,7 +805,7 @@ const MessengerPage = () => {
           .filter((conv) => !conv.isGroupChat)
           .flatMap((conv) =>
             conv.participants
-              ?.filter((p) => (p.userId || p.id) !== currentUser.id)
+              ?.filter((p) => (p.userId || p.id) !== currentUser?.id)
               .map((p) => p.userId || p.id)
           );
 
@@ -834,7 +834,7 @@ const MessengerPage = () => {
       );
 
       if (otherUser && currentUser) {
-        checkBlockStatus(otherUser.userId || otherUser.id, currentUser.id);
+        checkBlockStatus(otherUser.userId || otherUser.id, currentUser?.id);
       }
     } else {
       setIsUserBlocked(false);
