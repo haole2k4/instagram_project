@@ -12,10 +12,13 @@ import {
   Image as ImageIcon,
   Lock,
   MessageCircle,
+  Send,
   Users,
 } from "lucide-react";
 
 import ModalCart from "./ModalCart/ModalCart";
+import SharePostModal from "./SharePostModal";
+import UserHoverCard from "../../Common/UserHoverCard";
 import {
   handleLike,
   unlikePost,
@@ -76,6 +79,7 @@ const NewsFeedCart = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
+  const [shareModalPost, setShareModalPost] = useState(null);
   const { userInfo } = useSelector((state) => state.login);
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -197,6 +201,9 @@ const NewsFeedCart = () => {
           post.id === id ? { ...post, likesCount: newCount } : post
         )
       );
+      setSelectedPost((prev) =>
+        prev && prev.id === id ? { ...prev, likesCount: newCount } : prev
+      );
       try {
         await unlikePost(id, userInfo.id);
       } catch (error) {
@@ -224,6 +231,9 @@ const NewsFeedCart = () => {
         prev.map((post) =>
           post.id === id ? { ...post, likesCount: newLikesCount } : post
         )
+      );
+      setSelectedPost((prev) =>
+        prev && prev.id === id ? { ...prev, likesCount: newLikesCount } : prev
       );
       try {
         await handleLike(id, userInfo.id);
@@ -330,31 +340,38 @@ const NewsFeedCart = () => {
             {/* Header bài viết */}
             <header className="flex items-center justify-between py-3">
               <div className="flex min-w-0 items-center gap-3">
-                <Link
-                  to={
-                    item.user?.id
-                      ? `${Route.friend_profile}/${item.user.id}`
-                      : Route.profile
-                  }
-                  className="shrink-0"
-                >
-                  <img
-                    src={item.user?.userImage || "/default-avatar.png"}
-                    alt={authorName}
-                    className="h-9 w-9 rounded-full bg-ig-surface object-cover"
-                  />
-                </Link>
-                <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
-                  <Link
-                    to={
-                      item.user?.id
-                        ? `${Route.friend_profile}/${item.user.id}`
-                        : Route.profile
-                    }
-                    className="truncate font-semibold text-ig-text hover:opacity-85"
-                  >
-                    {authorName}
-                  </Link>
+                <UserHoverCard user={item.user} onSelectPost={handleModelComment}>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Link
+                      to={
+                        item.user?.id
+                          ? `${Route.friend_profile}/${item.user.id}`
+                          : Route.profile
+                      }
+                      className="shrink-0"
+                    >
+                      <img
+                        src={item.user?.userImage || "/default-avatar.png"}
+                        alt={authorName}
+                        className="h-9 w-9 rounded-full bg-ig-surface object-cover"
+                      />
+                    </Link>
+                    <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
+                      <Link
+                        to={
+                          item.user?.id
+                            ? `${Route.friend_profile}/${item.user.id}`
+                            : Route.profile
+                        }
+                        className="truncate font-semibold text-ig-text hover:opacity-85"
+                      >
+                        {authorName}
+                      </Link>
+                    </div>
+                  </div>
+                </UserHoverCard>
+
+                <div className="flex items-center gap-1.5 text-[14px]">
                   <span className="text-[12px] text-ig-faint">•</span>
                   <span className="shrink-0 text-[12px] text-ig-faint tabular-nums">
                     {formatTime(item.createdAt, t)}
@@ -477,6 +494,15 @@ const NewsFeedCart = () => {
                   >
                     <MessageCircle size={24} strokeWidth={1.5} />
                   </button>
+                  <button
+                    type="button"
+                    aria-label="Chia sẻ bài viết"
+                    title="Chia sẻ bài viết"
+                    onClick={() => setShareModalPost(item)}
+                    className="ig-press flex items-center justify-center text-ig-text hover:text-ig-muted"
+                  >
+                    <Send size={24} strokeWidth={1.5} />
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -540,7 +566,16 @@ const NewsFeedCart = () => {
         fetchPostData={fetchPostData}
         isLiked={selectedPost ? !!likes[selectedPost.id] : false}
         onToggleLikePost={handleLikePost}
+        onSharePost={(post) => setShareModalPost(post)}
       />
+
+      {shareModalPost && (
+        <SharePostModal
+          isOpen={Boolean(shareModalPost)}
+          onClose={() => setShareModalPost(null)}
+          post={shareModalPost}
+        />
+      )}
     </div>
   );
 };

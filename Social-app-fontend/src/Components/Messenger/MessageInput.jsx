@@ -9,13 +9,16 @@ const MessageInput = ({
   onSend,
   inputRef,
   isBlocked,
+  restrictionMessage,
   onFocus,
 }) => {
   const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const isRestricted = Boolean(isBlocked || restrictionMessage);
+
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !isBlocked) {
+    if (e.key === "Enter" && !e.shiftKey && !isRestricted) {
       e.preventDefault();
       onSend();
     }
@@ -36,6 +39,10 @@ const MessageInput = ({
       {isBlocked ? (
         <div className="rounded-panel border border-ig-border bg-ig-surface p-3 text-center text-[14px] text-ig-muted">
           {t("messenger.blockedMessage")}
+        </div>
+      ) : restrictionMessage ? (
+        <div className="rounded-panel border border-amber-900/40 bg-neutral-900/90 p-3 text-center text-[13px] font-medium text-neutral-300">
+          {restrictionMessage}
         </div>
       ) : (
         <div className="relative flex items-center rounded-control border border-ig-border bg-ig-surface px-2 py-1">

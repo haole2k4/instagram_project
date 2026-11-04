@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import Route from "../../../../Components/Routes/index";
 import { handleGetAllFollower } from "../../../../Service/Folower";
 import { useSelector } from "react-redux";
 import { handlePostFollower } from "../../../../Service/UserAPI";
@@ -117,48 +119,60 @@ export default function ControllFollower({
         </div>
 
         <div className="max-h-80 overflow-y-auto divide-y divide-ig-rule">
-          {filtered.map((user, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between px-4 py-3 hover:bg-ig-raised"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <img
-                  src={
-                    user.follower?.userImage || "https://via.placeholder.com/40"
-                  }
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-full object-cover"
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold text-ig-text">
-                    {user.follower?.userNickname}
-                  </p>
-                  <p className="truncate text-[12px] text-ig-muted">
-                    {user.follower?.userFullname}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className={`ig-press shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-semibold ${
-                  user.friend
-                    ? "cursor-default border border-ig-border bg-ig-surface text-ig-muted"
-                    : "bg-ig-accent text-white hover:opacity-90"
-                }`}
-                onClick={
-                  user.friend
-                    ? undefined
-                    : () => handleGetFollowersByUser(user)
-                }
-                disabled={user.friend}
+          {filtered.map((user, index) => {
+            const targetId = user.follower?.id || user.id?.followerId;
+            const profileUrl =
+              String(targetId) === String(currentUser?.id)
+                ? Route.profile
+                : `${Route.friend_profile}/${targetId}`;
+
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-between px-4 py-3 hover:bg-ig-raised"
               >
-                {user.friend
-                  ? t("userProfile.following")
-                  : t("RecommentUser.follow")}
-              </button>
-            </div>
-          ))}
+                <Link
+                  to={profileUrl}
+                  onClick={onClose}
+                  className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
+                >
+                  <img
+                    src={
+                      user.follower?.userImage || "https://via.placeholder.com/40"
+                    }
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold text-ig-text hover:underline">
+                      {user.follower?.userNickname}
+                    </p>
+                    <p className="truncate text-[12px] text-ig-muted">
+                      {user.follower?.userFullname}
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  className={`ig-press shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-semibold ${
+                    user.friend
+                      ? "cursor-default border border-ig-border bg-ig-surface text-ig-muted"
+                      : "bg-ig-accent text-white hover:opacity-90"
+                  }`}
+                  onClick={
+                    user.friend
+                      ? undefined
+                      : () => handleGetFollowersByUser(user)
+                  }
+                  disabled={user.friend}
+                >
+                  {user.friend
+                    ? t("userProfile.following")
+                    : t("RecommentUser.follow")}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

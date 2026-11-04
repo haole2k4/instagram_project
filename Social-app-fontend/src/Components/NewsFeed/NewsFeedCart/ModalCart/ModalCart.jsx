@@ -22,9 +22,15 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import notificationSocket from "../../../../Service/NotificationSocket";
 import { useTranslation } from "react-i18next";
-import { handleUpdateStatus } from "../../../../Service/postApi";
+import {
+  handleUpdateStatus,
+  handleLike,
+  unlikePost,
+  getLikedPostIdsByUser,
+} from "../../../../Service/postApi";
 import { toast } from "react-toastify";
 import { formatTime, cleanMojibake } from "../../../../Utils";
+import SharePostModal from "../SharePostModal";
 
 const AccessIcon = ({ access, t }) => {
   if (access === "PUBLIC") {
@@ -71,6 +77,7 @@ const ModalCart = ({
   fetchPostData,
   isLiked = false,
   onToggleLikePost,
+  onSharePost,
 }) => {
   const { userInfo } = useSelector((state) => state.login);
   const [comments, setComments] = useState([]);
@@ -80,6 +87,7 @@ const ModalCart = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [failedMedia, setFailedMedia] = useState({});
+  const [showShareModal, setShowShareModal] = useState(false);
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const commentInputRef = useRef(null);
@@ -96,6 +104,73 @@ const ModalCart = ({
     }
   });
   const [poppingCommentHeart, setPoppingCommentHeart] = useState(null);
+
+  const [localIsLiked, setLocalIsLiked] = useState(Boolean(isLiked));
+  const [localLikesCount, setLocalLikesCount] = useState(post?.likesCount || 0);
+  const [doubleTapHeart, setDoubleTapHeart] = useState(false);
+  const [isLikingInProgress, setIsLikingInProgress] = useState(false);
+
+  useEffect(() => {
+    if (!post?.id) return;
+    setLocalLikesCount(post.likesCount || 0);
+    setLocalIsLiked(Boolean(isLiked));
+
+    if (isOpen && userInfo?.id) {
+      getLikedPostIdsByUser(userInfo.id)
+        .then((res) => {
+          if (Array.isArray(res?.data)) {
+            setLocalIsLiked(res.data.includes(post.id));
+          }
+        })
+        .catch((err) => console.error("Error checking liked post:", err));
+    }
+  }, [post?.id, post?.likesCount, isOpen, isLiked, userInfo?.id]);
+
+  const handleToggleLike = async (forcedLike = false) => {
+    if (!post?.id || !userInfo?.id || isLikingInProgress) return;
+    if (forcedLike && localIsLiked) {
+      setDoubleTapHeart(true);
+      setTimeout(() => setDoubleTapHeart(false), 900);
+      return;
+    }
+
+    const nextLiked = forcedLike ? true : !localIsLiked;
+    if (nextLiked === localIsLiked) return;
+
+    const prevLiked = localIsLiked;
+    const prevCount = localLikesCount;
+    const nextCount = nextLiked ? prevCount + 1 : Math.max(0, prevCount - 1);
+
+    setLocalIsLiked(nextLiked);
+    setLocalLikesCount(nextCount);
+    if (nextLiked) {
+      setDoubleTapHeart(true);
+      setTimeout(() => setDoubleTapHeart(false), 900);
+    }
+
+    if (onToggleLikePost) {
+      onToggleLikePost(post.id, nextCount, nextLiked);
+    }
+
+    setIsLikingInProgress(true);
+    try {
+      if (nextLiked) {
+        await handleLike(post.id, userInfo.id);
+      } else {
+        await unlikePost(post.id, userInfo.id);
+      }
+    } catch (error) {
+      console.error("Error toggling like in modal:", error);
+      setLocalIsLiked(prevLiked);
+      setLocalLikesCount(prevCount);
+      if (onToggleLikePost) {
+        onToggleLikePost(post.id, prevCount, prevLiked);
+      }
+      toast.error(t("post.likeError") || "Không thể cập nhật lượt thích");
+    } finally {
+      setIsLikingInProgress(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -252,7 +327,21 @@ const ModalCart = ({
         className="ig-modal-panel relative flex h-[94vh] max-h-[920px] w-full max-w-[1240px] flex-col overflow-hidden rounded-2xl border border-ig-border bg-black shadow-2xl md:flex-row"
       >
         {/* Vùng Media (Ảnh/Video) - Tối ưu tỷ lệ và căn giữa hoàn hảo */}
-        <div className="relative flex h-1/2 w-full flex-1 items-center justify-center bg-black md:h-full border-b md:border-b-0 md:border-r border-ig-border overflow-hidden select-none">
+        <div
+          onDoubleClick={() => handleToggleLike(true)}
+          className="relative flex h-1/2 w-full flex-1 items-center justify-center bg-black md:h-full border-b md:border-b-0 md:border-r border-ig-border overflow-hidden select-none cursor-pointer"
+        >
+          {doubleTapHeart && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+            >
+              <Heart
+                size={88}
+                className="ig-heart-pop fill-white text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+              />
+            </div>
+          )}
           {failedMedia[`${post.id}-${currentImageIndex}-${currentMedia?.url}`] ? (
             <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-ig-muted">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ig-raised text-ig-faint">
@@ -509,19 +598,15 @@ const ModalCart = ({
                 <button
                   type="button"
                   aria-label={t("newFed.like")}
-                  onClick={() => {
-                    if (onToggleLikePost && post) {
-                      onToggleLikePost(post.id, post.likesCount);
-                    }
-                  }}
+                  onClick={() => handleToggleLike(false)}
                   className={`ig-press flex items-center justify-center ${
-                    isLiked ? "text-ig-like" : "text-white hover:text-neutral-400"
+                    localIsLiked ? "text-ig-like" : "text-white hover:text-neutral-400"
                   }`}
                 >
                   <Heart
                     size={24}
                     strokeWidth={1.5}
-                    className={isLiked ? "fill-current" : ""}
+                    className={localIsLiked ? "fill-current" : ""}
                   />
                 </button>
                 <button
@@ -535,7 +620,13 @@ const ModalCart = ({
                 <button
                   type="button"
                   aria-label="Chia sẻ"
-                  onClick={() => toast.info("Đã sao chép liên kết bài viết.")}
+                  onClick={() => {
+                    if (onSharePost) {
+                      onSharePost(post);
+                    } else {
+                      setShowShareModal(true);
+                    }
+                  }}
                   className="ig-press flex items-center justify-center text-white hover:text-neutral-400"
                 >
                   <Send size={22} strokeWidth={1.5} />
@@ -559,7 +650,7 @@ const ModalCart = ({
             </div>
 
             <p className="text-[14px] font-semibold text-white tabular-nums">
-              {post.likesCount || 0} {t("newFed.like")}
+              {localLikesCount || 0} {t("newFed.like")}
             </p>
             <p className="text-[11px] uppercase tracking-wide text-neutral-500 mt-1">
               {formatTime(post.createdAt, t)}
@@ -604,6 +695,14 @@ const ModalCart = ({
           </div>
         </div>
       </div>
+
+      {showShareModal && (
+        <SharePostModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          post={post}
+        />
+      )}
     </div>
   );
 };

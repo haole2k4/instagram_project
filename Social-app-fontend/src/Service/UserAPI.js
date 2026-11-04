@@ -40,7 +40,13 @@ const handleGetUserById = (id) => {
   return instance.get(`/stats/${id}`);
 };
 
+const getPrivacySettings = () => {
+  return instance.get("/user/privacy-settings");
+};
 
+const updatePrivacySettings = (data) => {
+  return instance.put("/user/privacy-settings", data);
+};
 
 export {
   handleEditProfile,
@@ -53,4 +59,6 @@ export {
   handlePostUnfollower,
   handleGetUserById,
   handleGetById,
+  getPrivacySettings,
+  updatePrivacySettings,
 };

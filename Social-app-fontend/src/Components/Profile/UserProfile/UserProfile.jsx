@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { handleGetUserById } from "../../../Service/UserAPI";
 import { getAllStoryByUserId } from "../../../Service/storyApi";
-import { handleGetAllPostByUserId } from "../../../Service/postApi";
+import {
+  handleGetAllPostByUserId,
+  getLikedPostIdsByUser,
+} from "../../../Service/postApi";
 import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import ControllFollower from "./ControllFlower/ControllFlower";
@@ -22,9 +25,40 @@ const UserProfile = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [likedPostIds, setLikedPostIds] = useState([]);
 
   const navigate = useNavigate();
   const [t] = useTranslation();
+
+  const fetchLikedPosts = useCallback(async () => {
+    if (!userredux?.id) return;
+    try {
+      const res = await getLikedPostIdsByUser(userredux.id);
+      if (Array.isArray(res?.data)) {
+        setLikedPostIds(res.data);
+      }
+    } catch (e) {
+      console.error("Error fetching liked posts:", e);
+    }
+  }, [userredux?.id]);
+
+  const handleToggleLikePost = (postId, newCount, isNowLiked) => {
+    setDataPost((prev) =>
+      prev.map((item) =>
+        item.id === postId ? { ...item, likesCount: newCount } : item
+      )
+    );
+    setSelectedPost((prev) =>
+      prev && prev.id === postId ? { ...prev, likesCount: newCount } : prev
+    );
+    setLikedPostIds((prev) => {
+      if (isNowLiked) {
+        return prev.includes(postId) ? prev : [...prev, postId];
+      } else {
+        return prev.filter((id) => id !== postId);
+      }
+    });
+  };
 
   const fetchDataUser = useCallback(async () => {
     if (!userredux?.id) return;
@@ -54,7 +88,8 @@ const UserProfile = () => {
     fetchDataUser();
     fetchDataStory();
     fetchDataPost();
-  }, [fetchDataUser, fetchDataStory, fetchDataPost]);
+    fetchLikedPosts();
+  }, [fetchDataUser, fetchDataStory, fetchDataPost, fetchLikedPosts]);
 
   const hasStories = Array.isArray(dataStory) && dataStory.length > 0;
 
@@ -274,6 +309,8 @@ const UserProfile = () => {
         setIsOpen={setIsOpen}
         post={selectedPost}
         userredux={userredux}
+        isLiked={selectedPost ? likedPostIds.includes(selectedPost.id) : false}
+        onToggleLikePost={handleToggleLikePost}
       />
     </div>
   );

@@ -33,11 +33,11 @@ public class ChatController {
      */
     @GetMapping("/conversation")
     @ApiMessage("Lấy hoặc tạo cuộc trò chuyện thành công")
-    public ResponseEntity<Conversation> getOrCreateConversation(
+    public ResponseEntity<ConversationDTO> getOrCreateConversation(
             @RequestParam(required = false) Long userId,
             @RequestParam Long otherUserId) throws IdInvalidException {
 
-        Conversation conversation = chatService.getOrCreateConversation(currentId(), otherUserId);
+        ConversationDTO conversation = chatService.getOrCreateConversationDTO(currentId(), otherUserId);
         return ResponseEntity.ok(conversation);
     }
 
@@ -46,7 +46,7 @@ public class ChatController {
      */
     @PostMapping("/conversation")
     @ApiMessage("Tạo cuộc trò chuyện thành công")
-    public ResponseEntity<Conversation> createConversation(
+    public ResponseEntity<ConversationDTO> createConversation(
             @RequestBody Map<String, Long> requestBody) throws IdInvalidException {
 
         Long otherUserId = requestBody.get("otherUserId");
@@ -55,7 +55,7 @@ public class ChatController {
             throw new IdInvalidException("Thiếu otherUserId");
         }
 
-        Conversation conversation = chatService.getOrCreateConversation(currentId(), otherUserId);
+        ConversationDTO conversation = chatService.getOrCreateConversationDTO(currentId(), otherUserId);
         return ResponseEntity.ok(conversation);
     }
 

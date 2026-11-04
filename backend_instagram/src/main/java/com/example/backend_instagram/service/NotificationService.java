@@ -89,26 +89,30 @@ public class NotificationService {
           Post post = postService.getPostById(postId);
           User actor = userService.fetchUserById(actorId);
           User receiver = post.getUser();
-      
-          String message = actor.getUserNickname() + " liked your post";
-          Notification notification = new Notification(receiver, actor, post, NotificationType.LIKE, message);
-          notificationRepository.save(notification);
-          NotificationDTO notificationDTO = toDTO(notification);
-          logger.info("Created like notification for user: {}, post: {}, {}",
-              receiver.getId(), postId, notificationDTO);
-          publishNotificationCreated(notification, receiver.getId());
-      
-          // Gửi like update chỉ tới receiver
-          LikeUpdateDTO likeUpdateDTO = new LikeUpdateDTO(
-              postId,
-              post.getLikesCount(),
-              message,
-              actor.getUserNickname(),
-              actor.getUserImage(),
-              receiver.getId(), // receiverId
-              actor.getId() // actorId
-          );
-          sendLikeUpdateToUser(receiver.getId(), likeUpdateDTO);
+
+          if (receiver != null && !receiver.getId().equals(actorId)) {
+            String message = actor.getUserNickname() + " liked your post";
+            Notification notification = new Notification(receiver, actor, post, NotificationType.LIKE, message);
+            notificationRepository.save(notification);
+            NotificationDTO notificationDTO = toDTO(notification);
+            logger.info("Created like notification for user: {}, post: {}, {}",
+                receiver.getId(), postId, notificationDTO);
+            publishNotificationCreated(notification, receiver.getId());
+
+            // Gửi like update chỉ tới receiver
+            LikeUpdateDTO likeUpdateDTO = new LikeUpdateDTO(
+                postId,
+                post.getLikesCount(),
+                message,
+                actor.getUserNickname(),
+                actor.getUserImage(),
+                receiver.getId(), // receiverId
+                actor.getId() // actorId
+            );
+            sendLikeUpdateToUser(receiver.getId(), likeUpdateDTO);
+          } else {
+            logger.debug("Skipping like notification as actorId equals receiverId: {}", actorId);
+          }
         } catch (Exception e) {
           logger.error("Error creating like notification: {}", e.getMessage(), e);
         }

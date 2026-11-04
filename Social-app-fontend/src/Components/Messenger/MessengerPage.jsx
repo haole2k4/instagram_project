@@ -40,6 +40,7 @@ import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import IncomingCallModal from "./IncomingCallModal";
 import instance from "../../Utils/AxiosApi/Axios";
 import ConversationDetails from "./ConversationDetails";
+import { toast } from "react-toastify";
 import Route from "../../Components/Routes/index";
 
 const SearchBar = ({ searchTerm, setSearchTerm, className = "" }) => {
@@ -511,6 +512,13 @@ const MessengerPage = () => {
   );
 
   const handleSendMessage = async (customContent) => {
+    if (currentConversation?.canReceiveMessage === false) {
+      toast.error(
+        currentConversation.restrictionMessage ||
+          "This account can't receive your message because they don't allow new message requests from everyone"
+      );
+      return;
+    }
     const messageContent = customContent || newMessage.trim();
     if (!messageContent || !currentConversation?.id || !currentUser?.id) return;
 
@@ -659,6 +667,7 @@ const MessengerPage = () => {
       if (otherUser) {
         return {
           name: otherUser.userFullname || otherUser.userNickname,
+          username: otherUser.userNickname || otherUser.username,
           image: otherUser.userImage || "/default-avatar.png",
           isGroup: false,
         };
@@ -903,9 +912,14 @@ const MessengerPage = () => {
                   />
                 )}
                 <div className="min-w-0">
-                  <h1 className="truncate text-[20px] font-semibold leading-tight text-ig-text md:text-[24px]">
+                  <h1 className="truncate text-[16px] font-bold leading-tight text-ig-text">
                     {headerInfo?.name}
                   </h1>
+                  {!headerInfo?.isGroup && headerInfo?.username && (
+                    <p className="truncate text-[13px] text-ig-muted">
+                      {headerInfo.username}
+                    </p>
+                  )}
                   {headerInfo?.isGroup && (
                     <p className="text-[12px] text-ig-muted tabular-nums">
                       {headerInfo.participantCount} {t("messenger.members")}
@@ -984,6 +998,12 @@ const MessengerPage = () => {
               onSend={handleSendMessage}
               inputRef={messageInputRef}
               isBlocked={isUserBlocked}
+              restrictionMessage={
+                currentConversation?.canReceiveMessage === false
+                  ? (currentConversation.restrictionMessage ||
+                    "This account can't receive your message because they don't allow new message requests from everyone")
+                  : null
+              }
               onFocus={handleMarkAsRead}
             />
           </>

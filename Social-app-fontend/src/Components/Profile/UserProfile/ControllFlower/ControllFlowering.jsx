@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import Route from "../../../../Components/Routes/index";
 import { handleGetAllFollowing } from "../../../../Service/Folower";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
@@ -6,6 +9,7 @@ import { X } from "lucide-react";
 export default function ControllFlowering({ isOpening, onClosing, id }) {
   const [dataFollowering, setDataFollowering] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const currentUser = useSelector((state) => state.login?.userInfo);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -84,34 +88,46 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
         </div>
 
         <div className="max-h-80 overflow-y-auto divide-y divide-ig-rule">
-          {filtered.map((user, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between px-4 py-3 hover:bg-ig-raised"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <img
-                  src={
-                    user.following?.userImage ||
-                    "https://via.placeholder.com/40"
-                  }
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-full object-cover"
-                />
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold text-ig-text">
-                    {user.following?.userNickname}
-                  </p>
-                  <p className="truncate text-[12px] text-ig-muted">
-                    {user.following?.userFullname}
-                  </p>
-                </div>
+          {filtered.map((user, index) => {
+            const targetId = user.following?.id || user.id?.followingId;
+            const profileUrl =
+              String(targetId) === String(currentUser?.id)
+                ? Route.profile
+                : `${Route.friend_profile}/${targetId}`;
+
+            return (
+              <div
+                key={index}
+                className="flex items-center justify-between px-4 py-3 hover:bg-ig-raised"
+              >
+                <Link
+                  to={profileUrl}
+                  onClick={onClosing}
+                  className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
+                >
+                  <img
+                    src={
+                      user.following?.userImage ||
+                      "https://via.placeholder.com/40"
+                    }
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-semibold text-ig-text hover:underline">
+                      {user.following?.userNickname}
+                    </p>
+                    <p className="truncate text-[12px] text-ig-muted">
+                      {user.following?.userFullname}
+                    </p>
+                  </div>
+                </Link>
+                <span className="shrink-0 rounded-lg border border-ig-border bg-ig-surface px-3 py-1.5 text-[13px] font-medium text-ig-muted">
+                  {t("userProfile.following")}
+                </span>
               </div>
-              <span className="shrink-0 rounded-lg border border-ig-border bg-ig-surface px-3 py-1.5 text-[13px] font-medium text-ig-muted">
-                {t("userProfile.following")}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

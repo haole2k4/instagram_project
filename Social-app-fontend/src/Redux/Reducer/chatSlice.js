@@ -117,7 +117,9 @@ const initialState = {
   currentUserId: null,
   loading: false,
   error: null,
-  webSocketConnected: false
+  webSocketConnected: false,
+  isMiniChatOpen: false,
+  activeMiniConversation: null,
 };
 
 const chatSlice = createSlice({
@@ -313,6 +315,30 @@ const chatSlice = createSlice({
 
     resetMessages: (state) => {
       state.messages = [];
+    },
+
+    setMiniChatOpen: (state, action) => {
+      state.isMiniChatOpen = action.payload;
+    },
+
+    setActiveMiniConversation: (state, action) => {
+      state.activeMiniConversation = action.payload;
+    },
+
+    openMiniChatWithConversation: (state, action) => {
+      state.isMiniChatOpen = true;
+      state.activeMiniConversation = action.payload;
+      if (action.payload) {
+        const exists = state.conversations.find((c) => c.id === action.payload.id);
+        if (!exists) {
+          state.conversations.unshift(action.payload);
+        }
+      }
+    },
+
+    closeMiniChat: (state) => {
+      state.isMiniChatOpen = false;
+      state.activeMiniConversation = null;
     },
 
     setLoading: (state, action) => {
@@ -525,7 +551,11 @@ export const {
   updateConversationWithLatestMessage,
   resetMessages, 
   setLoading,
-  updateConversationName, 
+  updateConversationName,
+  setMiniChatOpen,
+  setActiveMiniConversation,
+  openMiniChatWithConversation,
+  closeMiniChat,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

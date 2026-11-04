@@ -8,6 +8,7 @@ public class UserStatsDTO {
     private Long userId;
     private String username;
     private String userNickname;
+    private String userFullname;
     private String avatar;
     private String bio;
     private Long followersCount;
@@ -19,6 +20,7 @@ public class UserStatsDTO {
         dto.setUserId(user.getId());
         dto.setUsername(user.getUserNickname());
         dto.setUserNickname(user.getUserNickname());
+        dto.setUserFullname(user.getUserFullname());
         dto.setAvatar(user.getUserImage());
         dto.setBio(user.getUserBio());
         dto.setFollowersCount(followersCount);

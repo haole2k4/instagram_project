@@ -20,7 +20,12 @@ import {
   Video,
 } from "lucide-react";
 
-import { handleEditProfile, handleGetById } from "../../Service/UserAPI";
+import {
+  handleEditProfile,
+  handleGetById,
+  getPrivacySettings,
+  updatePrivacySettings,
+} from "../../Service/UserAPI";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
 import { changeLanguageRedux } from "../../Redux/Reducer/appReducer";
 
@@ -160,6 +165,47 @@ const Settings = () => {
 
   // Blocked Users State
   const [blockedUsers, setBlockedUsers] = useState(["spambot_99", "annoying_ads"]);
+
+  // Message Privacy State
+  const [allowStrangerMessages, setAllowStrangerMessages] = useState(true);
+  const [loadingPrivacy, setLoadingPrivacy] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "messages_replies") {
+      getPrivacySettings()
+        .then((res) => {
+          if (res?.data?.allowStrangerMessages !== undefined) {
+            setAllowStrangerMessages(res.data.allowStrangerMessages);
+          }
+        })
+        .catch((err) => console.error("Error fetching privacy settings:", err));
+    }
+  }, [activeTab]);
+
+  const handlePrivacySettingChange = async (allow) => {
+    setAllowStrangerMessages(allow);
+    setLoadingPrivacy(true);
+    try {
+      await updatePrivacySettings({ allowStrangerMessages: allow });
+      toast.success(
+        allow
+          ? isEn
+            ? "Now accepting message requests from everyone."
+            : "Đã cho phép mọi người gửi tin nhắn."
+          : isEn
+            ? "Strangers can no longer send you new message requests."
+            : "Đã bật chế độ không cho người lạ nhắn tin."
+      );
+    } catch (err) {
+      console.error("Error updating privacy settings:", err);
+      toast.error(
+        isEn ? "Failed to update setting." : "Không thể cập nhật cài đặt."
+      );
+      setAllowStrangerMessages(!allow);
+    } finally {
+      setLoadingPrivacy(false);
+    }
+  };
 
   // Fetch initial profile info
   useEffect(() => {
@@ -1210,35 +1256,44 @@ const Settings = () => {
                     ? "Who can send you message requests"
                     : "Ai có thể gửi yêu cầu tin nhắn"}
                 </p>
-                <div className="space-y-2 text-[13px] text-neutral-300">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="space-y-3 text-[13px] text-neutral-300">
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="msgReq"
-                      defaultChecked
-                      className="accent-[#0095f6]"
+                      checked={allowStrangerMessages}
+                      onChange={() => handlePrivacySettingChange(true)}
+                      disabled={loadingPrivacy}
+                      className="mt-0.5 accent-[#0095f6]"
                     />
-                    <span>{isEn ? "Everyone" : "Mọi người"}</span>
+                    <div>
+                      <span className="font-medium text-white">{isEn ? "Everyone" : "Mọi người"}</span>
+                      <p className="text-[12px] text-neutral-400">
+                        {isEn
+                          ? "Anyone can send you message requests."
+                          : "Bất kỳ ai cũng có thể gửi yêu cầu tin nhắn cho bạn."}
+                      </p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="msgReq"
-                      className="accent-[#0095f6]"
+                      checked={!allowStrangerMessages}
+                      onChange={() => handlePrivacySettingChange(false)}
+                      disabled={loadingPrivacy}
+                      className="mt-0.5 accent-[#0095f6]"
                     />
-                    <span>
-                      {isEn ? "People you follow" : "Những người bạn theo dõi"}
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="msgReq"
-                      className="accent-[#0095f6]"
-                    />
-                    <span>
-                      {isEn ? "Don't receive requests" : "Không nhận yêu cầu"}
-                    </span>
+                    <div>
+                      <span className="font-medium text-white">
+                        {isEn ? "Don't allow new message requests from everyone" : "Không cho người lạ nhắn tin"}
+                      </span>
+                      <p className="text-[12px] text-neutral-400">
+                        {isEn
+                          ? "Only people you follow can send you messages. Strangers will be notified that your account can't receive their messages."
+                          : "Chỉ những người bạn theo dõi mới có thể nhắn tin. Người lạ sẽ thấy thông báo tài khoản này không cho phép người lạ nhắn tin."}
+                      </p>
+                    </div>
                   </label>
                 </div>
               </div>

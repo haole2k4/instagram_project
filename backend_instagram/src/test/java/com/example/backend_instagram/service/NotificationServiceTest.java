@@ -96,4 +96,26 @@ class NotificationServiceTest {
 
         verify(notificationRepository).save(any(Notification.class));
     }
+
+    @Test
+    void skipsLikeNotificationWhenSelfLiking() {
+        when(postService.getPostById(10L)).thenReturn(post);
+        when(userService.fetchUserById(1L)).thenReturn(post.getUser());
+
+        notificationService.createLikeNotification(10L, 1L);
+
+        verify(notificationRepository, org.mockito.Mockito.never()).save(any(Notification.class));
+        verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any());
+    }
+
+    @Test
+    void createsLikeNotificationForOtherUser() {
+        when(postService.getPostById(10L)).thenReturn(post);
+        when(userService.fetchUserById(2L)).thenReturn(actor);
+
+        notificationService.createLikeNotification(10L, 2L);
+
+        verify(notificationRepository).save(any(Notification.class));
+        verify(eventPublisher).publishEvent(any(NotificationCreatedEvent.class));
+    }
 }
