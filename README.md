@@ -34,15 +34,7 @@ Lệnh này chỉ nạp dữ liệu một lần rồi thoát; các bản ghi đ�
 
 Khi chạy frontend riêng bằng `pnpm start` (không qua Docker), sao chép `Social-app-fontend/.env.example` thành `Social-app-fontend/.env`. File `.env` không được commit.
 
-Seed tạo ba tài khoản demo dùng chung mật khẩu `InstagramDemo!2026`:
-
-| Email | Tên hiển thị |
-| --- | --- |
-| `admin@instagram.local` | Demo Admin |
-| `linh@instagram.local` | Linh Nguyen |
-| `minh@instagram.local` | Minh Tran |
-
-Tài khoản Demo Admin dùng để đăng nhập và thử dữ liệu mẫu. Backend hiện chưa có cơ chế role superuser, nên tên tài khoản không đồng nghĩa với quyền quản trị đặc biệt.
+Seed tạo các tài khoản demo dùng chung mật khẩu `InstagramDemo!2026`. Chi tiết danh sách tài khoản xem tại [`docs/TEST_ACCOUNTS.md`](docs/TEST_ACCOUNTS.md).
 
 ### Giới hạn tài nguyên và log
 
@@ -114,7 +106,7 @@ Like/comment vẫn ghi notification vào MySQL trong transaction của request. 
 | Retry | 3 lần retry (tổng 4 lần thử), backoff 1s → 2s → 4s, hết lượt vào DLQ |
 | Idempotency | Consumer chỉ push khi `pushed_at` còn `NULL` |
 
-Consumer là at-least-once. Nếu message được redeliver sau khi đã push nhưng trước khi commit, frontend bỏ qua theo `notificationId`.
+Consumer là at-least-once. Nếu message được redeliver sau khi push nhưng trước khi commit, frontend bỏ qua theo `notificationId`.
 
 Quản lý RabbitMQ local tại [http://localhost:15672](http://localhost:15672). Tài khoản mặc định là `instagram` / `instagram_pass`; đổi bằng `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` trong `.env` trước khi chạy lần đầu. Management UI chỉ bind `127.0.0.1`, không mở ra mạng ngoài.
 
@@ -139,7 +131,7 @@ docker compose exec rabbitmq rabbitmqctl list_queues name messages consumers
 docker compose logs --tail=200 backend
 ```
 
-Mở management UI, vào **Queues → notification.dlq**, dùng **Get messages** để đọc headers/body. Sửa nguyên nhân (thường là payload sai hoặc lỗi DB tạm thời), rồi publish lại message đã sửa vào exchange `instagram.events` với routing key `notification.created`. Nếu message là dữ liệu rác không thể sửa, xoá khỏi DLQ sau khi ghi nhận. Không purge DLQ hàng loạt khi chưa điều tra vì sẽ mất dấu vết lỗi.
+Mở management UI, vào **Queues → notification.dlq**, dùng **Get messages** để đọc headers/body. Sửa nguyên nhân (thường là payload sai hoặc lỗi DB tạm thời), rồi publish lại message đã sửa vào exchange `instagram.events` với routing key `notification.created`. Nếu message là dữ liệu rác không thể sửa, xoá khỏi DLQ ghi nhận. Không purge DLQ hàng loạt khi chưa điều tra vì sẽ mất dấu vết lỗi.
 
 Chạy test backend (cần Docker cho Testcontainers MySQL và RabbitMQ):
 
@@ -150,7 +142,7 @@ cd backend_instagram
 
 ## Tự động deploy khi có code mới
 
-`scripts/auto-deploy.sh` cứ 2 phút kiểm tra `origin/master` một lần (chạy bằng systemd user timer). Nếu có commit mới, script sẽ fast-forward pull rồi build và chạy lại stack. Không cần mở cổng vào máy hay dùng GitHub runner.
+`scripts/auto-deploy.sh` cứ 2 phút kiểm tra `origin/master` một lần (chạy bằng systemd user timer). Nếu có commit mới, script sẽ fast-deploy pull rồi build và chạy lại stack. Không cần mở cổng vào máy hay dùng GitHub runner.
 
 ```bash
 # Nên dùng một bản clone riêng để deploy, tách khỏi thư mục đang code
@@ -161,16 +153,16 @@ cd ~/deploy/instagram_project
 make auto-deploy-install          # cài + bật timer
 loginctl enable-linger "$USER"    # để timer chạy cả khi chưa đăng nhập
 make auto-deploy-logs             # xem log
-make auto-deploy                  # deploy ngay, không cần chờ có commit mới
+make auto-deploy-install          # deploy ngay, không cần chờ có commit mới
 make auto-deploy-uninstall        # tắt
 ```
 
-- Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, khi đó script chạy `make k8s-redeploy`. Các biến khác: `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`, `DOCKER_CONTEXT` (nên đặt `DOCKER_CONTEXT=default` nếu máy cài cả Docker Desktop để timer luôn dùng Docker Engine hệ thống).
+- Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, cũng như `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`, `DOCKER_CONTEXT` (nên đặt `DOCKER_CONTEXT=default` nếu máy cài Docker Desktop để timer luôn dùng Docker Engine hệ thống).
 - Script sẽ dừng, không pull, nếu thư mục deploy không ở nhánh `master` hoặc có thay đổi tracked chưa commit. Nếu không fast-forward được, script cũng dừng.
 - Commit chỉ sửa file `.md` hoặc thư mục `.github/` thì không build lại.
 - PR và nhánh `master` được kiểm tra tự động qua GitHub Actions (`.github/workflows/ci.yml`: `./mvnw test` + `pnpm build`) trên runner của GitHub.
-- Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử lại khi có commit mới hoặc khi chạy `make auto-deploy`. Script không tự rollback.
-- Compose project name lấy theo tên thư mục. Clone vào thư mục cũng tên `instagram_project` thì stack dùng lại container và volume dữ liệu hiện có.
+- Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử push lại khi có commit mới hoặc chạy `make auto-deploy`. Script không tự rollback.
+- Compose project name lấy theo tên thư mục. Clone vào thư mục cùng tên `instagram_project` thì stack dùng dùng lại container và volume dữ liệu hiện có.
 
 ## Kubernetes local với kind
 
@@ -209,8 +201,7 @@ make k8s-redeploy
 | `mysql` | StatefulSet + PVC 10Gi | dữ liệu được giữ khi pod restart |
 | `redis` | Deployment + Service | cache tạm, dùng `emptyDir` |
 | `rabbitmq` | StatefulSet + Service + PVC 1Gi | broker cho notification, 1 replica, probe `rabbitmq-diagnostics -q ping` |
-| `localstack` | Deployment + Service | S3 giả lập |
-| `localstack-init` | Job | tạo bucket `instagram-media` và policy public-read |
+| `localstack` | Deployment + Service | Job | tạo bucket `instagram-media` và policy public-read |
 | `seed-demo` | Job | nạp dữ liệu demo sau khi backend tạo schema |
 | Ingress | `instagram`, `instagram-websocket`, `instagram-s3` | định tuyến `/`, `/api`, `/ws`, `/s3` |
 
@@ -275,7 +266,7 @@ docs/                Tài liệu thiết kế UI, đặc tả Admin và giao th�
 localstack-init/     Khởi tạo bucket S3 local
 k8s/                 Manifest Kubernetes (kind) + script tạo secret
 scripts/             auto-deploy.sh (tự pull + deploy) và công cụ worktree agent
-deploy/systemd/      Unit systemd cho auto-deploy
+deploy/systemd/      Unit systemd cho thể auto-deploy
 docker-compose.yml   Bộ dịch vụ phát triển local
 Makefile             Lệnh tắt cho Compose và Kubernetes
 ```
