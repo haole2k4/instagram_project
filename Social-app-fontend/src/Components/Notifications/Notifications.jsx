@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import notificationSocket from "../../Service/NotificationSocket";
+import notificationSocket from "../../Service/notificationSocket";
 import { fetchAllNotificationsbyUser } from "../../Service/notificationApi";
 import { useDispatch, useSelector } from "react-redux";
 import { formatTime } from "../../Utils";

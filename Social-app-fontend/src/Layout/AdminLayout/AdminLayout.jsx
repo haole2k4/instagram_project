@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { UserLogOut } from "../../Service/AuthApi";
+import { UserLogOut } from "../../Service/authApi";
 import { userLogoutALL } from "../../Redux/Reducer/UserAppDeucer";
 
 const NAV = [

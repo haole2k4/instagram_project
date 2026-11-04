@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { UserLogOut } from "../../../Service/AuthApi";
+import { UserLogOut } from "../../../Service/authApi";
 import { userLogoutALL } from "../../../Redux/Reducer/UserAppDeucer";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import instance from "../../../Utils/AxiosApi/Axios";
-import webSocketService from "../../../Service/WebSocketService";
+import webSocketService from "../../../Service/webSocketService";
 import AuthSplashScreen from "../../Common/AuthSplashScreen";
 
 const MoreMenu = ({

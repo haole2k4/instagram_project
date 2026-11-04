@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import Fragment from "../Fragment/index.jsx";
 import LeftNav from "../Sidebar/Left/SidebarLeft.jsx";
 import RightNav from "../Sidebar/Right/SidebarRight.jsx";
-import ChatPage from "../../Pages/Chat/ChatPage.jsx";
+import ChatPage from "../../Components/Messenger/ChatPage.jsx";
 import MiniChatFloating from "../../Components/Messenger/MiniChatFloating.jsx";
 import Route from "../../Components/Routes/index";
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
-import { handleGetAllUser } from "../../Service/UserAPI";
+import { handleGetAllUser } from "../../Service/userApi";
 import { Link } from "react-router-dom";
 import Route from "../../Components/Routes/index";
 import { useTranslation } from "react-i18next";

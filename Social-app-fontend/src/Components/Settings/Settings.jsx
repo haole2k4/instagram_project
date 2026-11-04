@@ -25,7 +25,7 @@ import {
   handleGetById,
   getPrivacySettings,
   updatePrivacySettings,
-} from "../../Service/UserAPI";
+} from "../../Service/userApi";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
 import { changeLanguageRedux } from "../../Redux/Reducer/appReducer";
 

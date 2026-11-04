@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Heart, Instagram, PlusSquare } from "lucide-react";
-import NewsFeed from "../../Pages/NewsFeed/index";
-import Stories from "../../Pages/Stories/index";
-import CreatePostModal from "../../Components/CreateModal/CreatePostModal";
+import NewsFeed from "../NewsFeed/NewsFeed";
+import Stories from "../Stories/Stories";
+import CreatePostModal from "../CreateModal/CreatePostModal";
 import Route from "../../Components/Routes/index";
 
 const Home = () => {

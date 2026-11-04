@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import MessengerPage from "../../Components/Messenger/MessengerPage";
+import MessengerPage from "./MessengerPage";
 
 const ChatPage = () => {
   const { conversationId } = useParams();

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Send, Sparkles, Trash2 } from "lucide-react";
-import { getChatAI } from "../../Service/ChatAIApi";
+import { getChatAI } from "../../Service/chatAIApi";
 import Route from "../../Components/Routes/index";
 
 const getStorageKey = (userId) => `ig_ai_chat_history_${userId || "guest"}`;

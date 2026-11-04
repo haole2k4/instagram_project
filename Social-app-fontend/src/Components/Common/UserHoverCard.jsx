@@ -8,7 +8,7 @@ import {
   handleGetFollowersByUser,
   handlePostFollower,
   handlePostUnfollower,
-} from "../../Service/UserAPI";
+} from "../../Service/userApi";
 import { handleGetAllPostByUserId } from "../../Service/postApi";
 import { openMiniChatWithConversation } from "../../Redux/Reducer/chatSlice";
 import Route from "../Routes/index";

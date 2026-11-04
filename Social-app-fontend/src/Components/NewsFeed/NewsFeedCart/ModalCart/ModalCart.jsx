@@ -20,7 +20,7 @@ import {
   addComment,
 } from "../../../../Service/commentApi";
 import { useDispatch, useSelector } from "react-redux";
-import notificationSocket from "../../../../Service/NotificationSocket";
+import notificationSocket from "../../../../Service/notificationSocket";
 import { useTranslation } from "react-i18next";
 import {
   handleUpdateStatus,

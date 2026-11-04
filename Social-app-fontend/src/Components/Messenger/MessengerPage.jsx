@@ -30,7 +30,7 @@ import {
   resetMessages,
   updateConversationWithLatestMessage,
 } from "../../Redux/Reducer/chatSlice";
-import webSocketService from "../../Service/WebSocketService";
+import webSocketService from "../../Service/webSocketService";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
