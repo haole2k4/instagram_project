@@ -22,8 +22,8 @@ kiểm duyệt nội dung, audit log và dashboard. Phần UI tuân theo [docs/A
 ### Diễn giải triển khai
 
 1. Tài khoản bị hạn chế vẫn đăng nhập được ở chế độ chỉ đọc để xem trạng thái và
-   DM cũ. Mọi request ghi bị chặn ở backend, trừ `auth/login`, `auth/refresh`,
-   `auth/logout`.
+   DM cũ. Mọi request ghi bị chặn ở backend, trừ `/api/v1/auth/login`, `/api/v1/auth/refresh`,
+   `/api/v1/auth/logout`.
 2. Ẩn theo tác giả áp dụng cho toàn bộ nội dung công khai: profile, post, comment,
    story, danh sách user. DM và follow giữ nguyên.
 3. Staff không bị moderate qua API: `MODERATOR` chỉ tác động lên `USER`; `ADMIN`
@@ -97,7 +97,7 @@ AND content.moderation_state = 'VISIBLE'
 ```
 
 Áp dụng cho feed, post theo user, post following, comment, story, search, profile,
-danh sách user. Chủ tài khoản và admin vẫn xem được nội dung của mình.
+danh sách user. Chủ tài khoản bị SUSPENDED/BANNED vẫn xem được nội dung VISIBLE của chính mình; nội dung đã bị ẩn/gỡ riêng (moderation_state = 'HIDDEN') thì chỉ Admin/Moderator xem được trong trang quản trị.
 
 Khôi phục tài khoản chỉ đổi status, không tự bỏ `HIDDEN` của nội dung bị gỡ riêng.
 
@@ -209,8 +209,8 @@ CREATE INDEX idx_stories_state_created ON stories(moderation_state, created_at);
 
 - `reason_code`: `SPAM`, `HARASSMENT`, `HATE`, `NUDITY`, `VIOLENCE`, `SELF_HARM`,
   `FALSE_INFO`, `IMPERSONATION`, `SCAM`, `POLICY_VIOLATION`, `OTHER`.
-- Text tối đa 500–1000 ký tự, trim, không chứa HTML.
-- Timestamp mới lưu UTC.
+- Text lý do: status_reason và moderation_reason tối đa 500 ký tự; report note, decision_note và audit reason_text tối đa 1000 ký tự; trim, không chứa HTML.
+- Timestamp lưu UTC (Instant cho users, reports, audit_logs; LocalDateTime cho posts/comments/stories.moderated_at để tương thích với created_at hiện có).
 - Không lưu email/số điện thoại/password trong `metadata`.
 - Restore nội dung: set `VISIBLE`, ghi lý do/thời điểm restore vào `moderation_*`;
   audit giữ lịch sử của cả hide và restore.
@@ -249,10 +249,10 @@ Body: { targetType, targetId, reasonCode, note }
 
 ### Auth
 
-`POST /auth/login`, `POST /auth/register`, `POST /auth/refresh`, `POST /auth/logout`,
-`GET /auth/account`.
+`POST /api/v1/auth/login`, `POST /api/v1/auth/register`, `GET /api/v1/auth/refresh`, `POST /api/v1/auth/logout`,
+`GET /api/v1/auth/account`.
 
-`login`/`account` trả thêm:
+login, refresh và account trả thêm:
 
 ```json
 {
@@ -265,9 +265,9 @@ Body: { targetType, targetId, reasonCode, note }
 ### Admin users
 
 ```http
-GET  /api/v1/admin/users?q=&status=&role=&page=0&size=20&sort=createdAt,desc
+GET  /api/v1/admin/users?q=&status=&role=&page=0&size=20   (cố định sort createdAt,desc)
 GET  /api/v1/admin/users/{id}
-POST /api/v1/admin/users/{id}/suspend   { reasonCode, note, durationDays }
+POST /api/v1/admin/users/{id}/suspend   { reasonCode, note, durationDays: 1|3|7|30 }
 POST /api/v1/admin/users/{id}/ban       { reasonCode, note }
 POST /api/v1/admin/users/{id}/restore   { reasonCode, note }
 ```
@@ -280,7 +280,7 @@ POST /api/v1/admin/users/{id}/restore   { reasonCode, note }
 ### Admin reports
 
 ```http
-GET  /api/v1/admin/reports?status=&targetType=&reasonCode=&assignee=me|unassigned&page=&size=&sort=createdAt,asc
+GET  /api/v1/admin/reports?status=&targetType=&reasonCode=&assignee=me|unassigned&page=&size=   (cố định sort createdAt,asc)
 GET  /api/v1/admin/reports/{id}
 POST /api/v1/admin/reports/{id}/claim
 POST /api/v1/admin/reports/{id}/decision
@@ -321,6 +321,7 @@ GET /api/v1/admin/stats/overview?days=7
   "newPosts": 34,
   "reports": { "open": 5, "claimed": 2, "resolved": 18, "dismissed": 3 },
   "processedByDay": [{ "date": "2026-10-17", "resolved": 4, "dismissed": 1 }],
+  "topReasons": [{ "reasonCode": "SPAM", "total": 12 }],
   "avgResolutionHours": 6.4
 }
 ```
@@ -335,9 +336,9 @@ GET /api/v1/admin/stats/overview?days=7
 | --- | --- |
 | 400 | `VALIDATION_ERROR`, `INVALID_TARGET_TYPE`, `INVALID_ACTION` |
 | 401 | `UNAUTHENTICATED` |
-| 403 | `FORBIDDEN`, `ACCOUNT_RESTRICTED` |
+| 403 | `FORBIDDEN`, `ACCOUNT_RESTRICTED`, `CONTENT_HIDDEN` |
 | 404 | `TARGET_NOT_FOUND`, `REPORT_NOT_FOUND`, `USER_NOT_FOUND` |
-| 409 | `LAST_ADMIN`, `REPORT_ALREADY_EXISTS`, `REPORT_ALREADY_CLAIMED`, `REPORT_ALREADY_DECIDED`, `REPORT_RATE_LIMIT` |
+| 409 | `LAST_ADMIN`, `ACCOUNT_ALREADY_BANNED`, `ACCOUNT_ALREADY_ACTIVE`, `INVALID_ACTION`, `REPORT_ALREADY_EXISTS`, `REPORT_ALREADY_CLAIMED`, `REPORT_ALREADY_DECIDED`, `REPORT_RATE_LIMIT` |
 
 ## 6. Luồng kiểm duyệt
 
@@ -374,7 +375,7 @@ với thay đổi; notification best-effort sau commit.
 /admin/reports/:id         Chi tiết + quyết định
 /admin/users               Danh sách
 /admin/users/:id           Chi tiết
-/admin/content             Post/Comment
+/admin/content             Post/Comment/Story
 /admin/audit-logs          Chỉ ADMIN
 ```
 
@@ -394,7 +395,7 @@ tuổi report, assignee, status. Filter server-side.
 hợp lệ, lý do, hậu quả, nút xác nhận. Quyết định hiện tại hiển thị dưới nội dung.
 
 **Users:** search server-side, filter status/role, pagination; email mask với MOD.
-Detail có status card, hành động, nội dung, report, audit.
+Detail có status card, panel hành động (chỉ ADMIN thấy Ban/Khôi phục; MODERATOR chỉ thấy Đình chỉ), chỉ số tổng quan và 10 report gần nhất.
 
 **Content:** tabs Post/Comment/Story; search/filter state; hide/restore kèm lý do. Không xóa.
 

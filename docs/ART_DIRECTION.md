@@ -21,28 +21,39 @@ Câu hỏi của từng màn hình: Home — "Có gì mới từ người mình 
 ## Anti-pattern bị cấm
 
 1. Không nền navy/slate (`#0b1014`, `#0f172a`). Nền `#000`, bề mặt `#111`, lớp nổi `#2a2a2a`.
-2. Không gradient trên nền, nút, chip, chữ, header, avatar. Ngoại lệ duy nhất: vòng story — brand asset, chỉ ở đúng vòng đó.
+2. Không gradient trên nền, nút, chip, chữ, header, avatar. Ngoại lệ: vòng story (brand asset) và thanh tiến trình chuyển trang trên cùng (`TopLoadingBar`).
 3. Không glow, neon, backdrop-blur, glass ở nav, modal, chat.
 4. Không shadow trên thứ đứng yên (post, rail, nav); shadow chỉ cho menu, popover, modal.
-5. Không icon trong ô tròn tô màu. Avatar là ảnh người; icon là outline 16px, một bộ duy nhất (lucide).
+5. Không icon trong ô tròn tô màu. Avatar là ảnh người; icon là outline từ một bộ duy nhất (lucide), tuân thủ phân cấp kích thước: 24px (nav rail), 20–22px (mobile header), 16–18px (button/action), 12–14px (inline meta, sort arrow).
 6. Không shimmer gradient khi loading. Dùng bar xám phẳng đúng kích thước, layout không nhảy khi data về.
 7. Không entrance animation cho từng post/row/nav; không scroll-reveal, parallax, scroll-jack, bounce/spring trang trí.
 8. Không tô accent lên chrome. Nav active bằng độ sáng (`#bbb → #fff`); accent chỉ ở link, một control chính và trạng thái đã like.
 9. Không emoji trong UI. Thay bằng icon lucide (khoá, nhóm, quả địa cầu).
-10. Không bịa hành vi hoặc dữ liệu: không "Followed by…" khi không có, không footer link chết, không nút "Chuyển" không chức năng, không lộ email, không nút nổi che nội dung.
+10. Không bịa hành vi hoặc dữ liệu: không "Followed by…" khi không có, không footer link chết, không nút "Chuyển" không chức năng, không lộ email, không nút nổi che nội dung (ngoại lệ: widget chat thu gọn `MiniChatFloating` được phép ở góc dưới bên phải trên desktop, ẩn trên mobile; toàn bộ AI chat đầy đủ nằm tại `/user/chat/ai`).
 
 ## Typography
 
 - Một family duy nhất: system grotesk (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`). Không thêm webfont.
-- Wordmark "Instagram" giữ asset PNG hiện có, không dùng font để vẽ lại.
-- Thang cỡ chữ: 12 / 14 / 16 / 20 / 24.
+- Wordmark "Instagram": dùng icon Lucide Instagram + text sans-serif in đậm (hoặc asset PNG hiện có), không dùng font để vẽ lại.
+- Thang cỡ chữ: 11 / 12 / 13 / 14 / 16 / 20 / 24.
   - 24: `h1` (ẩn thị giác ở feed), tiêu đề màn Chat.
   - 20: heading khối, dùng hiếm.
   - 16: tên section, empty state.
   - 14: body, username, caption, nav label, nút.
+  - 13: banner/trạng thái phụ (auxiliary banners/states).
   - 12: meta, timestamp, tên story, footer.
+  - 11: huy hiệu vai trò (role badges), footer meta; tuyệt đối không có chữ dưới 11px.
 - Weight: 400 / 500 / 600. Không 700 ngoài wordmark.
 - Số đếm (like, comment) dùng `tabular-nums`. Sentence case; không uppercase tracked; không chữ dưới 11px.
+
+## Bo góc (Border Radii)
+
+Các token bo góc từ `tailwind.config.js`:
+- `rounded-media` (`4px`): khung ảnh/video bài viết, thumbnail, ô input/textarea admin.
+- `rounded-lg` / `rounded-xl` (`8px` / `12px`): hàng danh sách khi hover, nút icon trên rail, thẻ phụ.
+- `rounded-panel` (`20px`): modal, menu popover, khung chat.
+- `rounded-control` (`999px` / pill): nút hành động chính, thanh tìm kiếm.
+- `rounded-full`: avatar, chấm trạng thái (status dot).
 
 ## Palette
 
@@ -57,13 +68,13 @@ Câu hỏi của từng màn hình: Home — "Có gì mới từ người mình 
 | Chữ meta | `#949494` | Thời gian, số phụ, footer |
 | Nhấn | `#0095f6` | Link, Follow, nút chính, focus ring |
 | Liked | `#ff3040` | Trạng thái đã like và chấm thông báo chưa đọc |
-| Ngoại lệ brand | gradient Instagram | Chỉ vòng story |
+| Ngoại lệ brand | gradient Instagram | Vòng story và thanh tiến trình chuyển trang (`TopLoadingBar`) |
 
 Màu nhấn giữ ở mức ≤ 3% pixel. Không có hue thứ hai ngoài đỏ liked và gradient story.
 
 ## Layout
 
-- Shell: rail 72px (mark ở đỉnh, tooltip và `aria-label` cho mọi icon), cột giữa tối đa 630px, bài viết 470px canh giữa trong cột, cột phải 320px sticky. Tổng vùng nội dung khoảng 998px, gutter 24–32px.
+- Shell: rail 72px (mark ở đỉnh, tooltip và `aria-label` cho mọi icon), cột giữa tối đa 630px, bài viết 470px canh giữa trong cột, cột phải 320px sticky. Tổng vùng nội dung khoảng 982px (630 + 320 + gap 32px), gutter 24–32px.
 - Breakpoint: dưới 768px dùng bottom bar 4 mục (Home, Search, Messages, Profile), margin 16px; 768–1279px rail + feed, ẩn cột phải; từ 1280px đủ ba cột.
 - Nhịp: base 4px; padding bài 12–16px; row chat/thông báo 56–72px; khoảng cách section 24–32px; một gap duy nhất cho cả ngang và dọc.
 - Mỗi cột có một trục trái; mọi phần tử trong cột kết thúc cùng mép phải. Không card bị kéo cao hơn nội dung, không panel rỗng quá 40px.
@@ -111,7 +122,7 @@ Admin là bề mặt vận hành, không phải feed. Giữ palette true-black v
 
 - Header 40px, row 52px, padding ngang 16px; border-bottom `#161616`; hover `#111`; không zebra, không card shadow.
 - Sticky header; sort bằng mũi tên lucide 14px; cột số canh phải.
-- Trạng thái: chấm 6px + text, không pill nền màu. `ACTIVE` trắng, `SUSPENDED` xám `#b4b4b4` với chấm rỗng, `BANNED` `#ff3040`.
+- Trạng thái: chấm 6px + text, không pill nền màu. Nhóm hiển thị/hoạt động (ACTIVE, RESOLVED, VISIBLE) dùng trắng; Đang chờ xử lý (OPEN) dùng xanh #0095f6; Đã nhận xử lý (CLAIMED) dùng xám #b4b4b4; Tạm đình chỉ (SUSPENDED) dùng viền xám chấm rỗng; Đã ẩn/bác bỏ (DISMISSED, HIDDEN) dùng xám đậm #2a2a2a; Cấm vĩnh viễn (BANNED) dùng đỏ #ff3040.
 - Hành động là text button 14px; nguy hiểm dùng `#ff3040`; icon-only phải có tooltip + aria-label.
 - Empty state nằm trong bảng, 16px, một câu + hành động nếu có.
 
@@ -131,7 +142,7 @@ Admin là bề mặt vận hành, không phải feed. Giữ palette true-black v
 ### Biểu đồ
 
 - Chỉ bar/line phẳng; một series accent `#0095f6`, series phụ `#2a2a2a`; grid `#161616`; không 3D, donut, rainbow, gradient.
-- KPI: số 24/600 + label 12; không icon trang trí.
+- KPI: số 28/600 (hoặc 24/600) tabular-nums + label 12; không icon trang trí.
 - Không thêm thư viện chart nếu chỉ cần 1–2 biểu đồ; SVG/CSS đủ.
 
 ### Trạng thái và chuyển động
@@ -151,11 +162,11 @@ Admin là bề mặt vận hành, không phải feed. Giữ palette true-black v
 ## Đã chốt — không tự ý thay đổi
 
 - Nền `#000`, accent `#0095f6`, system grotesk; không navy, không Inter.
-- Rail 72px icon-only; không đổi sang sidebar 240px có label nếu không có yêu cầu mới.
+- Rail 72px icon-only; cho phép mở rộng khi hover (`hover:w-[240px]` với `transition-[width] duration-200 ease-ui-out` và `hover:shadow-2xl`) mà không làm dịch chuyển bố cục feed bên dưới; không đổi sang sidebar 240px cố định có label nếu không có yêu cầu mới.
 - Cột 630 / bài 470 / rail phải 320; đúng ba breakpoint ở trên.
-- Gradient chỉ tồn tại ở vòng story.
+- Gradient chỉ tồn tại ở vòng story và thanh tiến trình chuyển trang trên cùng (`TopLoadingBar`).
 - Loading là bar phẳng, không shimmer; không entrance animation.
-- AI chat nằm trong khung chat (`/user/chat/ai`), không có nút nổi; history ghép ở client, backend `/chat` không đổi.
+- AI chat đầy đủ nằm trong khung chat (`/user/chat/ai`); widget chat thu gọn (`MiniChatFloating`) được phép ở góc dưới bên phải trên desktop (ẩn trên mobile); history ghép ở client, backend `/chat` không đổi.
 - Không thêm Reels, lưới Khám phá thật, account switcher hay link chết.
 - Ngôn ngữ mặc định là tiếng Việt; mọi label mới phải có key ở cả `vi` và `en`.
 - Admin dùng sidebar 240px mở / 64px thu gọn / drawer mobile; đây là ngoại lệ có chủ đích so với rail 72px của app.

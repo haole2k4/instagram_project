@@ -34,6 +34,7 @@ data:
   AUTH_COOKIE_SECURE: "false"
   AUTH_COOKIE_SAME_SITE: Lax
   CORS_ALLOWED_ORIGINS: http://instagram.local
+  APP_WEBSOCKET_ALLOWED_ORIGINS: http://instagram.local
 
   REGION: ap-southeast-1
   BUCKET_NAME: instagram-media

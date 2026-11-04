@@ -6,6 +6,8 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 
 - **Mọi tác vụ có sửa file đều phải chạy trong một worktree riêng**, không có ngoại lệ (áp dụng cả khi chỉ có một agent chạy một mình lẫn khi nhiều agent chạy song song).
 - **Kiểm tra `pwd` ngay trước khi sửa file**: nếu đang đứng ở checkout chính (`git rev-parse --git-dir` trùng `git rev-parse --git-common-dir`), **phải dừng lại ngay và tạo worktree mới trước** bằng `scripts/agent/new-worktree.sh`. Hook `pre-commit` chặn mọi commit từ checkout chính.
+  - Lệnh `cd` của CLI agent chỉ chạy trong subshell tạm thời nên không thể đổi thư mục làm việc của phiên chat hiện tại. Vì vậy ở checkout chính, agent chỉ được chạy `./scripts/agent/new-worktree.sh`, sau đó **PHẢI DỪNG LẠI** và yêu cầu người dùng mở phiên agent mới trực tiếp trong `../instagram_project.worktrees/<tên>`.
+  - Ngoại lệ: nếu vẫn tiếp tục trong phiên hiện tại, mọi lệnh bash và thao tác file tiếp theo bắt buộc dùng đường dẫn tuyệt đối hoặc cờ `git -C` trỏ vào worktree đó.
 - **Nhánh làm việc phải khác `master` và chưa từng được merge vào `master`**. Không dùng lại nhánh đã merge; mỗi công việc tạo một nhánh mới từ `origin/master` mới nhất.
 - Bật git hooks ngay sau khi clone bằng `make hooks` (đặt `core.hooksPath=scripts/githooks`).
 
@@ -25,6 +27,7 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md): hướng thẩm mỹ đã chốt cho UI (palette true-black, typography, layout, motion, anti-pattern và bề mặt Admin).
 - [docs/ADMIN_SPEC.md](docs/ADMIN_SPEC.md): đặc tả phần quản trị (RBAC, trạng thái tài khoản, kiểm duyệt nội dung/báo cáo, audit log, database schema và API `/api/v1/admin/**`).
 - [docs/WEBSOCKET.md](docs/WEBSOCKET.md): giao thức WebSocket / STOMP realtime (xác thực JWT, user destination, luồng gửi tin nhắn và thông báo).
+- [docs/TEST_ACCOUNTS.md](docs/TEST_ACCOUNTS.md): danh sách tài khoản kiểm thử demo, mật khẩu dev và vai trò phân quyền (Admin, Moderator, User).
 - Cấu hình mẫu & hạ tầng:
   - [backend_instagram/.env.example](backend_instagram/.env.example), [Social-app-fontend/.env.example](Social-app-fontend/.env.example): mẫu biến môi trường cho backend và frontend.
   - [k8s/configmap.yaml](k8s/configmap.yaml), [k8s/secret.example.yaml](k8s/secret.example.yaml): cấu hình và mẫu secret cho Kubernetes.
@@ -48,8 +51,8 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 8. **Bắt buộc xoá nhánh và worktree sau khi merge PR.** Ngay sau khi PR được merge, xoá claim, worktree, nhánh remote/local:
    ```bash
    gh pr merge <số-PR> --repo haole2k4/instagram_project --merge --delete-branch
-   ./scripts/agent/claims.sh rm
-   git worktree remove ../instagram_project.worktrees/<loại>-<mô-tả>
+   AGENT_BRANCH=<nhánh> ./scripts/agent/claims.sh rm
+   git worktree remove --force ../instagram_project.worktrees/<loại>-<mô-tả>
    git branch -d <nhánh>   # hoặc `-D` nếu nhánh chưa được merge fast-forward
    git fetch --prune
    ```
@@ -70,20 +73,26 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 
 ## Phát triển và kiểm tra
 
-- Backend: chạy test trong `backend_instagram/` bằng `./mvnw test` trước khi tạo PR khi có đổi code backend.
+- Backend: trong quá trình phát triển và trước khi tạo PR, chỉ chạy targeted test cho các class thuộc `.agent-scope` của mình, trong `backend_instagram/`:
+  ```bash
+  ./mvnw -Dtest=<DanhSáchTestClass> test
+  ```
+  Không chạy toàn bộ `./mvnw test` ở mỗi worktree để tránh tràn RAM khi nhiều agent chạy song song.
+- Toàn bộ `./mvnw test` chỉ chạy tuần tự một lần ở bước Integrator / trước khi merge PR, để tránh treo máy do khởi tạo nhiều cụm Testcontainers (MySQL + RabbitMQ) cùng lúc.
+- Ưu tiên viết và chạy test qua Testcontainers hoặc mock, không phụ thuộc dữ liệu MySQL/Redis local chung (các worktree symlink chung `.env` và dùng chung DB dev, dễ gây nhiễu dữ liệu giữa các nhánh).
 - Test messaging (`Notification*`, `RabbitMessaging*`) dùng Testcontainers MySQL + RabbitMQ, cần Docker đang chạy. Khi chỉ sửa phần messaging, chạy targeted trước:
   ```bash
   cd backend_instagram
   ./mvnw -Dtest=NotificationConsumerTest,NotificationEventPublisherTest,NotificationMessagingIntegrationTest,NotificationRetryDlqTest,RabbitMessagingFoundationTest,NotificationServiceTest test
   ```
-  Trước khi tạo PR vẫn chạy toàn bộ `./mvnw test`.
+  Toàn bộ `./mvnw test` do Integrator chạy trước khi merge PR (xem bên trên).
 - Frontend: trong `Social-app-fontend/` dùng `pnpm` (có `pnpm-lock.yaml`); kiểm tra bằng `pnpm build` (và `pnpm test` nếu có test liên quan).
 - Chạy stack: `docker compose up --build -d` hoặc `make k8s-up` (xem `README.md`).
 - Đổi hành vi cache Redis, schema DB hoặc manifest `k8s/` thì cập nhật `README.md` tương ứng.
 
 ## Phong cách làm việc
 
-- Đọc code liên quan trước khi sửa; theo convention hiện có (package `controller`/`service`/`repository`/`entity`/`dto` ở backend, cấu trúc `Pages`/`Components` ở frontend).
+- Đọc code liên quan trước khi sửa; theo convention hiện có (package `controller`/`service`/`repository`/`entity`/`dto` ở backend, cấu trúc `Components` ở frontend).
 - Trước khi thiết kế hoặc sửa UI, đọc [`docs/ART_DIRECTION.md`](docs/ART_DIRECTION.md) và giữ đúng hướng thẩm mỹ đã chốt (palette, typography, layout, motion, anti-pattern).
 - Khi làm việc với phần quản trị (Admin/Moderator/Report/Audit) hoặc realtime WebSocket, đọc [`docs/ADMIN_SPEC.md`](docs/ADMIN_SPEC.md) và [`docs/WEBSOCKET.md`](docs/WEBSOCKET.md).
 - Sửa tối thiểu, đúng phạm vi yêu cầu; không refactor hoặc format lại file không liên quan.
@@ -105,9 +114,9 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 ### Chạy nhiều dev server cùng lúc (khác cổng)
 Khi nhiều worktree cần chạy dev server song song, đổi cổng để không đụng cổng mặc định (`8081` cho backend, `3000` cho frontend):
 ```bash
-# Backend ở cổng 8082 (cho phép CORS từ frontend cổng 3001)
+# Backend ở cổng 8082 (cho phép CORS và WebSocket từ frontend cổng 3001)
 cd backend_instagram
-SERVER_PORT=8082 CORS_ALLOWED_ORIGINS=http://localhost:3001 ./mvnw spring-boot:run
+SERVER_PORT=8082 CORS_ALLOWED_ORIGINS=http://localhost:3001 APP_WEBSOCKET_ALLOWED_ORIGINS=http://localhost:3001 ./mvnw spring-boot:run
 
 # Frontend ở cổng 3001 (trỏ API về backend cổng 8082)
 cd Social-app-fontend
@@ -118,7 +127,7 @@ PORT=3001 REACT_APP_API_URL=http://localhost:8082 pnpm start
 - Vùng sửa ghi trong `.agent-scope` ở gốc worktree (một glob mỗi dòng, `*` khớp cả `/`). File này không bị commit.
 - Mọi thứ ngoài `.agent-scope` là read-only. Sửa ngoài vùng sẽ bị hook chặn.
 - Backend chia theo tầng, nên vùng backend giao theo tên file (`**/*Story*`) hoặc `messaging/`, `event/`, `src/test/**` tương ứng. Cần xác nhận quy ước tên khi giao.
-- Frontend giao theo `src/Pages/<tên>/`, `src/Components/<tên>/`, `src/Admin/`, `src/Service/<tên>Api.js`.
+- Frontend giao theo `src/Components/<tên>/` (màn hình + component của tính năng), `src/Admin/`, `src/Layout/`, `src/Routes/`, `src/Service/<tên>Api.js` (camelCase: `authApi.js`, `postApi.js`).
 
 ### File shared
 - Danh sách duy nhất: [scripts/agent/shared-paths.txt](scripts/agent/shared-paths.txt). Không tự ý sửa. Sửa trực tiếp mà không theo quy trình thì dễ conflict lockfile, schema và route.
@@ -145,7 +154,7 @@ PORT=3001 REACT_APP_API_URL=http://localhost:8082 pnpm start
 
 ### Đồng bộ
 - Commit nhỏ, đúng vùng. Hook `pre-commit` kiểm tra checkout chính, nhánh `master`, scope, shared, claim, `.env`.
-- Trước khi báo xong: `git fetch origin && git rebase origin/master`, rồi chạy `./mvnw test` (backend) hoặc `pnpm build` (frontend).
+- Trước khi báo xong: `git fetch origin && git rebase origin/master`, rồi chạy targeted test `./mvnw -Dtest=... test` cho vùng backend vừa sửa hoặc `pnpm build` cho frontend.
 - Conflict ở file ngoài vùng: dừng và báo. Không tự giải.
 
 ### Merge
@@ -167,3 +176,12 @@ git branch -d <loại/mô-tả>
 git fetch --prune
 ```
 - Báo cáo ngắn: file đã đổi, đề xuất cho shared, điều agent khác cần biết.
+
+### Huỷ bỏ công việc giữa chừng (Abort / Không merge PR)
+Nếu nhánh/task bị huỷ bỏ hoặc phiên agent bị lỗi và không tiếp tục nữa, **bắt buộc** chạy `./scripts/agent/claims.sh rm` (hoặc `AGENT_BRANCH=<nhánh> ./scripts/agent/claims.sh rm`) **trước khi** xoá worktree và nhánh, để giải phóng vùng sở hữu trong `.git/agent-claims.txt`, tránh làm kẹt các agent khác:
+```bash
+AGENT_BRANCH=<loại/mô-tả> ./scripts/agent/claims.sh rm
+git worktree remove --force ../instagram_project.worktrees/<loại>-<mô-tả>
+git branch -D <loại/mô-tả>
+git fetch --prune
+```
