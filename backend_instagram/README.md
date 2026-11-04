@@ -2,7 +2,7 @@
 
 Backend Spring Boot của Social App. Hướng dẫn chạy Docker Compose, cấu hình và dữ liệu demo nằm trong [README ở thư mục gốc](../README.md).
 
-Có thể chạy riêng backend khi MySQL và LocalStack đã hoạt động:
+Có thể chạy riêng backend khi MySQL, LocalStack, Redis và RabbitMQ đã hoạt động (hoặc tắt cache/messaging bằng SPRING_CACHE_TYPE=none MQ_ENABLED=false):
 
 ```bash
 ./mvnw spring-boot:run
