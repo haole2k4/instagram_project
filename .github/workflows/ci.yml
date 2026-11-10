@@ -18,9 +18,45 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+      k8s: ${{ steps.filter.outputs.k8s }}
+      workflow: ${{ steps.filter.outputs.workflow }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend_instagram/**'
+            frontend:
+              - 'Social-app-fontend/**'
+            infra:
+              - 'backend_instagram/Dockerfile'
+              - 'Social-app-fontend/Dockerfile'
+              - 'Social-app-fontend/nginx.conf'
+              - 'docker-compose.yml'
+              - 'k8s/**'
+              - '.github/workflows/ci.yml'
+            k8s:
+              - 'k8s/**'
+              - 'backend_instagram/seed-demo.sql'
+            workflow:
+              - '.github/workflows/ci.yml'
+
   backend:
     name: Backend test
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: backend_instagram
@@ -32,26 +68,136 @@ jobs:
           java-version: '25'
           cache: maven
           cache-dependency-path: backend_instagram/pom.xml
-      - run: ./mvnw -B test
+      - name: Run Maven tests
+        run: ./mvnw -B -ntp test
+      - name: Upload surefire reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend_instagram/target/surefire-reports
+          if-no-files-found: ignore
+          retention-days: 7
 
   frontend:
     name: Frontend build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: Social-app-fontend
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: pnpm
           cache-dependency-path: Social-app-fontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        # Note: pnpm v9 parses `--watchAll=false` as a pnpm option unless `--` is passed;
+        # `CI=true pnpm test -- --watchAll=false` passes `--watchAll=false` to react-app-rewired/Jest.
+        run: CI=true pnpm test -- --watchAll=false
+      - name: Build production bundle
+        run: pnpm build
         env:
           CI: 'true'
           GENERATE_SOURCEMAP: 'false'
+
+  docker-build:
+    name: Docker build (${{ matrix.target.name }})
+    needs: changes
+    if: >-
+      needs.changes.outputs.infra == 'true' ||
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: backend
+            context: backend_instagram
+            scope: backend
+            build_args: ''
+          - name: frontend
+            context: Social-app-fontend
+            scope: frontend
+            build_args: REACT_APP_API_URL=http://localhost:8081
+    steps:
+      - name: Check if target should build
+        id: should_build
+        run: |
+          if [[ "${{ needs.changes.outputs.infra }}" == "true" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ matrix.target.name }}" == "backend" && "${{ needs.changes.outputs.backend }}" == "true" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ matrix.target.name }}" == "frontend" && "${{ needs.changes.outputs.frontend }}" == "true" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.should_build.outputs.run == 'true'
+      - uses: docker/setup-buildx-action@v3
+        if: steps.should_build.outputs.run == 'true'
+      - name: Build ${{ matrix.target.name }} image
+        if: steps.should_build.outputs.run == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.target.context }}
+          push: false
+          load: false
+          build-args: ${{ matrix.target.build_args }}
+          cache-from: type=gha,scope=${{ matrix.target.scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target.scope }}
+
+  k8s-validate:
+    name: Validate Kubernetes manifests
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.k8s == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+      - name: Render kustomize and validate with kubeconform
+        # Note: k8s/kustomization.yaml references ../backend_instagram/seed-demo.sql via configMapGenerator
+        # (requires --load-restrictor LoadRestrictionsNone).
+        # Secrets (instagram-secrets) are created at runtime via k8s/create-secrets.sh from .env and are not
+        # standalone Secret resources in kustomize; kubeconform validates resource schemas offline so envFrom
+        # secretRef references do not require cluster state, and -ignore-missing-schemas skips any third-party CRDs.
+        run: |
+          kubectl kustomize --load-restrictor LoadRestrictionsNone k8s \
+            | kubeconform -strict -ignore-missing-schemas -summary
+
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs:
+      - changes
+      - backend
+      - frontend
+      - docker-build
+      - k8s-validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check all upstream job results
+        env:
+          RESULTS_JSON: ${{ toJson(needs.*.result) }}
+        run: |
+          echo "Upstream job results: $RESULTS_JSON"
+          if echo "$RESULTS_JSON" | grep -qE '"(failure|cancelled)"'; then
+            echo "::error::One or more CI jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All required CI jobs succeeded or were skipped."
