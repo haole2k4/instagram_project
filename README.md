@@ -142,7 +142,7 @@ cd backend_instagram
 
 ## Tự động deploy khi có code mới
 
-`scripts/auto-deploy.sh` cứ 2 phút kiểm tra `origin/master` một lần (chạy bằng systemd user timer). Nếu có commit mới, script sẽ fast-deploy pull rồi build và chạy lại stack. Không cần mở cổng vào máy hay dùng GitHub runner.
+`scripts/auto-deploy.sh` cứ 2 phút kiểm tra `origin/master` một lần (chạy bằng systemd user timer). Nếu có commit mới và check CI trên GitHub Actions đã pass, script sẽ pull rồi build và chạy lại stack. Không cần mở cổng vào máy hay dùng GitHub runner.
 
 ```bash
 # Nên dùng một bản clone riêng để deploy, tách khỏi thư mục đang code
@@ -159,9 +159,25 @@ make auto-deploy-uninstall        # tắt
 
 - Mặc định deploy bằng Docker Compose (`docker compose up --build -d --wait`). Muốn deploy lên kind thì ghi `DEPLOY_TARGET=k8s` vào `~/.config/instagram-auto-deploy.env`, cũng như `DEPLOY_BRANCH`, `DEPLOY_REMOTE`, `DEPLOY_WAIT_TIMEOUT`, `DOCKER_CONTEXT` (nên đặt `DOCKER_CONTEXT=default` nếu máy cài Docker Desktop để timer luôn dùng Docker Engine hệ thống).
 - Script sẽ dừng, không pull, nếu thư mục deploy không ở nhánh `master` hoặc có thay đổi tracked chưa commit. Nếu không fast-forward được, script cũng dừng.
-- Commit chỉ sửa file `.md` hoặc thư mục `.github/` thì không build lại.
+- Commit chỉ sửa file `.md` hoặc thư mục `.github/` thì fast-forward trực tiếp mà không cần chờ CI và không build lại stack.
 - PR và nhánh `master` được kiểm tra tự động qua GitHub Actions (`.github/workflows/ci.yml`: `./mvnw test` + `pnpm build`) trên runner của GitHub.
-- Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử push lại khi có commit mới hoặc chạy `make auto-deploy`. Script không tự rollback.
+- Trước khi fast-forward và build, script kiểm tra cổng CI: gọi GitHub API để kiểm tra check-run `"CI OK"` của commit mới trên GitHub Actions:
+  - `success`: pull và deploy bình thường.
+  - `pending` / `in_progress` / chưa có check-run: log và thoát `0` để chu kỳ timer kế tiếp thử lại (không pull code chưa qua CI).
+  - `failure` / `cancelled`: log lý do một lần duy nhất cho mỗi SHA (lưu SHA đã từ chối tại `${XDG_STATE_HOME:-~/.local/state}/instagram-auto-deploy/rejected-sha` để không spam journal) và bỏ qua deploy.
+- Cấu hình CI gate trong `~/.config/instagram-auto-deploy.env`:
+  - `DEPLOY_REQUIRE_CI`: mặc định `1` (yêu cầu check-run CI pass trước khi deploy); đặt `0` để tắt kiểm tra CI. Cờ `--force` (`make auto-deploy`) cũng bỏ qua kiểm tra CI.
+  - `DEPLOY_CI_CHECK_NAME`: tên check-run cần pass (mặc định: `CI OK`).
+- Cấu hình xác thực GitHub CLI (`gh`) cho timer:
+  Tạo Fine-grained Personal Access Token (read-only) để `gh` kiểm tra check-run:
+  1. Vào GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+  2. **Repository access**: chọn *Only select repositories* → `haole2k4/instagram_project`.
+  3. **Permissions → Repository permissions**: cấp quyền **Checks: Read-only** (và **Commit statuses: Read-only** nếu cần; `Metadata: Read-only` được chọn mặc định).
+  4. Ghi token vào `~/.config/instagram-auto-deploy.env` (đặt `chmod 600 ~/.config/instagram-auto-deploy.env`):
+     ```ini
+     GH_TOKEN=github_pat_...
+     ```
+- Nếu build lỗi, Compose vẫn giữ các container cũ đang chạy. Nếu bản mới không healthy, lần chạy đó báo lỗi trong journal, và script chỉ thử build lại khi có commit mới hoặc chạy `make auto-deploy`. Script không tự rollback.
 - Compose project name lấy theo tên thư mục. Clone vào thư mục cùng tên `instagram_project` thì stack dùng lại container và volume dữ liệu hiện có.
 
 ## Kubernetes local với kind
