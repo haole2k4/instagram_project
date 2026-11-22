@@ -33,13 +33,27 @@ spec:
         app: frontend
         app.kubernetes.io/part-of: instagram
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: instagram-frontend:local
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
           readinessProbe:
             httpGet:
               path: /health

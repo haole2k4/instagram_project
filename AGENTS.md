@@ -16,7 +16,7 @@ Quy tắc làm việc cho AI agent (và người) trong repo `haole2k4/instagram
 - Đây là **fork** của `doanhdai/instagram_project` (upstream). Repo làm việc chính là `haole2k4/instagram_project`.
 - Nhánh mặc định: `master`.
 - Cấu trúc:
-  - `backend_instagram/`: Spring Boot 4.1 (Java 25, Maven wrapper `./mvnw`), MySQL, Redis cache, S3 (LocalStack), WebSocket/STOMP.
+  - `backend_instagram/`: Spring Boot 4.1 (Java 25, Maven wrapper `./mvnw`), MySQL, Redis cache, RabbitMQ, S3 (LocalStack), WebSocket/STOMP.
   - `Social-app-fontend/`: React 19 (react-app-rewired, pnpm), Tailwind.
   - `docs/`: tài liệu thiết kế UI, đặc tả Admin và giao thức WebSocket/STOMP.
   - `k8s/`: manifest kind + ingress-nginx. `docker-compose.yml`, `Makefile`, `localstack-init/` ở thư mục gốc.
@@ -127,7 +127,7 @@ PORT=3001 REACT_APP_API_URL=http://localhost:8082 pnpm start
 - Vùng sửa ghi trong `.agent-scope` ở gốc worktree (một glob mỗi dòng, `*` khớp cả `/`). File này không bị commit.
 - Mọi thứ ngoài `.agent-scope` là read-only. Sửa ngoài vùng sẽ bị hook chặn.
 - Backend chia theo tầng, nên vùng backend giao theo tên file (`**/*Story*`) hoặc `messaging/`, `event/`, `src/test/**` tương ứng. Cần xác nhận quy ước tên khi giao.
-- Frontend giao theo `src/Components/<tên>/` (màn hình + component của tính năng), `src/Admin/`, `src/Layout/`, `src/Routes/`, `src/Service/<tên>Api.js` (camelCase: `authApi.js`, `postApi.js`).
+- Frontend giao theo `src/Components/<tên>/` (màn hình + component của tính năng), `src/Admin/`, `src/Layout/`, `src/Service/<tên>Api.js` (camelCase: `authApi.js`, `postApi.js`). (`src/Routes/*` và `src/Components/Routes/*` là file shared trong `scripts/agent/shared-paths.txt`.)
 
 ### File shared
 - Danh sách duy nhất: [scripts/agent/shared-paths.txt](scripts/agent/shared-paths.txt). Không tự ý sửa. Sửa trực tiếp mà không theo quy trình thì dễ conflict lockfile, schema và route.

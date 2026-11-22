@@ -1,7 +1,10 @@
 package com.example.backend_instagram.config;
 
+import com.example.backend_instagram.entity.Role;
+import com.example.backend_instagram.entity.RoleCode;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.UserRepository;
+import com.example.backend_instagram.service.RoleService;
 import java.util.List;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,17 +29,15 @@ public class UserDetailCustom implements UserDetailsService {
       throw new UsernameNotFoundException("User not found with email: " + username);
     }
 
-    List<SimpleGrantedAuthority> authorities = user.getRoles() == null
+    List<RoleCode> rawCodes = user.getRoles() == null
       ? List.of()
-      : user
-        .getRoles()
-        .stream()
-        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getCode().name()))
-        .toList();
+      : user.getRoles().stream().map(Role::getCode).toList();
 
-    if (authorities.isEmpty()) {
-      authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-    }
+    List<SimpleGrantedAuthority> authorities = RoleService
+      .expandRoles(rawCodes)
+      .stream()
+      .map(code -> new SimpleGrantedAuthority("ROLE_" + code.name()))
+      .toList();
 
     return new org.springframework.security.core.userdetails.User(
       user.getUserEmail(),

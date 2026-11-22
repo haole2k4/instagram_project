@@ -24,6 +24,15 @@ const userAppSlice = createSlice({
       state.suspendedUntil = suspendedUntil || null;
     },
 
+    updateUserProfile: (state, action) => {
+      if (action.payload) {
+        state.userInfo = {
+          ...(state.userInfo || {}),
+          ...action.payload,
+        };
+      }
+    },
+
     userLogoutALL: (state) => {
       state.isLoggedIn = false;
       state.userInfo = null;
@@ -35,6 +44,7 @@ const userAppSlice = createSlice({
   },
 });
 
-export const { userLoginData, userLogoutALL } = userAppSlice.actions;
+export const { userLoginData, updateUserProfile, userLogoutALL } =
+  userAppSlice.actions;
 
 export default userAppSlice.reducer;

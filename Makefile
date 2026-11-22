@@ -5,15 +5,16 @@ BACKEND_IMAGE ?= instagram-backend:local
 FRONTEND_IMAGE ?= instagram-frontend:local
 PUBLIC_HOST ?= instagram.local
 PUBLIC_URL ?= http://$(PUBLIC_HOST)
-_HOOKS := $(shell git config core.hooksPath scripts/githooks 2>/dev/null)
+INGRESS_NGINX_VERSION ?= controller-v1.12.1
 
-.PHONY: help hooks k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down auto-deploy auto-deploy-install auto-deploy-uninstall auto-deploy-logs
+.PHONY: help hooks k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply k8s-seed k8s-up k8s-redeploy k8s-down k8s-status k8s-logs compose-up compose-down auto-deploy auto-deploy-install auto-deploy-uninstall auto-deploy-logs
 
 help:
 	@echo "Các target:"
 	@echo "  make hooks        Bật git hooks (core.hooksPath=scripts/githooks)"
 	@echo "  make k8s-up       Tạo kind cluster, build image, deploy toàn bộ stack"
-	@echo "  make k8s-redeploy Build lại image và rollout bản mới"
+	@echo "  make k8s-redeploy Cập nhật manifest, build lại image và rollout bản mới"
+	@echo "  make k8s-seed     Chạy lại job seed dữ liệu demo (tuỳ chọn)"
 	@echo "  make k8s-down     Xoá kind cluster"
 	@echo "  make k8s-status   Xem trạng thái pod/service trong namespace $(K8S_NAMESPACE)"
 	@echo "  make k8s-logs     Theo dõi log backend"
@@ -29,15 +30,20 @@ k8s-cluster:
 	kind get clusters | grep -qx "$(KIND_CLUSTER)" || kind create cluster --config k8s/kind-config.yaml
 
 k8s-ingress:
-	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/$(INGRESS_NGINX_VERSION)/deploy/static/provider/kind/deploy.yaml
 	kubectl -n ingress-nginx wait --for=condition=available deployment/ingress-nginx-controller --timeout=180s
 	@echo "Chờ admission webhook của ingress-nginx sẵn sàng..."
-	@for i in $$(seq 1 60); do \
+	@ready=0; \
+	for i in $$(seq 1 60); do \
 		if kubectl -n ingress-nginx get endpoints ingress-nginx-controller-admission -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null | grep -q .; then \
-			echo "Webhook sẵn sàng."; break; \
+			echo "Webhook sẵn sàng."; ready=1; break; \
 		fi; \
 		sleep 2; \
-	done
+	done; \
+	if [ "$$ready" -ne 1 ]; then \
+		echo "Quá thời gian chờ admission webhook của ingress-nginx." >&2; \
+		exit 1; \
+	fi
 
 k8s-build:
 	docker build -t $(BACKEND_IMAGE) ./backend_instagram
@@ -56,13 +62,18 @@ k8s-apply:
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/backend --timeout=300s
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/frontend --timeout=180s
 
+k8s-seed:
+	kubectl -n $(K8S_NAMESPACE) delete job/seed-demo --ignore-not-found
+	kubectl -n $(K8S_NAMESPACE) apply -f k8s/seed-job.yaml
+	kubectl -n $(K8S_NAMESPACE) wait --for=condition=complete job/seed-demo --timeout=180s
+
 k8s-up: k8s-cluster k8s-ingress k8s-build k8s-load k8s-secrets k8s-apply
 	@echo ""
 	@echo "Ứng dụng đã chạy tại $(PUBLIC_URL)"
 	@echo "Thêm dòng sau vào /etc/hosts nếu chưa có: 127.0.0.1 $(PUBLIC_HOST)"
 	@kubectl -n $(K8S_NAMESPACE) get pods
 
-k8s-redeploy: k8s-build k8s-load k8s-secrets
+k8s-redeploy: k8s-build k8s-load k8s-secrets k8s-apply
 	kubectl -n $(K8S_NAMESPACE) rollout restart deployment/backend deployment/frontend
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/backend --timeout=300s
 	kubectl -n $(K8S_NAMESPACE) rollout status deployment/frontend --timeout=180s

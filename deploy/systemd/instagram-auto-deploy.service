@@ -1,6 +1,6 @@
 [Unit]
 Description=Instagram project: pull code mới và deploy lại
-After=network-online.target docker.service
+After=network-online.target
 Wants=network-online.target
 
 [Service]

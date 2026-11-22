@@ -111,8 +111,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
     }
 
     /**
-     * Cho phép /user/queue/** và dạng đã resolve /queue/...-user{sessionId}.
-     * Chặn /topic/** và các /queue/** công khai.
+     * Chỉ cho phép client subscribe vào /user/queue/**.
+     * Chặn /topic/**, /queue/** công khai và /queue/*-user* để tránh giả mạo session.
      */
     private void requireAllowedSubscription(StompHeaderAccessor accessor) {
         String destination = accessor.getDestination();
@@ -120,9 +120,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             throw new MessagingException("Subscription destination is required");
         }
 
-        boolean rawUserQueue = destination.startsWith(USER_QUEUE_PREFIX);
-        boolean resolvedUserQueue = destination.startsWith("/queue/") && destination.contains("-user");
-        if (!rawUserQueue && !resolvedUserQueue) {
+        if (!destination.startsWith(USER_QUEUE_PREFIX)) {
             throw new MessagingException("Subscription not allowed: " + destination);
         }
     }

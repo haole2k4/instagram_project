@@ -39,8 +39,10 @@ spec:
           image: redis:7-alpine
           args:
             - redis-server
+            - --save
+            - ""
             - --appendonly
-            - "yes"
+            - "no"
             - --maxmemory
             - 256mb
             - --maxmemory-policy

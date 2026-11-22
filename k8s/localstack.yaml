@@ -43,6 +43,16 @@ spec:
               value: s3
             - name: GATEWAY_LISTEN
               value: 0.0.0.0:4566
+            - name: BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: instagram-config
+                  key: BUCKET_NAME
+            - name: REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: instagram-config
+                  key: REGION
           readinessProbe:
             httpGet:
               path: /_localstack/health
@@ -69,64 +79,32 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/localstack
+            - name: init-scripts
+              mountPath: /etc/localstack/init/ready.d
+              readOnly: true
       volumes:
         - name: data
           emptyDir: {}
+        - name: init-scripts
+          configMap:
+            name: localstack-init
+            defaultMode: 0755
 ---
-# Tạo bucket S3 và bucket policy public-read sau khi LocalStack sẵn sàng.
-apiVersion: batch/v1
-kind: Job
+# Tự động tạo bucket S3 public-read mỗi khi LocalStack pod khởi động.
+apiVersion: v1
+kind: ConfigMap
 metadata:
   name: localstack-init
   labels:
     app: localstack-init
     app.kubernetes.io/part-of: instagram
-spec:
-  backoffLimit: 6
-  ttlSecondsAfterFinished: 600
-  template:
-    metadata:
-      labels:
-        app: localstack-init
-        app.kubernetes.io/part-of: instagram
-    spec:
-      restartPolicy: OnFailure
-      containers:
-        - name: aws-cli
-          image: amazon/aws-cli:2.15.57
-          env:
-            - name: AWS_DEFAULT_REGION
-              value: ap-southeast-1
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: instagram-secrets
-                  key: ACCESS_KEY
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: instagram-secrets
-                  key: SECRET_KEY
-            - name: S3_ENDPOINT
-              value: http://localstack:4566
-            - name: BUCKET_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: instagram-config
-                  key: BUCKET_NAME
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -eu
-              echo "Chờ LocalStack sẵn sàng..."
-              until aws --endpoint-url "$S3_ENDPOINT" s3api list-buckets >/dev/null 2>&1; do
-                sleep 3
-              done
-              if ! aws --endpoint-url "$S3_ENDPOINT" s3api head-bucket --bucket "$BUCKET_NAME" >/dev/null 2>&1; then
-                aws --endpoint-url "$S3_ENDPOINT" s3 mb "s3://$BUCKET_NAME"
-              fi
-              aws --endpoint-url "$S3_ENDPOINT" s3api put-bucket-policy \
-                --bucket "$BUCKET_NAME" \
-                --policy "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::$BUCKET_NAME/*\"}]}"
-              echo "Bucket $BUCKET_NAME đã sẵn sàng."
+data:
+  10-create-bucket.sh: |
+    #!/bin/sh
+    set -eu
+
+    BUCKET="${BUCKET_NAME:-instagram-media}"
+    AWS_REGION="${REGION:-ap-southeast-1}"
+
+    awslocal s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1 || awslocal s3 mb "s3://$BUCKET" --region "$AWS_REGION"
+    awslocal s3api put-bucket-policy --bucket "$BUCKET" --policy "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::$BUCKET/*\"}]}"

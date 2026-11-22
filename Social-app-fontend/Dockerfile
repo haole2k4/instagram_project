@@ -12,6 +12,10 @@ ENV GENERATE_SOURCEMAP=false
 RUN pnpm build
 
 FROM nginx:1.29.2-alpine-slim
+RUN sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
+    sed -i '/^user /d' /etc/nginx/nginx.conf && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
+COPY --from=build --chown=nginx:nginx /app/build /usr/share/nginx/html
+USER nginx
+EXPOSE 8080

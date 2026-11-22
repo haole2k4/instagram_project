@@ -39,9 +39,19 @@ is_env_file() {
 # prefix_of <glob>: phần cố định phía trước ký tự '*'.
 prefix_of() { local g="$1"; echo "${g%%\**}"; }
 
-# globs_overlap <a> <b>: đúng nếu prefix cố định của một bên chứa bên kia (kiểm tra thận trọng).
+# globs_overlap <a> <b>: đúng nếu hai glob có thể giao nhau.
+# Khi một bên có wildcard ở đầu (prefix rỗng như '**/*Story*'), chỉ coi là trùng
+# khi giống hệt hoặc một bên khớp trực tiếp với pattern của bên kia.
 globs_overlap() {
-  local a b
-  a="$(prefix_of "$1")"; b="$(prefix_of "$2")"
+  local g1="$1" g2="$2" a b
+  [[ "$g1" == "$g2" ]] && return 0
+  a="$(prefix_of "$g1")"; b="$(prefix_of "$g2")"
+  if [[ -z "$a" || -z "$b" ]]; then
+    local p1="$g1" p2="$g2"
+    [[ "$p1" == */ ]] && p1="${p1}*"
+    [[ "$p2" == */ ]] && p2="${p2}*"
+    [[ "$g2" == $p1 || "$g1" == $p2 ]]
+    return $?
+  fi
   [[ "$a" == "$b"* || "$b" == "$a"* ]]
 }

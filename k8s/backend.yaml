@@ -50,6 +50,13 @@ spec:
         # Chờ MySQL, Redis và RabbitMQ sẵn sàng trước khi Spring Boot khởi động
         - name: wait-for-dependencies
           image: busybox:1.36
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           command:
             - /bin/sh
             - -c
@@ -70,6 +77,13 @@ spec:
         - name: backend
           image: instagram-backend:local
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
           ports:
             - name: http
               containerPort: 8081
@@ -134,25 +148,3 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                topologyKey: kubernetes.io/hostname
-                labelSelector:
-                  matchLabels:
-                    app: backend
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: backend
-  labels:
-    app: backend
-    app.kubernetes.io/part-of: instagram
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      app: backend
