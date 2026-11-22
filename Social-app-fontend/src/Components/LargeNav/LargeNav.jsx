@@ -19,6 +19,7 @@ import SearchPanel from "../../Components/SearchBar/SearchBar";
 import NotificationsPanel from "../../Components/Notifications/Notifications";
 import CreatePostModal from "../CreateModal/CreatePostModal";
 import notificationSocket from "../../Service/notificationSocket";
+import { fetchAllNotificationsUnread } from "../../Service/notificationApi";
 
 const LargeNav = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -30,40 +31,42 @@ const LargeNav = () => {
   const dispatch = useDispatch();
   const [t] = useTranslation();
 
-  // Khởi tạo WebSocket và lắng nghe sự kiện
+  // Khởi tạo WebSocket, tải trạng thái chưa đọc ban đầu và lắng nghe thông báo mới
   useEffect(() => {
     if (!userInfo?.id) return;
 
+    let isMounted = true;
     notificationSocket.init(dispatch, userInfo.id, accessToken);
+
+    fetchAllNotificationsUnread(userInfo.id)
+      .then((res) => {
+        const unreadList = res?.data ?? res;
+        if (isMounted && Array.isArray(unreadList) && unreadList.length > 0) {
+          setHasUnreadNotifications(true);
+        }
+      })
+      .catch(() => {});
 
     const unsubscribeNotifications =
       notificationSocket.subscribeToNotifications((notificationData) => {
-        if (notificationData.userId === userInfo.id) {
+        if (!notificationData) return;
+        const recipientId =
+          notificationData.userId ?? notificationData.toUserId;
+        const actorId =
+          notificationData.actorId ?? notificationData.fromUserId;
+        const isForCurrentUser =
+          !recipientId || String(recipientId) === String(userInfo.id);
+        const isFromOtherUser =
+          !actorId || String(actorId) !== String(userInfo.id);
+
+        if (isForCurrentUser && isFromOtherUser) {
           setHasUnreadNotifications(true);
         }
       });
 
-    const unsubscribeLikes = notificationSocket.subscribeToLikeUpdates(() => {
-      setHasUnreadNotifications(true);
-    });
-
-    const unsubscribeComments = notificationSocket.subscribeToCommentUpdates(
-      (commentData) => {
-        if (commentData.userId !== userInfo.id) {
-          setHasUnreadNotifications(true);
-        }
-      }
-    );
-
-    const unsubscribeFollow = notificationSocket.subscribeToFollow(() => {
-      setHasUnreadNotifications(true);
-    });
-
     return () => {
+      isMounted = false;
       unsubscribeNotifications();
-      unsubscribeLikes();
-      unsubscribeComments();
-      unsubscribeFollow();
     };
   }, [userInfo?.id, accessToken, dispatch]);
 
@@ -105,7 +108,8 @@ const LargeNav = () => {
             alt=""
             className="h-6 w-6 rounded-full object-cover"
             onError={(e) => {
-              e.currentTarget.style.display = "none";
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/default-avatar.png";
             }}
           />
         ) : (
@@ -221,7 +225,8 @@ const LargeNav = () => {
             alt=""
             className="h-6 w-6 rounded-full object-cover"
             onError={(e) => {
-              e.currentTarget.style.display = "none";
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/default-avatar.png";
             }}
           />
         ) : (

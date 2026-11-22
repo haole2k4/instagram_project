@@ -267,6 +267,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                   alt={nickname}
                   className="h-8 w-8 rounded-full object-cover"
                   onError={(e) => {
+                    e.currentTarget.onerror = null;
                     e.currentTarget.src = "/default-avatar.png";
                   }}
                 />

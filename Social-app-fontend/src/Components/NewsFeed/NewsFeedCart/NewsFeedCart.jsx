@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import {
-  Bookmark,
   ChevronLeft,
   ChevronRight,
+  Flag,
   Globe,
   Heart,
   Image as ImageIcon,
@@ -19,8 +19,9 @@ import {
 import ModalCart from "./ModalCart/ModalCart";
 import SharePostModal from "./SharePostModal";
 import UserHoverCard from "../../Common/UserHoverCard";
+import ReportModal from "../../Common/ReportModal";
 import {
-  handleLike,
+  likePost,
   unlikePost,
   getPostByFollowing,
   getLikedPostIdsByUser,
@@ -80,10 +81,19 @@ const NewsFeedCart = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
   const [shareModalPost, setShareModalPost] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
+  const timersRef = useRef([]);
   const { userInfo } = useSelector((state) => state.login);
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((timerId) => clearTimeout(timerId));
+    };
+  }, []);
 
   const fetchLikedPosts = useCallback(
     async (userId) => {
@@ -180,9 +190,10 @@ const NewsFeedCart = () => {
 
   const triggerHeartPop = (postId) => {
     setPoppingHearts((prev) => ({ ...prev, [postId]: true }));
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       setPoppingHearts((prev) => ({ ...prev, [postId]: false }));
     }, 220);
+    timersRef.current.push(timerId);
   };
 
   const handleLikePost = async (id, likesCount) => {
@@ -236,7 +247,7 @@ const NewsFeedCart = () => {
         prev && prev.id === id ? { ...prev, likesCount: newLikesCount } : prev
       );
       try {
-        await handleLike(id, userInfo.id);
+        await likePost(id, userInfo.id);
       } catch (error) {
         console.error("Error liking post:", error);
         if (!error.response?.data?.message?.includes("đã thích")) {
@@ -257,9 +268,10 @@ const NewsFeedCart = () => {
 
   const handleDoubleTapMedia = (post) => {
     setDoubleTapHeart((prev) => ({ ...prev, [post.id]: true }));
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       setDoubleTapHeart((prev) => ({ ...prev, [post.id]: false }));
     }, 400);
+    timersRef.current.push(timerId);
 
     if (!likes[post.id]) {
       handleLikePost(post.id, post.likesCount);
@@ -354,6 +366,10 @@ const NewsFeedCart = () => {
                         src={item.user?.userImage || "/default-avatar.png"}
                         alt={authorName}
                         className="h-9 w-9 rounded-full bg-ig-surface object-cover"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-avatar.png";
+                        }}
                       />
                     </Link>
                     <div className="flex min-w-0 items-center gap-1.5 text-[14px]">
@@ -379,6 +395,24 @@ const NewsFeedCart = () => {
                   <AccessIcon access={item?.access} t={t} />
                 </div>
               </div>
+
+              {item.user?.id && String(item.user.id) !== String(userInfo?.id) && (
+                <button
+                  type="button"
+                  aria-label={t("report.reportPost")}
+                  title={t("report.reportPost")}
+                  onClick={() =>
+                    setReportTarget({
+                      targetType: "POST",
+                      targetId: item.id,
+                      targetLabel: authorName,
+                    })
+                  }
+                  className="ig-press flex h-8 w-8 items-center justify-center rounded-lg text-ig-muted transition-colors hover:bg-ig-surface hover:text-ig-text"
+                >
+                  <Flag size={16} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              )}
             </header>
 
             {/* Khung media 4:5 hoặc 1:1 */}
@@ -496,22 +530,14 @@ const NewsFeedCart = () => {
                   </button>
                   <button
                     type="button"
-                    aria-label="Chia sẻ bài viết"
-                    title="Chia sẻ bài viết"
+                    aria-label={t("post.share")}
+                    title={t("post.share")}
                     onClick={() => setShareModalPost(item)}
                     className="ig-press flex items-center justify-center text-ig-text hover:text-ig-muted"
                   >
                     <Send size={24} strokeWidth={1.5} />
                   </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label={t("post.save")}
-                  title={t("post.save")}
-                  className="ig-press flex items-center justify-center text-ig-text hover:text-ig-muted"
-                >
-                  <Bookmark size={24} strokeWidth={1.5} />
-                </button>
               </div>
 
               <p className="mb-1.5 text-[14px] font-semibold text-ig-text tabular-nums">
@@ -576,6 +602,14 @@ const NewsFeedCart = () => {
           post={shareModalPost}
         />
       )}
+
+      <ReportModal
+        open={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+        targetType={reportTarget?.targetType}
+        targetId={reportTarget?.targetId}
+        targetLabel={reportTarget?.targetLabel}
+      />
     </div>
   );
 };

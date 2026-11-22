@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createStory } from "../../../Service/storyApi";
 import { useSelector } from "react-redux";
@@ -17,6 +17,14 @@ const FormCreateStory = () => {
   const navigate = useNavigate();
   const [t] = useTranslation();
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const privacyOptions = [
     { value: "PUBLIC", label: t("CreateNew.public") },
     { value: "ONLY_FRIEND", label: t("CreateNew.friends") },
@@ -25,6 +33,9 @@ const FormCreateStory = () => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     if (!selectedFile) {
       setFile(null);
       setPreviewUrl(null);

@@ -21,6 +21,8 @@ const MoreMenu = ({
   const lang = useSelector((state) => state.app.language);
   const { userInfo, roles = [] } = useSelector((state) => state.login);
   const menuRef = useRef(null);
+  const logoutTimerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   const isStaff =
     Array.isArray(roles) &&
@@ -28,6 +30,17 @@ const MoreMenu = ({
       roles.includes("ROLE_ADMIN") ||
       roles.includes("MODERATOR") ||
       roles.includes("ROLE_MODERATOR"));
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+        logoutTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setShowMenu(false);
@@ -61,14 +74,24 @@ const MoreMenu = ({
       setIsLoggingOut(true);
       await UserLogOut();
       webSocketService.disconnect();
-      await dispatch(userLogoutALL());
-      instance.defaults.headers.common = {};
-      setTimeout(() => {
-        navigate("/login");
+      dispatch(userLogoutALL());
+      if (instance?.defaults?.headers?.common) {
+        delete instance.defaults.headers.common["Authorization"];
+      }
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+      }
+      logoutTimerRef.current = setTimeout(() => {
+        logoutTimerRef.current = null;
+        if (isMountedRef.current) {
+          navigate("/login");
+        }
       }, 850);
     } catch (error) {
       console.error("Logout error:", error);
-      setIsLoggingOut(false);
+      if (isMountedRef.current) {
+        setIsLoggingOut(false);
+      }
       toast.error(t("sidebar.logoutError"));
     }
   };
@@ -95,32 +118,32 @@ const MoreMenu = ({
                   </Link>
                 </li>
               )}
-          {isStaff && (
-            <li>
-              <Link
-                to="/admin"
-                onClick={() => setShowMenu(false)}
-                className="block rounded-lg p-2 hover:bg-ig-surface"
-              >
-                {t("moreMenu.admin")}
-              </Link>
-            </li>
-          )}
-          <li aria-hidden="true">
-            <hr className="my-2 border-ig-border" />
-          </li>
-        </ul>
-        <button
-          type="button"
-          onClick={handleLogOut}
-          className="w-full rounded-lg p-2 text-left text-[14px] text-ig-like hover:bg-ig-surface"
-        >
-          {t("moreMenu.logout")}
-        </button>
-      </div>
-    </div>
-  )}
-</>
+              {isStaff && (
+                <li>
+                  <Link
+                    to="/admin"
+                    onClick={() => setShowMenu(false)}
+                    className="block rounded-lg p-2 hover:bg-ig-surface"
+                  >
+                    {t("moreMenu.admin")}
+                  </Link>
+                </li>
+              )}
+              <li aria-hidden="true">
+                <hr className="my-2 border-ig-border" />
+              </li>
+            </ul>
+            <button
+              type="button"
+              onClick={handleLogOut}
+              className="w-full rounded-lg p-2 text-left text-[14px] text-ig-like hover:bg-ig-surface"
+            >
+              {t("moreMenu.logout")}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

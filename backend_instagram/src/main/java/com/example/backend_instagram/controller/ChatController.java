@@ -1,22 +1,23 @@
 package com.example.backend_instagram.controller;
 
+import com.example.backend_instagram.dto.message.ChatUserSummaryDTO;
 import com.example.backend_instagram.dto.message.ConversationDTO;
 import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.entity.Conversation;
 import com.example.backend_instagram.entity.User;
+import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.ChatService;
 import com.example.backend_instagram.service.CurrentUserService;
 import com.example.backend_instagram.utils.constant.ApiMessage;
 import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -27,6 +28,9 @@ public class ChatController {
 
     @Autowired
     private CurrentUserService currentUserService;
+
+    @Autowired
+    private AccountStatusService accountStatusService;
 
     /**
      * Lấy hoặc tạo cuộc trò chuyện giữa hai người dùng
@@ -88,16 +92,6 @@ public class ChatController {
     }
 
     /**
-     * Lấy cuộc trò chuyện nhóm
-     */
-    @GetMapping("/group-conversation")
-    @ApiMessage("Lấy cuộc trò chuyện nhóm thành công")
-    public ResponseEntity<Conversation> getGroupConversation() {
-        Conversation conversation = chatService.getGroupConversation();
-        return ResponseEntity.ok(conversation);
-    }
-
-    /**
      * Lấy thông tin chi tiết của một cuộc trò chuyện
      */
     @GetMapping("/conversation/{conversationId}")
@@ -111,10 +105,9 @@ public class ChatController {
     }
 
     @GetMapping("/conversationUsers/{userId}")
-    public ResponseEntity<?> getConversationUsers(@PathVariable Long userId) {
+    public ResponseEntity<List<ChatUserSummaryDTO>> getConversationUsers(@PathVariable Long userId) {
         requireSelf(userId);
-        List<User> users = chatService.getUsersWithConversation(currentId());
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(chatService.getUsersWithConversation(currentId()));
     }
 
     // Nhóm
@@ -122,13 +115,20 @@ public class ChatController {
     @ApiMessage("Tạo group chat thành công")
     public ResponseEntity<Conversation> createGroupConversation(@RequestBody Map<String, Object> requestBody)
             throws IdInvalidException {
+        User currentUser = currentUserService.requireCurrentUser();
+        accountStatusService.requireWritable(currentUser);
+
         String groupName = (String) requestBody.get("name");
-        List<?> userIdsRaw = (List<?>) requestBody.get("userIds");
+        Object rawIds = requestBody.get("userIds");
+        if (!(rawIds instanceof List<?> userIdsRaw)) {
+            throw new IdInvalidException("Thiếu danh sách thành viên userIds");
+        }
         List<Long> userIds = new ArrayList<>(userIdsRaw.stream()
+                .filter(java.util.Objects::nonNull)
                 .map(id -> Long.valueOf(id.toString()))
                 .toList());
-        if (!userIds.contains(currentId())) {
-            userIds.add(currentId());
+        if (!userIds.contains(currentUser.getId())) {
+            userIds.add(currentUser.getId());
         }
         Conversation group = chatService.createGroupConversation(groupName, userIds);
         return ResponseEntity.ok(group);
@@ -149,7 +149,9 @@ public class ChatController {
     @ApiMessage("Thêm member mới thành công")
     public ResponseEntity<?> addUserToGroup(@PathVariable Long conversationId, @RequestParam Long userId)
             throws IdInvalidException {
-        chatService.addUserToGroup(conversationId, userId);
+        User actor = currentUserService.requireCurrentUser();
+        accountStatusService.requireWritable(actor);
+        chatService.addUserToGroup(conversationId, userId, actor.getId());
         return ResponseEntity.ok().build();
     }
 
@@ -157,7 +159,9 @@ public class ChatController {
     @ApiMessage("Xóa member thành công")
     public ResponseEntity<?> removeUserFromGroup(@PathVariable Long conversationId, @RequestParam Long userId)
             throws IdInvalidException {
-        chatService.removeUserFromGroup(conversationId, userId);
+        User actor = currentUserService.requireCurrentUser();
+        accountStatusService.requireWritable(actor);
+        chatService.removeUserFromGroup(conversationId, userId, actor.getId());
         return ResponseEntity.ok().build();
     }
 }

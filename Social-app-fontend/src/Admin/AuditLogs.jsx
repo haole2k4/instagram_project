@@ -15,6 +15,7 @@ import {
 
 const AuditLogs = () => {
   const { t } = useTranslation();
+  const [actionInput, setActionInput] = useState("");
   const [filters, setFilters] = useState({
     action: "",
     targetType: "ALL",
@@ -26,12 +27,22 @@ const AuditLogs = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const trimmed = actionInput.trim();
+    if (trimmed === filters.action) return undefined;
+    const timer = setTimeout(() => {
+      setPage(0);
+      setFilters((current) => ({ ...current, action: trimmed }));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [actionInput, filters.action]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const params = { page, size: 30 };
-      if (filters.action) params.action = filters.action.trim();
+      if (filters.action) params.action = filters.action;
       if (filters.targetType !== "ALL") params.targetType = filters.targetType;
       if (filters.from) params.from = new Date(filters.from).toISOString();
       if (filters.to) params.to = new Date(filters.to).toISOString();
@@ -52,6 +63,17 @@ const AuditLogs = () => {
     setFilters((current) => ({ ...current, [key]: value }));
   };
 
+  const handleApply = (event) => {
+    event.preventDefault();
+    const trimmed = actionInput.trim();
+    if (trimmed !== filters.action) {
+      setPage(0);
+      setFilters((current) => ({ ...current, action: trimmed }));
+    } else {
+      load();
+    }
+  };
+
   const rows = data?.content || [];
 
   return (
@@ -61,21 +83,21 @@ const AuditLogs = () => {
         description={t("admin.auditDescription")}
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+      <form className="mb-4 flex flex-wrap items-end gap-3" onSubmit={handleApply}>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="audit-action">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="audit-action">
             {t("admin.table.action")}
           </label>
           <input
             id="audit-action"
             className={inputClass + " !w-52"}
-            value={filters.action}
-            onChange={(event) => update("action", event.target.value)}
+            value={actionInput}
+            onChange={(event) => setActionInput(event.target.value)}
             placeholder="USER_BAN, REPORT_DECIDE…"
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="audit-target">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="audit-target">
             {t("admin.filters.targetType")}
           </label>
           <select
@@ -92,7 +114,7 @@ const AuditLogs = () => {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="audit-from">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="audit-from">
             {t("admin.filters.from")}
           </label>
           <input
@@ -104,7 +126,7 @@ const AuditLogs = () => {
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="audit-to">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="audit-to">
             {t("admin.filters.to")}
           </label>
           <input
@@ -115,10 +137,10 @@ const AuditLogs = () => {
             onChange={(event) => update("to", event.target.value)}
           />
         </div>
-        <button type="button" className={btnSecondary} onClick={load}>
+        <button type="submit" className={btnSecondary}>
           {t("admin.apply")}
         </button>
-      </div>
+      </form>
 
       {error ? <ErrorState message={error} onRetry={load} /> : null}
 
@@ -147,13 +169,13 @@ const AuditLogs = () => {
                   >
                     <td className="px-4 py-3">
                       <p className="text-white">{log.actorLabel || "—"}</p>
-                      <p className="text-[11px] text-[#6f6f6f]">#{log.actorId}</p>
+                      <p className="text-[11px] text-ig-faint">#{log.actorId}</p>
                     </td>
                     <td className="px-4 py-3 text-[#b4b4b4]">{log.action}</td>
                     <td className="px-4 py-3 text-[#b4b4b4]">
                       {log.targetType} #{log.targetId}
                       {log.reportId ? (
-                        <p className="text-[11px] text-[#6f6f6f]">
+                        <p className="text-[11px] text-ig-faint">
                           report #{log.reportId}
                         </p>
                       ) : null}
@@ -161,7 +183,7 @@ const AuditLogs = () => {
                     <td className="px-4 py-3">
                       <p className="text-[#b4b4b4]">{log.reasonCode || "—"}</p>
                       {log.reasonText ? (
-                        <p className="mt-1 max-w-[220px] text-[11px] text-[#6f6f6f]">
+                        <p className="mt-1 max-w-[220px] text-[11px] text-ig-faint">
                           {log.reasonText}
                         </p>
                       ) : null}
@@ -169,10 +191,10 @@ const AuditLogs = () => {
                     <td className="px-4 py-3 text-[#b4b4b4]">
                       {log.metadata ? (
                         <details>
-                          <summary className="cursor-pointer text-[12px] text-[#6f6f6f]">
+                          <summary className="cursor-pointer text-[12px] text-ig-faint">
                             {t("admin.viewMetadata")}
                           </summary>
-                          <pre className="mt-1 max-w-[240px] overflow-x-auto whitespace-pre-wrap break-all text-[11px] text-[#6f6f6f]">
+                          <pre className="mt-1 max-w-[240px] overflow-x-auto whitespace-pre-wrap break-all text-[11px] text-ig-faint">
                             {JSON.stringify(log.metadata, null, 2)}
                           </pre>
                         </details>

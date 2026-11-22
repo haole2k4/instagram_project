@@ -48,9 +48,6 @@ public class PostResponseDTO {
         private String userNickname;
         private String userFullname;
         private String userImage;
-        private String userBday;
-        private String userEmail;
-        private String userPhone;
         private String userGender;
         private String userBio;
 
@@ -63,9 +60,6 @@ public class PostResponseDTO {
             author.setUserNickname(user.getUserNickname());
             author.setUserFullname(user.getUserFullname());
             author.setUserImage(user.getUserImage());
-            author.setUserBday(user.getUserBday());
-            author.setUserEmail(user.getUserEmail());
-            author.setUserPhone(user.getUserPhone());
             author.setUserGender(user.getUserGender());
             author.setUserBio(user.getUserBio());
             return author;

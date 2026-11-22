@@ -7,11 +7,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class FollowResponseDTO {
-    private Follow follow;
-//    private Notification notification;
+    private FollowSummaryDTO follow;
 
     public FollowResponseDTO(Follow follow) {
+        this.follow = FollowSummaryDTO.from(follow);
+    }
+
+    public FollowResponseDTO(FollowSummaryDTO follow) {
         this.follow = follow;
-//        this.notification = notification;
     }
 }

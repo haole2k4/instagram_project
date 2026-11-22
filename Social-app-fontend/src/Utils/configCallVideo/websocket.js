@@ -75,45 +75,58 @@ export function useWebSocket() {
       }
     });
 
-    const unsubscribeVideo = webSocketService.on("video-call", (signal) => {
-      if (!active || !signal) {
-        return;
-      }
-      if (signal.action === "endCall" || signal.action === "call-reject") {
-        setIncomingCall(null);
-        setReceivingCall(false);
-        cleanupMedia();
-        return;
-      }
-      if (
-        signal.signal?.type === "offer" ||
-        signal.action === "call-invite" ||
-        signal.action === "group-call-ring"
-      ) {
-        remoteUserIdRef.current = signal.from;
-        setReceivingCall(true);
-        setCaller(signal.from);
-        setName(signal.name || "");
-        setCallerSignal(signal.signal);
-        setIncomingCall({
-          from: signal.from,
-          name: signal.name || "",
-          userImage: signal.userImage,
-          conversationId: signal.conversationId,
-          hasVideo: signal.hasVideo !== false,
-          isGroup: !!signal.isGroup,
-        });
-      } else if (signal.signal?.type === "answer") {
-        setCallerSignal(signal.signal);
-        if (peerRef.current) {
-          try {
-            peerRef.current.signal(signal.signal);
-          } catch (error) {
-            console.warn("Cannot apply video answer:", error);
+    let unsubscribeVideo = () => {};
+    const isOnCallPage =
+      typeof window !== "undefined" &&
+      window.location?.pathname?.startsWith("/call");
+
+    if (!isOnCallPage) {
+      unsubscribeVideo = webSocketService.on("video-call", (signal) => {
+        if (!active || !signal) {
+          return;
+        }
+        if (
+          typeof window !== "undefined" &&
+          window.location?.pathname?.startsWith("/call")
+        ) {
+          return;
+        }
+        if (signal.action === "endCall" || signal.action === "call-reject") {
+          setIncomingCall(null);
+          setReceivingCall(false);
+          cleanupMedia();
+          return;
+        }
+        if (
+          signal.signal?.type === "offer" ||
+          signal.action === "call-invite" ||
+          signal.action === "group-call-ring"
+        ) {
+          remoteUserIdRef.current = signal.from;
+          setReceivingCall(true);
+          setCaller(signal.from);
+          setName(signal.name || "");
+          setCallerSignal(signal.signal);
+          setIncomingCall({
+            from: signal.from,
+            name: signal.name || "",
+            userImage: signal.userImage,
+            conversationId: signal.conversationId,
+            hasVideo: signal.hasVideo !== false,
+            isGroup: !!signal.isGroup,
+          });
+        } else if (signal.signal?.type === "answer") {
+          setCallerSignal(signal.signal);
+          if (peerRef.current) {
+            try {
+              peerRef.current.signal(signal.signal);
+            } catch (error) {
+              console.warn("Cannot apply video answer:", error);
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     const unsubscribeNotification = webSocketService.on(
       "notification",

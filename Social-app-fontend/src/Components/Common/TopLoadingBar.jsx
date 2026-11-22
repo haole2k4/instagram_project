@@ -18,21 +18,26 @@ const TopLoadingBar = () => {
   const [visible, setVisible] = useState(false);
   const location = useLocation();
   const timerRef = useRef(null);
+  const stepTimerRef = useRef(null);
   const hideTimerRef = useRef(null);
 
-  const finishProgress = useCallback(() => {
+  const clearAllTimers = useCallback(() => {
     clearTimeout(timerRef.current);
+    clearTimeout(stepTimerRef.current);
     clearTimeout(hideTimerRef.current);
+  }, []);
+
+  const finishProgress = useCallback(() => {
+    clearAllTimers();
     setProgress(100);
     hideTimerRef.current = setTimeout(() => {
       setVisible(false);
       setProgress(0);
     }, 250);
-  }, []);
+  }, [clearAllTimers]);
 
   const startProgress = useCallback(() => {
-    clearTimeout(timerRef.current);
-    clearTimeout(hideTimerRef.current);
+    clearAllTimers();
     setVisible(true);
     setProgress(15);
 
@@ -40,15 +45,14 @@ const TopLoadingBar = () => {
       setProgress(65);
     }, 120);
 
-    const stepTimer = setTimeout(() => {
+    stepTimerRef.current = setTimeout(() => {
       setProgress(85);
     }, 280);
 
     hideTimerRef.current = setTimeout(() => {
-      clearTimeout(stepTimer);
       finishProgress();
     }, 420);
-  }, [finishProgress]);
+  }, [clearAllTimers, finishProgress]);
 
   useEffect(() => {
     startProgress();
@@ -64,10 +68,9 @@ const TopLoadingBar = () => {
     return () => {
       window.removeEventListener("ig:loading:start", handleStart);
       window.removeEventListener("ig:loading:done", handleDone);
-      clearTimeout(timerRef.current);
-      clearTimeout(hideTimerRef.current);
+      clearAllTimers();
     };
-  }, [startProgress, finishProgress]);
+  }, [startProgress, finishProgress, clearAllTimers]);
 
   if (!visible && progress === 0) return null;
 
@@ -77,9 +80,9 @@ const TopLoadingBar = () => {
       className="pointer-events-none fixed left-0 right-0 top-0 z-[99999] h-[2.5px] overflow-hidden"
     >
       <div
-        className="h-full transition-all duration-200 ease-out ig-top-gradient-bar"
+        className="h-full w-full origin-left transition-[transform,opacity] duration-200 ease-ui-out ig-top-gradient-bar"
         style={{
-          width: `${progress}%`,
+          transform: `scaleX(${progress / 100})`,
           opacity: visible ? 1 : 0,
         }}
       />

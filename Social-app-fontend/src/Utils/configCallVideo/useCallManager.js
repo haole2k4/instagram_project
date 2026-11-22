@@ -22,7 +22,7 @@ export function useCallManager({
   const [isVideoEnabled, setIsVideoEnabled] = useState(initialHasVideo);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [participants, setParticipants] = useState([]); // [{ id, name, image, stream, isMuted, isCameraOff }]
+  const [participants, setParticipants] = useState([]);
   const [audioDevices, setAudioDevices] = useState([]);
   const [audioOutputDevices, setAudioOutputDevices] = useState([]);
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState(null);
@@ -31,11 +31,23 @@ export function useCallManager({
 
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
-  const peersRef = useRef(new Map()); // participantId -> Peer instance
+  const peersRef = useRef(new Map());
   const ringtonePlayerRef = useRef(null);
   const isCleaningUpRef = useRef(false);
+  const hasAutoJoinedRef = useRef(false);
 
-  // Stop media stream utility
+  const currentUserRef = useRef(currentUser);
+  const targetUserRef = useRef(targetUser);
+  const isGroupRef = useRef(isGroup);
+  const isVideoEnabledRef = useRef(isVideoEnabled);
+  const conversationIdRef = useRef(conversationId);
+
+  currentUserRef.current = currentUser;
+  targetUserRef.current = targetUser;
+  isGroupRef.current = isGroup;
+  isVideoEnabledRef.current = isVideoEnabled;
+  conversationIdRef.current = conversationId;
+
   const stopTracks = useCallback((stream) => {
     if (!stream) return;
     stream.getTracks().forEach((track) => {
@@ -47,8 +59,8 @@ export function useCallManager({
     });
   }, []);
 
-  // Enumerate audio & video devices
   const refreshDevices = useCallback(async () => {
+    if (!navigator?.mediaDevices?.enumerateDevices) return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = devices.filter((d) => d.kind === "audioinput");
@@ -69,47 +81,67 @@ export function useCallManager({
     }
   }, [selectedAudioDeviceId, selectedAudioOutputId]);
 
-  // Initialize local camera and mic
-  const initLocalStream = useCallback(async (withVideo = isVideoEnabled, audioDeviceId = null) => {
-    try {
-      const constraints = {
-        audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
-        video: withVideo ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
-      };
-
-      // If user requested audio only or video failed, fallback gracefully
-      let stream;
+  const initLocalStream = useCallback(
+    async (withVideo = isVideoEnabledRef.current, audioDeviceId = null) => {
+      if (!navigator?.mediaDevices?.getUserMedia) return null;
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (err) {
-        console.warn("Could not get requested media, trying audio only fallback:", err);
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setIsVideoEnabled(false);
+        const constraints = {
+          audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
+          video: withVideo
+            ? { width: { ideal: 1280 }, height: { ideal: 720 } }
+            : false,
+        };
+
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          console.warn(
+            "Could not get requested media, trying audio only fallback:",
+            err
+          );
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
+          setIsVideoEnabled(false);
+        }
+
+        if (localStreamRef.current) {
+          stopTracks(localStreamRef.current);
+        }
+        localStreamRef.current = stream;
+
+        const audioTrack = stream.getAudioTracks()[0];
+        if (audioTrack && audioTrack.label) {
+          setAudioDeviceLabel(audioTrack.label);
+        }
+
+        await refreshDevices();
+        return stream;
+      } catch (error) {
+        console.error("Failed to access media devices:", error);
+        return null;
       }
+    },
+    [stopTracks, refreshDevices]
+  );
 
-      if (localStreamRef.current) {
-        stopTracks(localStreamRef.current);
-      }
-      localStreamRef.current = stream;
-
-      // Update audio device label from active track
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack && audioTrack.label) {
-        setAudioDeviceLabel(audioTrack.label);
-      }
-
-      await refreshDevices();
-      return stream;
-    } catch (error) {
-      console.error("Failed to access media devices:", error);
-      return null;
-    }
-  }, [isVideoEnabled, stopTracks, refreshDevices]);
-
-  // Initialize media on mount
   useEffect(() => {
+    isCleaningUpRef.current = false;
+    const peers = peersRef.current;
     initLocalStream(initialHasVideo);
     return () => {
+      if (ringtonePlayerRef.current) {
+        ringtonePlayerRef.current.stop();
+        ringtonePlayerRef.current = null;
+      }
+      peers.forEach((peer) => {
+        try {
+          peer.destroy();
+        } catch (e) {}
+      });
+      peers.clear();
       if (localStreamRef.current) {
         stopTracks(localStreamRef.current);
       }
@@ -120,18 +152,15 @@ export function useCallManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cleanup all peers and connections
   const cleanupCall = useCallback(() => {
     if (isCleaningUpRef.current) return;
     isCleaningUpRef.current = true;
 
-    // Stop ringtone if playing
     if (ringtonePlayerRef.current) {
       ringtonePlayerRef.current.stop();
       ringtonePlayerRef.current = null;
     }
 
-    // Destroy all peer connections
     peersRef.current.forEach((peer) => {
       try {
         peer.destroy();
@@ -142,7 +171,6 @@ export function useCallManager({
     peersRef.current.clear();
     setParticipants([]);
 
-    // Stop streams
     if (localStreamRef.current) {
       stopTracks(localStreamRef.current);
       localStreamRef.current = null;
@@ -157,141 +185,185 @@ export function useCallManager({
     if (onCallEnded) onCallEnded();
   }, [stopTracks, onCallEnded]);
 
-  // Create WebRTC Peer connection
-  const createPeer = useCallback((remoteUserId, initiator, remoteInfo = {}) => {
-    const stream = screenStreamRef.current || localStreamRef.current;
-    const peer = new Peer({
-      initiator,
-      trickle: false,
-      stream,
-    });
+  const createPeer = useCallback(
+    (remoteUserId, initiator, remoteInfo = {}) => {
+      const existingPeer = peersRef.current.get(String(remoteUserId));
+      if (existingPeer) {
+        try {
+          existingPeer.destroy();
+        } catch (e) {}
+        peersRef.current.delete(String(remoteUserId));
+      }
 
-    peer.on("signal", (signalData) => {
-      webSocketService.sendVideoSignal(remoteUserId, {
-        action: "signal",
-        conversationId,
-        signal: signalData,
-        name: currentUser?.userFullname,
-        userImage: currentUser?.userImage,
-        hasVideo: isVideoEnabled,
-      }).catch((e) => console.warn("Failed to send WebRTC signal:", e));
-    });
+      const stream = screenStreamRef.current || localStreamRef.current;
+      const peer = new Peer({
+        initiator,
+        trickle: false,
+        stream,
+      });
 
-    peer.on("stream", (remoteStream) => {
-      setParticipants((prev) => {
-        const existing = prev.find((p) => p.id === String(remoteUserId));
-        if (existing) {
-          return prev.map((p) =>
-            p.id === String(remoteUserId)
-              ? { ...p, stream: remoteStream, ...remoteInfo }
-              : p
-          );
+      peer.on("signal", (signalData) => {
+        const user = currentUserRef.current;
+        webSocketService
+          .sendVideoSignal(remoteUserId, {
+            action: "signal",
+            conversationId: conversationIdRef.current,
+            signal: signalData,
+            name: user?.userFullname,
+            userImage: user?.userImage,
+            hasVideo: isVideoEnabledRef.current,
+          })
+          .catch((e) => console.warn("Failed to send WebRTC signal:", e));
+      });
+
+      peer.on("stream", (remoteStream) => {
+        setParticipants((prev) => {
+          const existing = prev.find((p) => p.id === String(remoteUserId));
+          if (existing) {
+            return prev.map((p) =>
+              p.id === String(remoteUserId)
+                ? { ...p, stream: remoteStream, ...remoteInfo }
+                : p
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: String(remoteUserId),
+              name: remoteInfo.name || "User",
+              image: remoteInfo.image || "/default-avatar.png",
+              stream: remoteStream,
+              isMuted: false,
+              isCameraOff: !remoteInfo.hasVideo,
+            },
+          ];
+        });
+        setCallState("CONNECTED");
+        if (ringtonePlayerRef.current) {
+          ringtonePlayerRef.current.stop();
+          ringtonePlayerRef.current = null;
         }
-        return [
-          ...prev,
-          {
-            id: String(remoteUserId),
-            name: remoteInfo.name || "User",
-            image: remoteInfo.image || "/default-avatar.png",
-            stream: remoteStream,
-            isMuted: false,
-            isCameraOff: !remoteInfo.hasVideo,
-          },
-        ];
       });
-      setCallState("CONNECTED");
-      if (ringtonePlayerRef.current) {
-        ringtonePlayerRef.current.stop();
-        ringtonePlayerRef.current = null;
-      }
-    });
 
-    peer.on("close", () => {
-      peersRef.current.delete(String(remoteUserId));
-      setParticipants((prev) => prev.filter((p) => p.id !== String(remoteUserId)));
-      if (!isGroup) {
-        cleanupCall();
-      }
-    });
-
-    peer.on("error", (err) => {
-      console.warn(`Peer error with ${remoteUserId}:`, err);
-    });
-
-    peersRef.current.set(String(remoteUserId), peer);
-    return peer;
-  }, [conversationId, currentUser, isVideoEnabled, isGroup, cleanupCall]);
-
-  // Start Call (from Lobby)
-  const startCall = useCallback(async () => {
-    if (!currentUser?.id || !conversationId) return;
-
-    if (!localStreamRef.current) {
-      await initLocalStream(isVideoEnabled);
-    }
-
-    if (!isGroup) {
-      // 1-on-1 Call
-      const toUserId = targetUser?.userId || targetUser?.id;
-      if (!toUserId) return;
-
-      setCallState("CALLING");
-      ringtonePlayerRef.current = playOutgoingRingtone();
-
-      // Send call invite to remote user
-      webSocketService.sendVideoSignal(toUserId, {
-        action: "call-invite",
-        conversationId,
-        name: currentUser.userFullname,
-        userImage: currentUser.userImage,
-        hasVideo: isVideoEnabled,
-      }).catch((err) => console.error("Error sending call-invite:", err));
-
-      // Create initiator peer
-      createPeer(toUserId, true, {
-        name: targetUser.userFullname || targetUser.name,
-        image: targetUser.userImage || targetUser.image,
-        hasVideo: isVideoEnabled,
+      peer.on("close", () => {
+        peersRef.current.delete(String(remoteUserId));
+        setParticipants((prev) =>
+          prev.filter((p) => p.id !== String(remoteUserId))
+        );
+        if (!isGroupRef.current) {
+          cleanupCall();
+        }
       });
-    } else {
-      // Group Call
-      setCallState("CONNECTED");
 
-      // Broadcast join to conversation
-      webSocketService.sendGroupVideoSignal(conversationId, {
-        action: "group-join",
-        conversationId,
-        name: currentUser.userFullname,
-        userImage: currentUser.userImage,
-        hasVideo: isVideoEnabled,
-      }).catch((err) => console.error("Error sending group-join:", err));
+      peer.on("error", (err) => {
+        console.warn(`Peer error with ${remoteUserId}:`, err);
+      });
+
+      peersRef.current.set(String(remoteUserId), peer);
+      return peer;
+    },
+    [cleanupCall]
+  );
+
+  const startCall = useCallback(
+    async ({ isAnswering = false } = {}) => {
+      if (!currentUserRef.current?.id || !conversationIdRef.current) return;
+
+      isCleaningUpRef.current = false;
+
+      if (!localStreamRef.current) {
+        await initLocalStream(isVideoEnabledRef.current);
+      }
+
+      const user = currentUserRef.current;
+      const threadId = conversationIdRef.current;
+
+      if (!isGroupRef.current) {
+        const toUserId =
+          targetUserRef.current?.userId || targetUserRef.current?.id;
+        if (!toUserId) return;
+
+        setCallState("CALLING");
+
+        if (isAnswering) {
+          // Answering an incoming call: notify caller we are ready and wait as responder (initiator: false)
+          webSocketService
+            .sendVideoSignal(toUserId, {
+              action: "call-accept",
+              conversationId: threadId,
+              name: user.userFullname,
+              userImage: user.userImage,
+              hasVideo: isVideoEnabledRef.current,
+            })
+            .catch((err) => console.error("Error sending call-accept:", err));
+        } else {
+          ringtonePlayerRef.current = playOutgoingRingtone();
+          webSocketService
+            .sendVideoSignal(toUserId, {
+              action: "call-invite",
+              conversationId: threadId,
+              name: user.userFullname,
+              userImage: user.userImage,
+              hasVideo: isVideoEnabledRef.current,
+            })
+            .catch((err) => console.error("Error sending call-invite:", err));
+        }
+      } else {
+        setCallState("CONNECTED");
+        webSocketService
+          .sendGroupVideoSignal(threadId, {
+            action: "group-join",
+            conversationId: threadId,
+            name: user.userFullname,
+            userImage: user.userImage,
+            hasVideo: isVideoEnabledRef.current,
+          })
+          .catch((err) => console.error("Error sending group-join:", err));
+      }
+    },
+    [initLocalStream]
+  );
+
+  // Auto join once when answering an incoming call after target/group metadata loads
+  useEffect(() => {
+    const targetReady =
+      isGroup || Boolean(targetUser?.userId || targetUser?.id);
+    if (
+      autoJoin &&
+      !hasAutoJoinedRef.current &&
+      callState === "LOBBY" &&
+      currentUser?.id &&
+      conversationId &&
+      targetReady
+    ) {
+      hasAutoJoinedRef.current = true;
+      startCall({ isAnswering: true });
     }
   }, [
-    currentUser,
+    autoJoin,
+    callState,
+    currentUser?.id,
     conversationId,
     isGroup,
     targetUser,
-    isVideoEnabled,
-    initLocalStream,
-    createPeer,
+    startCall,
   ]);
 
-  // Handle auto join if arriving from incoming call modal
+  // Listen to incoming STOMP video signals (registered once per user/call session)
   useEffect(() => {
-    if (autoJoin && callState === "LOBBY") {
-      startCall();
-    }
-  }, [autoJoin, callState, startCall]);
+    if (!currentUser?.id) return undefined;
 
-  // Listen to incoming STOMP video signals
-  useEffect(() => {
     const unsubscribe = webSocketService.on("video-call", (payload) => {
       if (!payload) return;
       const { from, action, signal, name, userImage, hasVideo } = payload;
       const fromId = String(from);
 
-      // Ignore signals from self
-      if (fromId === String(currentUser?.id)) return;
+      if (fromId === String(currentUserRef.current?.id)) return;
+
+      // Incoming call invitations belong to IncomingCallModal (websocket.js), not CallPage
+      if (action === "call-invite" || action === "group-call-ring") {
+        return;
+      }
 
       if (action === "endCall" || action === "group-leave") {
         const peer = peersRef.current.get(fromId);
@@ -303,25 +375,48 @@ export function useCallManager({
         }
         setParticipants((prev) => prev.filter((p) => p.id !== fromId));
 
-        if (!isGroup && fromId === String(targetUser?.userId || targetUser?.id)) {
+        if (
+          !isGroupRef.current &&
+          fromId ===
+            String(targetUserRef.current?.userId || targetUserRef.current?.id)
+        ) {
           cleanupCall();
         }
         return;
       }
 
       if (action === "call-reject") {
-        if (!isGroup) {
+        if (!isGroupRef.current) {
           cleanupCall();
         }
         return;
       }
 
+      if (action === "call-accept" && !isGroupRef.current) {
+        if (ringtonePlayerRef.current) {
+          ringtonePlayerRef.current.stop();
+          ringtonePlayerRef.current = null;
+        }
+        createPeer(fromId, true, {
+          name:
+            name ||
+            targetUserRef.current?.userFullname ||
+            targetUserRef.current?.name ||
+            "User",
+          image:
+            userImage ||
+            targetUserRef.current?.userImage ||
+            targetUserRef.current?.image ||
+            "/default-avatar.png",
+          hasVideo: hasVideo ?? true,
+        });
+        return;
+      }
+
       if (action === "group-join") {
         if (peersRef.current.size >= MAX_GROUP_PARTICIPANTS) {
-          // Group call limit reached
           return;
         }
-        // New member joined the group -> initiate peer connection to them
         createPeer(fromId, true, {
           name: name || "User",
           image: userImage || "/default-avatar.png",
@@ -333,7 +428,6 @@ export function useCallManager({
       if (action === "signal" && signal) {
         let peer = peersRef.current.get(fromId);
         if (!peer) {
-          // Received offer as responder
           peer = createPeer(fromId, false, {
             name: name || "User",
             image: userImage || "/default-avatar.png",
@@ -352,27 +446,29 @@ export function useCallManager({
     return () => {
       unsubscribe();
     };
-  }, [currentUser?.id, targetUser, isGroup, createPeer, cleanupCall]);
+  }, [currentUser?.id, createPeer, cleanupCall]);
 
-  // End Call
   const endCall = useCallback(() => {
     if (!isGroup && (targetUser?.userId || targetUser?.id)) {
       const toId = targetUser.userId || targetUser.id;
-      webSocketService.sendVideoSignal(toId, {
-        action: "endCall",
-        conversationId,
-      }).catch(() => {});
+      webSocketService
+        .sendVideoSignal(toId, {
+          action: "endCall",
+          conversationId,
+        })
+        .catch(() => {});
     } else if (isGroup && conversationId) {
-      webSocketService.sendGroupVideoSignal(conversationId, {
-        action: "group-leave",
-        conversationId,
-      }).catch(() => {});
+      webSocketService
+        .sendGroupVideoSignal(conversationId, {
+          action: "group-leave",
+          conversationId,
+        })
+        .catch(() => {});
     }
 
     cleanupCall();
   }, [isGroup, targetUser, conversationId, cleanupCall]);
 
-  // Toggle Video Track
   const toggleVideo = useCallback(async () => {
     const nextState = !isVideoEnabled;
     setIsVideoEnabled(nextState);
@@ -381,8 +477,7 @@ export function useCallManager({
       const videoTrack = localStreamRef.current.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = nextState;
-      } else if (nextState) {
-        // Need to acquire video track
+      } else if (nextState && navigator?.mediaDevices?.getUserMedia) {
         try {
           const videoStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -390,7 +485,6 @@ export function useCallManager({
           const newTrack = videoStream.getVideoTracks()[0];
           localStreamRef.current.addTrack(newTrack);
 
-          // Update peers with new video track
           peersRef.current.forEach((peer) => {
             try {
               peer.replaceTrack(null, newTrack, localStreamRef.current);
@@ -406,7 +500,6 @@ export function useCallManager({
     }
   }, [isVideoEnabled]);
 
-  // Toggle Audio Track
   const toggleAudio = useCallback(() => {
     const nextState = !isAudioEnabled;
     setIsAudioEnabled(nextState);
@@ -419,10 +512,8 @@ export function useCallManager({
     }
   }, [isAudioEnabled]);
 
-  // Toggle Screen Sharing
   const toggleScreenShare = useCallback(async () => {
     if (isScreenSharing) {
-      // Stop screen sharing, restore camera
       if (screenStreamRef.current) {
         stopTracks(screenStreamRef.current);
         screenStreamRef.current = null;
@@ -433,11 +524,15 @@ export function useCallManager({
         const camTrack = localStreamRef.current.getVideoTracks()[0];
         peersRef.current.forEach((peer) => {
           try {
-            peer.replaceTrack(peer.streams[0]?.getVideoTracks()[0], camTrack, localStreamRef.current);
+            peer.replaceTrack(
+              peer.streams[0]?.getVideoTracks()[0],
+              camTrack,
+              localStreamRef.current
+            );
           } catch (e) {}
         });
       }
-    } else {
+    } else if (navigator?.mediaDevices?.getDisplayMedia) {
       try {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: { cursor: "always" },
@@ -460,10 +555,11 @@ export function useCallManager({
           }
         };
 
-        // Replace track for all peers
         peersRef.current.forEach((peer) => {
           try {
-            const oldTrack = peer.streams[0]?.getVideoTracks()[0] || localStreamRef.current?.getVideoTracks()[0];
+            const oldTrack =
+              peer.streams[0]?.getVideoTracks()[0] ||
+              localStreamRef.current?.getVideoTracks()[0];
             peer.replaceTrack(oldTrack, screenTrack, localStreamRef.current);
           } catch (e) {
             console.warn("Error replacing screen track:", e);
@@ -476,18 +572,18 @@ export function useCallManager({
     }
   }, [isScreenSharing, stopTracks]);
 
-  // Select Audio Input Device
-  const selectAudioDevice = useCallback(async (deviceId) => {
-    setSelectedAudioDeviceId(deviceId);
-    await initLocalStream(isVideoEnabled, deviceId);
-  }, [initLocalStream, isVideoEnabled]);
+  const selectAudioDevice = useCallback(
+    async (deviceId) => {
+      setSelectedAudioDeviceId(deviceId);
+      await initLocalStream(isVideoEnabled, deviceId);
+    },
+    [initLocalStream, isVideoEnabled]
+  );
 
-  // Select Audio Output Device
   const selectAudioOutput = useCallback((deviceId) => {
     setSelectedAudioOutputId(deviceId);
   }, []);
 
-  // Test Speaker
   const testSpeaker = useCallback(() => {
     playTestSound({ deviceId: selectedAudioOutputId });
   }, [selectedAudioOutputId]);

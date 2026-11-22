@@ -114,6 +114,10 @@ const SearchResults = ({
                   <img
                     src={otherUser?.userImage || "/default-avatar.png"}
                     alt=""
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/default-avatar.png";
+                    }}
                     className="mr-3 h-10 w-10 rounded-full bg-ig-surface object-cover"
                   />
                 )}
@@ -151,6 +155,10 @@ const SearchResults = ({
               <img
                 src={user.userImage || "/default-avatar.png"}
                 alt=""
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
                 className="mr-3 h-10 w-10 rounded-full bg-ig-surface object-cover"
               />
               <div className="min-w-0 flex-1">
@@ -220,7 +228,6 @@ const MessengerPage = () => {
   useEffect(() => {
     if (currentUser?.id) {
       dispatch(setCurrentUserId(currentUser?.id));
-      localStorage.setItem("userId", currentUser?.id);
       webSocketService.init(dispatch, currentUser?.id, accessToken);
       dispatch(getConversations(currentUser?.id));
     }
@@ -908,11 +915,15 @@ const MessengerPage = () => {
                   <img
                     src={headerInfo?.image || "/default-avatar.png"}
                     alt={headerInfo?.name || ""}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/default-avatar.png";
+                    }}
                     className="h-10 w-10 shrink-0 rounded-full bg-ig-surface object-cover"
                   />
                 )}
                 <div className="min-w-0">
-                  <h1 className="truncate text-[16px] font-bold leading-tight text-ig-text">
+                  <h1 className="truncate text-[16px] font-semibold leading-tight text-ig-text">
                     {headerInfo?.name}
                   </h1>
                   {!headerInfo?.isGroup && headerInfo?.username && (

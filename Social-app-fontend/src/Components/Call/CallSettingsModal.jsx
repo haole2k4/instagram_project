@@ -13,7 +13,7 @@ const CallSettingsModal = ({
   onSelectAudioOutput,
 }) => {
   const [isPlayingTest, setIsPlayingTest] = useState(false);
-  const [testProgress, setTestProgress] = useState(0); // 0 to 12
+  const [testProgress, setTestProgress] = useState(0);
   const [testPlayerRef, setTestPlayerRef] = useState(null);
 
   useEffect(() => {
@@ -60,23 +60,23 @@ const CallSettingsModal = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="call-settings-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[480px] rounded-2xl border border-white/10 bg-[#262626] p-6 text-white shadow-2xl"
+        className="ig-modal-panel w-full max-w-[480px] rounded-panel border border-ig-border bg-ig-raised p-6 text-ig-text shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h2 id="call-settings-title" className="text-[18px] font-semibold">
+          <h2 id="call-settings-title" className="text-[16px] font-semibold">
             Settings
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close settings"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+            className="ig-press flex h-8 w-8 items-center justify-center rounded-full bg-ig-surface text-ig-muted hover:text-ig-text"
           >
             <X size={18} strokeWidth={2} />
           </button>
@@ -84,11 +84,10 @@ const CallSettingsModal = ({
 
         {/* Device selection form */}
         <div className="space-y-5">
-          {/* Microphone */}
           <div>
             <label
               htmlFor="mic-select"
-              className="mb-2 block text-[13px] font-medium text-[#a8a8a8]"
+              className="mb-2 block text-[13px] font-medium text-ig-muted"
             >
               Microphone
             </label>
@@ -97,7 +96,7 @@ const CallSettingsModal = ({
                 id="mic-select"
                 value={selectedAudioDeviceId || ""}
                 onChange={(e) => onSelectAudioDevice(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-white/10 bg-[#363636] px-3.5 py-2.5 pr-8 text-[14px] text-white focus:border-[#0095f6] focus:outline-none"
+                className="w-full appearance-none rounded-xl border border-ig-border bg-ig-surface px-3.5 py-2.5 pr-8 text-[14px] text-ig-text focus:border-ig-accent focus:outline-none"
               >
                 {audioDevices.length > 0 ? (
                   audioDevices.map((device, idx) => (
@@ -109,22 +108,18 @@ const CallSettingsModal = ({
                   <option value="">Default Microphone</option>
                 )}
               </select>
-              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/60">
-                <svg
-                  className="h-4 w-4 fill-current"
-                  viewBox="0 0 20 20"
-                >
+              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ig-muted">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                   <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                 </svg>
               </div>
             </div>
           </div>
 
-          {/* Audio output & Test sound */}
           <div>
             <label
               htmlFor="speaker-select"
-              className="mb-2 block text-[13px] font-medium text-[#a8a8a8]"
+              className="mb-2 block text-[13px] font-medium text-ig-muted"
             >
               Audio output
             </label>
@@ -134,11 +129,14 @@ const CallSettingsModal = ({
                   id="speaker-select"
                   value={selectedAudioOutputId || ""}
                   onChange={(e) => onSelectAudioOutput(e.target.value)}
-                  className="w-full appearance-none truncate rounded-xl border border-white/10 bg-[#363636] px-3.5 py-2.5 pr-8 text-[14px] text-white focus:border-[#0095f6] focus:outline-none"
+                  className="w-full appearance-none truncate rounded-xl border border-ig-border bg-ig-surface px-3.5 py-2.5 pr-8 text-[14px] text-ig-text focus:border-ig-accent focus:outline-none"
                 >
                   {audioOutputDevices.length > 0 ? (
                     audioOutputDevices.map((device, idx) => (
-                      <option key={device.deviceId || idx} value={device.deviceId}>
+                      <option
+                        key={device.deviceId || idx}
+                        value={device.deviceId}
+                      >
                         {device.label || `Speaker ${idx + 1}`}
                       </option>
                     ))
@@ -146,21 +144,17 @@ const CallSettingsModal = ({
                     <option value="">Default Speaker</option>
                   )}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white/60">
-                  <svg
-                    className="h-4 w-4 fill-current"
-                    viewBox="0 0 20 20"
-                  >
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ig-muted">
+                  <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                     <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                   </svg>
                 </div>
               </div>
 
-              {/* Test Audio Button & Progress */}
               <button
                 type="button"
                 onClick={handleToggleTestSound}
-                className="flex items-center gap-2 rounded-full bg-[#0095f6] px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+                className="ig-press flex items-center gap-2 rounded-control bg-ig-accent px-3.5 py-2 text-[13px] font-medium text-ig-text hover:opacity-90"
                 title={isPlayingTest ? "Stop test sound" : "Play test sound"}
               >
                 {isPlayingTest ? (
@@ -175,9 +169,8 @@ const CallSettingsModal = ({
             </div>
           </div>
 
-          {/* Keyboard shortcuts */}
           <div className="pt-2">
-            <h3 className="mb-3 text-[13px] font-medium text-[#a8a8a8]">
+            <h3 className="mb-3 text-[13px] font-medium text-ig-muted">
               Keyboard shortcuts
             </h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-[13px]">
@@ -186,14 +179,16 @@ const CallSettingsModal = ({
                   key={sc.label}
                   className="flex items-center justify-between"
                 >
-                  <span className="text-[#e0e0e0]">{sc.label}</span>
-                  <div className="flex items-center gap-1 font-mono text-[12px] text-white/80">
+                  <span className="text-ig-text">{sc.label}</span>
+                  <div className="flex items-center gap-1 font-mono text-[12px] text-ig-muted">
                     {sc.keys.map((k, i) => (
                       <React.Fragment key={k}>
-                        <kbd className="rounded border border-white/20 bg-[#3a3a3a] px-1.5 py-0.5 text-[11px] shadow-sm">
+                        <kbd className="rounded border border-ig-border bg-ig-surface px-1.5 py-0.5 text-[11px]">
                           {k}
                         </kbd>
-                        {i < sc.keys.length - 1 && <span className="text-white/40">+</span>}
+                        {i < sc.keys.length - 1 && (
+                          <span className="text-ig-faint">+</span>
+                        )}
                       </React.Fragment>
                     ))}
                   </div>
@@ -208,9 +203,13 @@ const CallSettingsModal = ({
           <button
             type="button"
             onClick={() =>
-              window.open("https://help.instagram.com", "_blank", "noopener,noreferrer")
+              window.open(
+                "https://help.instagram.com",
+                "_blank",
+                "noopener,noreferrer"
+              )
             }
-            className="flex items-center gap-1.5 rounded-xl bg-[#363636] px-4 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-[#404040]"
+            className="ig-press flex items-center gap-1.5 rounded-control border border-ig-border bg-ig-surface px-4 py-2.5 text-[14px] font-medium text-ig-text hover:bg-ig-ground"
           >
             <HelpCircle size={16} />
             <span>Get help</span>
@@ -218,7 +217,7 @@ const CallSettingsModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl bg-[#0095f6] px-5 py-2.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+            className="ig-press flex-1 rounded-control bg-ig-accent px-5 py-2.5 text-[14px] font-semibold text-ig-text hover:opacity-90"
           >
             Done
           </button>

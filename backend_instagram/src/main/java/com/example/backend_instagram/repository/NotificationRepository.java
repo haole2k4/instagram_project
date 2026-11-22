@@ -2,6 +2,7 @@ package com.example.backend_instagram.repository;
 
 import com.example.backend_instagram.entity.Notification;
 import com.example.backend_instagram.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,8 +11,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    @EntityGraph(attributePaths = { "actor", "post" })
     List<Notification> findByUserOrderBySentAtDesc(User user);
 
+    @EntityGraph(attributePaths = { "actor", "post" })
     List<Notification> findByUserAndIsReadFalseOrderBySentAtDesc(User user);
 
     @Modifying

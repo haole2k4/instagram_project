@@ -15,7 +15,7 @@ const Kpi = ({ label, value, note }) => (
     <p className="mt-2 text-[28px] font-semibold leading-8 tabular-nums text-white">
       {value}
     </p>
-    {note ? <p className="mt-1 text-[12px] text-[#6f6f6f]">{note}</p> : null}
+    {note ? <p className="mt-1 text-[12px] text-ig-faint">{note}</p> : null}
   </div>
 );
 
@@ -23,6 +23,7 @@ const Dashboard = () => {
   const { t } = useTranslation();
   const [days, setDays] = useState(7);
   const [data, setData] = useState(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,6 +32,7 @@ const Dashboard = () => {
     setError("");
     try {
       setData(await adminApi.overview(days));
+      setLastFetchedAt(new Date().toISOString());
     } catch (requestError) {
       setError(errorMessage(requestError, t("admin.loadError")));
     } finally {
@@ -164,7 +166,7 @@ const Dashboard = () => {
                           ) : null}
                         </div>
                         {showLabel ? (
-                          <span className="w-full truncate text-center text-[10px] text-[#6f6f6f]">
+                          <span className="w-full truncate text-center text-[11px] text-ig-faint">
                             {day.date.slice(5)}
                           </span>
                         ) : (
@@ -225,8 +227,8 @@ const Dashboard = () => {
                   <p className="mt-2 text-[24px] font-semibold tabular-nums">
                     {value ?? 0}
                   </p>
-                  <p className="mt-1 text-[11px] text-[#6f6f6f]">
-                    {t("admin.updatedAt")} {formatDate(new Date().toISOString())}
+                  <p className="mt-1 text-[11px] text-ig-faint">
+                    {t("admin.updatedAt")} {formatDate(lastFetchedAt)}
                   </p>
                 </div>
               ))}

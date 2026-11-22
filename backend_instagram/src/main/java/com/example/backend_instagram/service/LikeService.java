@@ -6,6 +6,7 @@ import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.LikeRepository;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,20 +36,25 @@ public class LikeService {
 
   @Transactional
   public void likePost(Long postId, Long userId) {
-    Post post = postService.getVisiblePost(postId);
     User user = requireUser(userId);
     accountStatusService.requireWritable(user);
+    Post post = postService.getVisiblePost(postId, userId);
 
     if (likeRepository.findByPostAndUser(post, user).isPresent()) {
-      throw new IllegalStateException("Người dùng đã thích bài viết này");
+      throw new ApiException(HttpStatus.CONFLICT, "ALREADY_LIKED", "Người dùng đã thích bài viết này");
     }
 
     Like like = new Like();
     like.setPost(post);
     like.setUser(user);
-    likeRepository.save(like);
+    try {
+      likeRepository.saveAndFlush(like);
+    } catch (DataIntegrityViolationException ex) {
+      throw new ApiException(HttpStatus.CONFLICT, "ALREADY_LIKED", "Người dùng đã thích bài viết này");
+    }
 
-    post.setLikesCount(post.getLikesCount() + 1);
+    int currentLikes = post.getLikesCount() == null ? 0 : post.getLikesCount();
+    post.setLikesCount(currentLikes + 1);
     postService.savePost(post);
 
     notificationService.createLikeNotification(postId, userId);
@@ -56,16 +62,19 @@ public class LikeService {
 
   @Transactional
   public void unlikePost(Long postId, Long userId) {
-    Post post = postService.getVisiblePost(postId);
     User user = requireUser(userId);
     accountStatusService.requireWritable(user);
+    Post post = postService.getVisiblePost(postId, userId);
 
     Like like = likeRepository
       .findByPostAndUser(post, user)
-      .orElseThrow(() -> new IllegalStateException("Người dùng chưa thích bài viết này"));
+      .orElseThrow(() ->
+        new ApiException(HttpStatus.CONFLICT, "NOT_LIKED", "Người dùng chưa thích bài viết này")
+      );
 
     likeRepository.delete(like);
-    post.setLikesCount(Math.max(0, post.getLikesCount() - 1));
+    int currentLikes = post.getLikesCount() == null ? 0 : post.getLikesCount();
+    post.setLikesCount(Math.max(0, currentLikes - 1));
     postService.savePost(post);
   }
 

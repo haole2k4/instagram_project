@@ -9,8 +9,10 @@ import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -22,10 +24,29 @@ public class AccountStatusService {
 
   private final UserRepository userRepository;
   private final AuditService auditService;
+  private final CacheManager cacheManager;
 
   public AccountStatusService(UserRepository userRepository, AuditService auditService) {
+    this(userRepository, auditService, (CacheManager) null);
+  }
+
+  public AccountStatusService(
+    UserRepository userRepository,
+    AuditService auditService,
+    CacheManager cacheManager
+  ) {
     this.userRepository = userRepository;
     this.auditService = auditService;
+    this.cacheManager = cacheManager;
+  }
+
+  @Autowired
+  public AccountStatusService(
+    UserRepository userRepository,
+    AuditService auditService,
+    ObjectProvider<CacheManager> cacheManagerProvider
+  ) {
+    this(userRepository, auditService, cacheManagerProvider.getIfAvailable());
   }
 
   public UserStatus effectiveStatus(User user) {
@@ -58,22 +79,21 @@ public class AccountStatusService {
 
   @Scheduled(fixedDelay = 60_000)
   @Transactional
-  @Caching(
-    evict = {
-      @CacheEvict(cacheNames = CacheNames.POSTS, allEntries = true),
-      @CacheEvict(cacheNames = CacheNames.COMMENTS, allEntries = true),
-      @CacheEvict(cacheNames = CacheNames.USER_STATS, allEntries = true),
-    }
-  )
   public void expireSuspensions() {
     List<User> expired = userRepository.findByStatusAndSuspendedUntilBefore(
       UserStatus.SUSPENDED,
       Instant.now()
     );
+    if (expired.isEmpty()) {
+      return;
+    }
+
+    int expiredCount = 0;
+    Instant now = Instant.now();
     for (User user : expired) {
       user.setStatus(UserStatus.ACTIVE);
       user.setSuspendedUntil(null);
-      user.setStatusChangedAt(Instant.now());
+      user.setStatusChangedAt(now);
       user.setStatusChangedBy(null);
       userRepository.save(user);
       auditService.log(
@@ -87,6 +107,23 @@ public class AccountStatusService {
         null
       );
       logger.info("Suspension expired for user {}", user.getId());
+      expiredCount++;
+    }
+
+    if (expiredCount > 0) {
+      evictCaches(CacheNames.POSTS, CacheNames.COMMENTS, CacheNames.USER_STATS);
+    }
+  }
+
+  private void evictCaches(String... cacheNames) {
+    if (cacheManager == null) {
+      return;
+    }
+    for (String cacheName : cacheNames) {
+      Cache cache = cacheManager.getCache(cacheName);
+      if (cache != null) {
+        cache.clear();
+      }
     }
   }
 }

@@ -143,27 +143,27 @@ const UserDetail = () => {
             </h2>
             <dl className="grid grid-cols-1 gap-4 text-[13px] sm:grid-cols-2">
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.email")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.email")}</dt>
                 <dd className="mt-1">{user.email || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.phone")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.phone")}</dt>
                 <dd className="mt-1">{user.phone || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.roles")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.roles")}</dt>
                 <dd className="mt-1">{user.roles?.join(" · ") || "—"}</dd>
               </div>
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.joined")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.joined")}</dt>
                 <dd className="mt-1">{formatDate(user.createdAt)}</dd>
               </div>
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.posts")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.posts")}</dt>
                 <dd className="mt-1 tabular-nums">{user.postsCount}</dd>
               </div>
               <div>
-                <dt className="text-[#6f6f6f]">{t("admin.table.reports")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.reports")}</dt>
                 <dd className="mt-1 tabular-nums">{user.reportsCount}</dd>
               </div>
             </dl>
@@ -211,7 +211,7 @@ const UserDetail = () => {
         <aside className="lg:sticky lg:top-20 lg:self-start">
           <section className="border border-[#161616] p-5">
             <h2 className="text-[16px] font-medium">{t("admin.accountActions")}</h2>
-            <p className="mt-2 text-[12px] text-[#6f6f6f]">
+            <p className="mt-2 text-[12px] text-ig-faint">
               {t("admin.accountActionsHint")}
             </p>
             {user.statusReasonCode ? (
@@ -220,7 +220,7 @@ const UserDetail = () => {
                   {t("admin.table.reason")}: {user.statusReasonCode}
                 </p>
                 {user.statusReason ? <p className="mt-1">{user.statusReason}</p> : null}
-                <p className="mt-1 text-[#6f6f6f]">
+                <p className="mt-1 text-ig-faint">
                   {formatDate(user.statusChangedAt)}
                 </p>
               </div>
@@ -237,7 +237,7 @@ const UserDetail = () => {
                     {t("admin.suspend")}
                   </button>
                 ) : null}
-                {user.status !== "ACTIVE" ? (
+                {isAdmin && user.status !== "ACTIVE" ? (
                   <button
                     type="button"
                     className={btnPrimary + " w-full"}
@@ -257,7 +257,7 @@ const UserDetail = () => {
                 ) : null}
               </div>
             ) : (
-              <p className="mt-4 text-[12px] text-[#6f6f6f]">
+              <p className="mt-4 text-[12px] text-ig-faint">
                 {t("admin.protectedAccount")}
               </p>
             )}
@@ -290,7 +290,7 @@ const UserDetail = () => {
               className={
                 mode === "ban" || mode === "suspend" ? btnDanger : btnPrimary
               }
-              disabled={submitting}
+              disabled={!form.reasonCode || submitting}
               onClick={submit}
             >
               {submitting ? t("admin.submitting") : t("admin.confirm")}

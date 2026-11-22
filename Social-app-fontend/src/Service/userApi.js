@@ -7,10 +7,6 @@ const handleGetAllUser = () => {
   return instance.get("/user/all");
 };
 
-const handleDeleteUser = (id) => {
-  return instance.delete(`/user/${id}`);
-};
-
 const handleCreateUser = (data) => {
   return instance.post("/user", data);
 };
@@ -51,7 +47,6 @@ const updatePrivacySettings = (data) => {
 export {
   handleEditProfile,
   handleGetAllUser,
-  handleDeleteUser,
   handleCreateUser,
   handleGetFollowingByUser,
   handleGetFollowersByUser,

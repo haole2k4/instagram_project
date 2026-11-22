@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -11,6 +11,15 @@ import { userRegister } from "../../Service/authApi";
 const Register = () => {
   const navi = useNavigate();
   const { t } = useTranslation();
+  const redirectTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   const userSchema = yup.object().shape({
     email: yup
@@ -35,7 +44,7 @@ const Register = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({
     mode: "onChange",
     resolver: yupResolver(userSchema),
@@ -43,10 +52,10 @@ const Register = () => {
 
   const handleRegister = async (data) => {
     try {
-      let res = await userRegister(data);
+      const res = await userRegister(data);
       if (res && res.statusCode === 201) {
         toast.success(t("auth.registerSuccess"));
-        setTimeout(() => {
+        redirectTimerRef.current = setTimeout(() => {
           navi("/login");
         }, 1500);
       }
@@ -61,10 +70,10 @@ const Register = () => {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-ig-ground px-4 text-ig-text">
-      <div className="w-full max-w-[384px] rounded-xl border border-ig-border bg-ig-surface p-8 text-center">
+      <div className="w-full max-w-[390px] rounded-xl border border-ig-border bg-ig-surface p-8 text-center">
         <div className="mb-2 flex items-center justify-center gap-2.5">
           <Instagram size={24} strokeWidth={1.5} aria-hidden="true" />
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em]">
+          <h1 className="text-[20px] font-semibold tracking-tight text-ig-text">
             Instagram
           </h1>
         </div>
@@ -80,8 +89,9 @@ const Register = () => {
           <div>
             <input
               type="email"
-              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
               placeholder={t("auth.email")}
+              aria-label={t("auth.email")}
               {...register("email")}
             />
             {errors.email && (
@@ -94,8 +104,9 @@ const Register = () => {
           <div>
             <input
               type="password"
-              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
               placeholder={t("auth.password")}
+              aria-label={t("auth.password")}
               {...register("password")}
             />
             {errors.password && (
@@ -108,8 +119,9 @@ const Register = () => {
           <div>
             <input
               type="text"
-              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
               placeholder={t("auth.fullname")}
+              aria-label={t("auth.fullname")}
               {...register("fullname")}
             />
             {errors.fullname && (
@@ -122,8 +134,9 @@ const Register = () => {
           <div>
             <input
               type="text"
-              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[16px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-muted"
+              className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
               placeholder={t("auth.username")}
+              aria-label={t("auth.username")}
               {...register("username")}
             />
             {errors.username && (
@@ -135,14 +148,15 @@ const Register = () => {
 
           <button
             type="submit"
-            className="ig-press w-full rounded-lg bg-ig-accent py-2.5 text-[14px] font-semibold text-white hover:opacity-90"
+            disabled={isSubmitting}
+            className="ig-press w-full rounded-lg bg-ig-accent py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            {t("auth.register")}
+            {isSubmitting ? t("common.submitting") : t("auth.register")}
           </button>
         </form>
       </div>
 
-      <div className="mt-3 w-full max-w-[384px] rounded-xl border border-ig-border bg-ig-surface p-4 text-center text-[14px] text-ig-muted">
+      <div className="mt-3 w-full max-w-[390px] rounded-xl border border-ig-border bg-ig-surface p-4 text-center text-[14px] text-ig-muted">
         {t("auth.haveAccount")}{" "}
         <Link
           to="/login"

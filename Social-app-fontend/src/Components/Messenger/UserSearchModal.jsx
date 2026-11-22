@@ -209,6 +209,10 @@ const UserSearchModal = ({
                     <img
                       src={user.userImage || "/default-avatar.png"}
                       alt={user.userFullname || ""}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/default-avatar.png";
+                      }}
                       className="mr-3 h-10 w-10 shrink-0 rounded-full bg-ig-surface object-cover"
                     />
                     <div className="min-w-0 flex-1">

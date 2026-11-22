@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import instance from "../../Utils/AxiosApi/Axios";
@@ -22,6 +22,16 @@ const CallPage = () => {
   const [conversation, setConversation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const endTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (endTimerRef.current) {
+        clearTimeout(endTimerRef.current);
+        endTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Initialize WebSocket connection if not already connected
   useEffect(() => {
@@ -37,10 +47,13 @@ const CallPage = () => {
   useEffect(() => {
     let isMounted = true;
     const fetchConversation = async () => {
-      if (!conversationId || !currentUser?.id) return;
+      if (!conversationId || !currentUser?.id) {
+        if (isMounted) setLoading(false);
+        return;
+      }
       try {
         const res = await instance.get(
-          `/api/v1/chat/conversation/${conversationId}?userId=${currentUser.id}`
+          `/chat/conversation/${conversationId}?userId=${currentUser.id}`
         );
         if (isMounted && res.data) {
           setConversation(res.data);
@@ -66,7 +79,7 @@ const CallPage = () => {
     if (isGroup) {
       return {
         name: conversation.name || "Nhóm trò chuyện",
-        image: null,
+        image: "/group-avatar.png",
       };
     }
     const other = conversation.participants?.find(
@@ -82,7 +95,11 @@ const CallPage = () => {
   }, [conversation, isGroup, currentUser?.id]);
 
   const handleCallEnded = useCallback(() => {
-    setTimeout(() => {
+    if (endTimerRef.current) {
+      clearTimeout(endTimerRef.current);
+    }
+    endTimerRef.current = setTimeout(() => {
+      endTimerRef.current = null;
       if (window.opener && window.opener !== window) {
         window.close();
       } else {
@@ -126,17 +143,17 @@ const CallPage = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-black text-white">
+      <div className="flex min-h-dvh w-full items-center justify-center bg-ig-ground text-ig-text">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-[#0095f6]" />
-          <span className="text-[13px] text-white/60">Đang chuẩn bị cuộc gọi...</span>
+          <div className="h-2 w-32 rounded-control bg-ig-surface" />
+          <span className="text-[13px] text-ig-muted">Đang chuẩn bị cuộc gọi...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-black font-sans text-white">
+    <div className="relative min-h-dvh w-full overflow-hidden bg-ig-ground font-sans text-ig-text">
       {callState === "LOBBY" ? (
         <CallLobby
           targetInfo={targetUser}
@@ -172,7 +189,6 @@ const CallPage = () => {
         />
       )}
 
-      {/* Settings Modal (Image 3) */}
       <CallSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

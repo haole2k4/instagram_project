@@ -78,6 +78,7 @@ const Stories = () => {
                 alt={userInfo?.userNickname || ""}
                 className="h-full w-full rounded-full object-cover opacity-80"
                 onError={(e) => {
+                  e.currentTarget.onerror = null;
                   e.currentTarget.src = "/default-avatar.png";
                 }}
               />
@@ -114,6 +115,7 @@ const Stories = () => {
                       alt={nickname}
                       className="h-full w-full rounded-full bg-ig-surface object-cover"
                       onError={(e) => {
+                        e.currentTarget.onerror = null;
                         e.currentTarget.src = "/default-avatar.png";
                       }}
                     />

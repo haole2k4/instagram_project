@@ -1,7 +1,7 @@
 package com.example.backend_instagram.utils;
 
-
-
+import com.example.backend_instagram.dto.user.RestResponse;
+import com.example.backend_instagram.utils.constant.ApiMessage;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -12,9 +12,6 @@ import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-import com.example.backend_instagram.dto.user.RestResponse;
-import com.example.backend_instagram.utils.constant.ApiMessage;
-
 @RestControllerAdvice
 public class FormatRestresponse implements ResponseBodyAdvice<Object> {
 
@@ -23,7 +20,11 @@ public class FormatRestresponse implements ResponseBodyAdvice<Object> {
     MethodParameter returnType,
     Class<? extends HttpMessageConverter<?>> converterType
   ) {
-    return true; // Bạn có thể kiểm tra loại converter ở đây nếu cần
+    if (RestResponse.class.isAssignableFrom(returnType.getParameterType())) {
+      return false;
+    }
+    String packageName = returnType.getContainingClass().getPackageName();
+    return !packageName.startsWith("org.springframework.boot.actuate");
   }
 
   @Override
@@ -35,29 +36,27 @@ public class FormatRestresponse implements ResponseBodyAdvice<Object> {
     ServerHttpRequest request,
     ServerHttpResponse response
   ) {
+    if (body instanceof String || body instanceof RestResponse<?>) {
+      return body;
+    }
+    String path = request.getURI().getPath();
+    if (path != null && path.startsWith("/actuator")) {
+      return body;
+    }
+
     HttpServletResponse servletResponse =
       ((ServletServerHttpResponse) response).getServletResponse();
     int status = servletResponse.getStatus();
 
-    // Tạo RestResponse để đóng gói kết quả trả về
+    if (status >= 400) {
+      return body;
+    }
+
     RestResponse<Object> res = new RestResponse<>();
     res.setStatusCode(status);
-
-    if (body instanceof String) {
-      return body;
-    }
-
-    if (status >= 400) {
-      // res.setError("Call API FAILED");
-      // res.setMessage("An error occurred during the API call.");
-      // res.setData(body);
-      return body;
-    } else {
-      res.setData(body);
-      ApiMessage message = returnType.getMethodAnnotation(ApiMessage.class);
-      res.setMessage(message != null? message.value() : "CALL API SUCCESS");
-    }
-
+    res.setData(body);
+    ApiMessage message = returnType.getMethodAnnotation(ApiMessage.class);
+    res.setMessage(message != null ? message.value() : "CALL API SUCCESS");
     return res;
   }
 }

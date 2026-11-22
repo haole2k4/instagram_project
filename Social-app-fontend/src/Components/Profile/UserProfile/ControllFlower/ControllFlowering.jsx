@@ -106,12 +106,13 @@ export default function ControllFlowering({ isOpening, onClosing, id }) {
                   className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-80"
                 >
                   <img
-                    src={
-                      user.following?.userImage ||
-                      "https://via.placeholder.com/40"
-                    }
+                    src={user.following?.userImage || "/default-avatar.png"}
                     alt=""
                     className="h-10 w-10 shrink-0 rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/default-avatar.png";
+                    }}
                   />
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-ig-text hover:underline">

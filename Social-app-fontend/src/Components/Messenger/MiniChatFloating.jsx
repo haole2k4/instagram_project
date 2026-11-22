@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
+  Image as ImageIcon,
   Maximize2,
   MessageSquare,
   Send,
@@ -297,24 +298,25 @@ const MiniChatFloating = () => {
           type="button"
           onClick={() => dispatch(setMiniChatOpen(true))}
           aria-label={t("messenger.title")}
-          className="fixed bottom-5 right-6 z-40 hidden md:flex items-center gap-2.5 rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-4 py-2 text-white shadow-xl transition-all duration-120 hover:bg-[#262626] active:scale-[0.97]"
+          className="ig-press fixed bottom-5 right-6 z-40 hidden items-center gap-2.5 rounded-control border border-ig-border bg-ig-raised px-4 py-2 text-ig-text shadow-xl hover:bg-ig-surface md:flex"
         >
           <div className="relative flex items-center justify-center">
             <MessageSquare size={20} strokeWidth={1.75} aria-hidden="true" />
             {totalUnreadCount > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ig-like px-1 text-[10px] font-bold text-white tabular-nums">
+              <span className="absolute -right-2 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ig-like px-1 text-[11px] font-semibold text-ig-text tabular-nums">
                 {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
               </span>
             )}
           </div>
-          <span className="text-[14px] font-semibold text-white tracking-tight">
+          <span className="text-[14px] font-semibold tracking-tight text-ig-text">
             {t("messenger.title")}
           </span>
           <img
             src={currentUserAvatar}
             alt=""
-            className="h-6 w-6 rounded-full object-cover shrink-0"
+            className="h-6 w-6 shrink-0 rounded-full object-cover"
             onError={(e) => {
+              e.currentTarget.onerror = null;
               e.currentTarget.src = "/default-avatar.png";
             }}
           />
@@ -325,40 +327,41 @@ const MiniChatFloating = () => {
       {isMiniChatOpen && (
         <section
           aria-label={t("messenger.title")}
-          className="fixed bottom-4 right-6 z-50 flex h-[520px] w-[370px] flex-col overflow-hidden rounded-2xl border border-[#2e2e2e] bg-[#121212] shadow-2xl transition-all duration-200"
+          className="ig-modal-panel fixed bottom-4 right-6 z-50 flex h-[520px] w-[370px] flex-col overflow-hidden rounded-panel border border-ig-border bg-ig-surface shadow-2xl"
         >
           {/* Topbar mini chat */}
-          <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-[#262626] px-3 bg-[#121212]">
-            <div className="flex items-center gap-2 min-w-0">
+          <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-ig-border bg-ig-surface px-3">
+            <div className="flex min-w-0 items-center gap-2">
               {activeMiniConversation ? (
                 <>
                   <button
                     type="button"
                     onClick={handleBackToList}
                     aria-label="Back"
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-ig-muted hover:bg-neutral-800 hover:text-white"
+                    className="ig-press flex h-8 w-8 items-center justify-center rounded-full text-ig-muted hover:bg-ig-raised hover:text-ig-text"
                   >
                     <ChevronLeft size={20} strokeWidth={2} />
                   </button>
                   <img
                     src={activeDisplay?.image}
                     alt=""
-                    className="h-8 w-8 rounded-full bg-ig-surface object-cover shrink-0"
+                    className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover"
                     onError={(e) => {
+                      e.currentTarget.onerror = null;
                       e.currentTarget.src = "/default-avatar.png";
                     }}
                   />
-                  <h2 className="truncate text-[15px] font-bold text-white">
+                  <h2 className="truncate text-[14px] font-semibold text-ig-text">
                     {activeDisplay?.name}
                   </h2>
                 </>
               ) : (
                 <>
-                  <h2 className="text-[16px] font-bold text-white">
+                  <h2 className="text-[16px] font-semibold text-ig-text">
                     {t("messenger.title")}
                   </h2>
                   {totalUnreadCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-ig-like px-1.5 text-[11px] font-bold text-white tabular-nums">
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-ig-like px-1.5 text-[11px] font-semibold text-ig-text tabular-nums">
                       {totalUnreadCount}
                     </span>
                   )}
@@ -404,6 +407,7 @@ const MiniChatFloating = () => {
                       alt=""
                       className="mb-3 h-14 w-14 rounded-full object-cover"
                       onError={(e) => {
+                        e.currentTarget.onerror = null;
                         e.currentTarget.src = "/default-avatar.png";
                       }}
                     />
@@ -431,8 +435,9 @@ const MiniChatFloating = () => {
                           <img
                             src={activeDisplay?.image}
                             alt=""
-                            className="h-7 w-7 rounded-full object-cover shrink-0"
+                            className="h-7 w-7 shrink-0 rounded-full object-cover"
                             onError={(e) => {
+                              e.currentTarget.onerror = null;
                               e.currentTarget.src = "/default-avatar.png";
                             }}
                           />
@@ -446,7 +451,7 @@ const MiniChatFloating = () => {
                             return (
                               <div
                                 onClick={() => navigate("/user/home")}
-                                className="cursor-pointer max-w-[210px] rounded-2xl overflow-hidden border border-white/10 bg-[#1c1c1c] text-white shadow-md hover:opacity-95"
+                                className="max-w-[210px] cursor-pointer overflow-hidden rounded-panel border border-ig-border bg-ig-surface text-ig-text hover:opacity-95"
                               >
                                 <div className="flex items-center gap-1.5 p-2">
                                   <img
@@ -457,6 +462,7 @@ const MiniChatFloating = () => {
                                     alt=""
                                     className="h-5 w-5 rounded-full object-cover"
                                     onError={(e) => {
+                                      e.currentTarget.onerror = null;
                                       e.currentTarget.src =
                                         "/default-avatar.png";
                                     }}
@@ -465,33 +471,43 @@ const MiniChatFloating = () => {
                                     {parsed.authorName}
                                   </span>
                                 </div>
-                                <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-900">
+                                <div className="relative aspect-[4/5] w-full overflow-hidden bg-ig-ground">
                                   {isVideo ? (
                                     <video
                                       src={parsed.mediaUrl}
                                       className="h-full w-full object-cover"
                                       muted
                                     />
-                                  ) : (
+                                  ) : parsed.mediaUrl ? (
                                     <img
-                                      src={
-                                        parsed.mediaUrl ||
-                                        "/default-placeholder.png"
-                                      }
+                                      src={parsed.mediaUrl}
                                       alt=""
+                                      onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src =
+                                          "/default-avatar.png";
+                                      }}
                                       className="h-full w-full object-cover"
                                     />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-ig-faint">
+                                      <ImageIcon
+                                        size={20}
+                                        strokeWidth={1.5}
+                                        aria-hidden="true"
+                                      />
+                                    </div>
                                   )}
                                   {parsed.caption && (
-                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                      <p className="line-clamp-2 text-[11px] leading-tight text-white font-medium">
+                                    <div className="absolute inset-x-0 bottom-0 bg-black/75 p-2">
+                                      <p className="line-clamp-2 text-[11px] font-medium leading-tight text-ig-text">
                                         {parsed.caption}
                                       </p>
                                     </div>
                                   )}
                                 </div>
                                 {parsed.text && (
-                                  <div className="p-2 text-[12px] text-neutral-300">
+                                  <div className="p-2 text-[12px] text-ig-muted">
                                     {parsed.text}
                                   </div>
                                 )}
@@ -501,10 +517,10 @@ const MiniChatFloating = () => {
 
                           return (
                             <div
-                              className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed break-words ${
+                              className={`max-w-[78%] break-words rounded-panel px-3.5 py-2 text-[13px] leading-relaxed ${
                                 isMine
-                                  ? "bg-[#0095f6] text-white rounded-br-sm"
-                                  : "bg-[#262626] text-white rounded-bl-sm"
+                                  ? "bg-ig-accent text-ig-text rounded-br-sm"
+                                  : "bg-ig-raised text-ig-text rounded-bl-sm"
                               } ${msg.pending ? "opacity-70" : ""}`}
                             >
                               <p>{msg.content}</p>
@@ -520,8 +536,8 @@ const MiniChatFloating = () => {
 
               {/* Vùng input hoặc thông báo chặn người lạ */}
               {isRestricted ? (
-                <div className="border-t border-[#262626] bg-[#121212] p-3">
-                  <div className="rounded-xl border border-amber-900/40 bg-neutral-900/95 p-3 text-center text-[12px] font-medium leading-normal text-neutral-300">
+                <div className="border-t border-ig-border bg-ig-surface p-3">
+                  <div className="rounded-xl border border-ig-border bg-ig-ground p-3 text-center text-[12px] font-medium leading-normal text-ig-muted">
                     {restrictionNotice}
                   </div>
                 </div>
@@ -618,6 +634,7 @@ const MiniChatFloating = () => {
                               alt=""
                               className="h-12 w-12 rounded-full bg-ig-surface object-cover"
                               onError={(e) => {
+                                e.currentTarget.onerror = null;
                                 e.currentTarget.src = "/default-avatar.png";
                               }}
                             />

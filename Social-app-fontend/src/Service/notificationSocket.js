@@ -3,13 +3,13 @@ import webSocketService from "./webSocketService";
 /**
  * Facade tương thích cho các component cũ đang dùng notificationSocket.
  *
- * Không còn mở SockJS/STOMP riêng. Mọi thứ đi qua webSocketService để cả app
- * chỉ có 1 connection. disconnect() chỉ gỡ listener của facade này, không đóng
- * connection dùng chung.
+ * Không còn mở kết nối riêng. Mọi thứ đi qua webSocketService để cả app
+ * chỉ có 1 connection. Mỗi subscription trả về cleanup riêng để tránh gỡ nhầm
+ * listener của component khác đang mount.
  */
 class NotificationWebSocket {
   constructor() {
-    this.unsubscribers = [];
+    this.unsubscribers = new Set();
     this.connected = false;
   }
 
@@ -27,8 +27,12 @@ class NotificationWebSocket {
   }
 
   _addNotificationListener(handler) {
-    const unsubscribe = webSocketService.on("notification", handler);
-    this.unsubscribers.push(unsubscribe);
+    const rawUnsubscribe = webSocketService.on("notification", handler);
+    const unsubscribe = () => {
+      rawUnsubscribe();
+      this.unsubscribers.delete(unsubscribe);
+    };
+    this.unsubscribers.add(unsubscribe);
     return unsubscribe;
   }
 
@@ -80,14 +84,14 @@ class NotificationWebSocket {
   }
 
   disconnect() {
-    this.unsubscribers.forEach((unsubscribe) => {
+    [...this.unsubscribers].forEach((unsubscribe) => {
       try {
         unsubscribe();
       } catch (error) {
         console.warn("Error removing notification listener:", error);
       }
     });
-    this.unsubscribers = [];
+    this.unsubscribers.clear();
     this.connected = false;
   }
 

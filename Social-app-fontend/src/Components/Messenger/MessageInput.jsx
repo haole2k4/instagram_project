@@ -41,7 +41,7 @@ const MessageInput = ({
           {t("messenger.blockedMessage")}
         </div>
       ) : restrictionMessage ? (
-        <div className="rounded-panel border border-amber-900/40 bg-neutral-900/90 p-3 text-center text-[13px] font-medium text-neutral-300">
+        <div className="rounded-panel border border-ig-border bg-ig-surface p-3 text-center text-[13px] font-medium text-ig-muted">
           {restrictionMessage}
         </div>
       ) : (

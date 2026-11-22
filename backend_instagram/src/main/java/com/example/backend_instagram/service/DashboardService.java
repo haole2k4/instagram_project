@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,15 +80,24 @@ public class DashboardService {
       );
     }
 
+    Map<ReportStatus, Long> statusCounts = new EnumMap<>(ReportStatus.class);
+    for (Object[] row : reportRepository.countGroupedByStatus()) {
+      if (row[0] instanceof ReportStatus status && row[1] instanceof Number count) {
+        statusCounts.put(status, count.longValue());
+      } else if (row[0] != null && row[1] instanceof Number count) {
+        statusCounts.put(ReportStatus.valueOf(String.valueOf(row[0])), count.longValue());
+      }
+    }
+
     return new AdminDtos.Dashboard(
       userRepository.count(),
       userRepository.countByCreatedAtAfter(LocalDateTime.now().minusDays(days)),
       postRepository.countByCreatedAtAfter(LocalDateTime.now().minusDays(days)),
       new AdminDtos.ReportCounts(
-        reportRepository.countByStatus(ReportStatus.OPEN),
-        reportRepository.countByStatus(ReportStatus.CLAIMED),
-        reportRepository.countByStatus(ReportStatus.RESOLVED),
-        reportRepository.countByStatus(ReportStatus.DISMISSED)
+        statusCounts.getOrDefault(ReportStatus.OPEN, 0L),
+        statusCounts.getOrDefault(ReportStatus.CLAIMED, 0L),
+        statusCounts.getOrDefault(ReportStatus.RESOLVED, 0L),
+        statusCounts.getOrDefault(ReportStatus.DISMISSED, 0L)
       ),
       processed,
       avgHours,

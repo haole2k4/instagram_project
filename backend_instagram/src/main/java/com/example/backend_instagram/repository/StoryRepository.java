@@ -23,26 +23,30 @@ public interface StoryRepository
     """
     SELECT s FROM Story s
     WHERE s.user.id = :userId AND s.status = 1
+      AND s.createdAt >= :createdAt
       AND (s.access = 'PUBLIC' OR s.access IS NULL)
       AND s.moderationState = com.example.backend_instagram.entity.ModerationState.VISIBLE
       AND s.user.status = com.example.backend_instagram.entity.UserStatus.ACTIVE
     ORDER BY s.createdAt DESC
     """
   )
-  List<Story> findPublicByUserId(@Param("userId") Long userId);
+  List<Story> findPublicByUserId(
+      @Param("userId") Long userId,
+      @Param("createdAt") LocalDateTime createdAt);
 
   @EntityGraph(attributePaths = "user")
   @Query(
     """
     SELECT s FROM Story s
     WHERE s.status = 1
+      AND s.createdAt >= :createdAt
       AND (s.access = 'PUBLIC' OR s.access IS NULL)
       AND s.moderationState = com.example.backend_instagram.entity.ModerationState.VISIBLE
       AND s.user.status = com.example.backend_instagram.entity.UserStatus.ACTIVE
     ORDER BY s.createdAt DESC
     """
   )
-  List<Story> findAllPublic();
+  List<Story> findAllPublic(@Param("createdAt") LocalDateTime createdAt);
 
   @EntityGraph(attributePaths = "user")
   @Query(

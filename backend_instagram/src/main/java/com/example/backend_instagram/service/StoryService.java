@@ -6,11 +6,11 @@ import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.StoryRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.service.AwsS3Service;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,12 +47,10 @@ public class StoryService {
       );
     accountStatusService.requireWritable(user);
 
+    AwsS3Service.ValidatedMedia validated = awsS3Service.validateMediaFile(file);
+
     try {
-      String originalFilename = file.getOriginalFilename();
-      String extension = originalFilename == null || !originalFilename.contains(".")
-        ? ""
-        : originalFilename.substring(originalFilename.lastIndexOf("."));
-      String fileName = System.currentTimeMillis() + "_story" + extension;
+      String fileName = UUID.randomUUID() + "_story" + validated.extension();
       String url = awsS3Service.uploadFile(fileName, file.getBytes());
 
       Story story = new Story();
@@ -67,11 +65,11 @@ public class StoryService {
   }
 
   public List<Story> getStoriesByUserId(Long userId) {
-    return storyRepository.findPublicByUserId(userId);
+    return storyRepository.findPublicByUserId(userId, LocalDateTime.now().minusHours(24));
   }
 
   public List<Story> getAllStories() {
-    return storyRepository.findAllPublic();
+    return storyRepository.findAllPublic(LocalDateTime.now().minusHours(24));
   }
 
   @Transactional

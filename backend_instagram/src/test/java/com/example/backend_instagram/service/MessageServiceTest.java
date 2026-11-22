@@ -1,14 +1,18 @@
 package com.example.backend_instagram.service;
 
+import com.example.backend_instagram.dto.message.ChatUserSummaryDTO;
+import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.entity.Conversation;
 import com.example.backend_instagram.entity.ConversationParticipant;
 import com.example.backend_instagram.entity.Follow;
+import com.example.backend_instagram.entity.Message;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.ConversationParticipantRepository;
 import com.example.backend_instagram.repository.ConversationRepository;
 import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.MessageRepository;
 import com.example.backend_instagram.repository.UserRepository;
+import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,9 +20,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
+import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -92,7 +99,6 @@ class MessageServiceTest {
         when(participantRepository.findWithConversationAndUsersByConversationId(convId))
                 .thenReturn(List.of(cpSender, cpRecipient));
 
-        // Sender follows recipient, but recipient DOES NOT follow sender
         Follow senderFollowsRecipient = new Follow();
         senderFollowsRecipient.setFollower(sender);
         senderFollowsRecipient.setFollowing(recipient);
@@ -101,7 +107,6 @@ class MessageServiceTest {
         when(followRepository.findBetweenUsers(senderId, recipientId))
                 .thenReturn(List.of(senderFollowsRecipient));
 
-        // Recipient has disabled stranger messages
         when(userPrivacyService.allowsStrangerMessages(recipientId)).thenReturn(false);
 
         assertThatThrownBy(() -> messageService.sendMessage(convId, senderId, "Hello!"))
@@ -142,7 +147,6 @@ class MessageServiceTest {
         when(participantRepository.findWithConversationAndUsersByConversationId(convId))
                 .thenReturn(List.of(cpSender, cpRecipient));
 
-        // Recipient follows sender
         Follow recipientFollowsSender = new Follow();
         recipientFollowsSender.setFollower(recipient);
         recipientFollowsSender.setFollowing(sender);
@@ -153,7 +157,7 @@ class MessageServiceTest {
 
         when(userPrivacyService.allowsStrangerMessages(recipientId)).thenReturn(false);
 
-        com.example.backend_instagram.entity.Message saved = new com.example.backend_instagram.entity.Message();
+        Message saved = new Message();
         saved.setId(500L);
         saved.setSender(sender);
         saved.setConversation(conv);
@@ -164,5 +168,62 @@ class MessageServiceTest {
         messageService.sendMessage(convId, senderId, "Hello friend!");
 
         verify(messageRepository).save(any());
+    }
+
+    @Test
+    void getConversationMarksReadForCurrentUserNotBlindlyUser1AndChecksBlocking() throws IdInvalidException {
+        Conversation conv = new Conversation();
+        conv.setId(77L);
+
+        User u1 = new User();
+        u1.setId(1L);
+        u1.setUserNickname("u1");
+
+        Message msg = new Message();
+        msg.setId(10L);
+        msg.setConversation(conv);
+        msg.setSender(u1);
+        msg.setContent("hey");
+
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(userRepository.existsById(2L)).thenReturn(true);
+        when(followRepository.findBetweenUsers(1L, 2L)).thenReturn(List.of());
+        when(conversationRepository.findConversationBetweenUsers(1L, 2L)).thenReturn(Optional.of(conv));
+        when(messageRepository.findByConversationId(77L)).thenReturn(List.of(msg));
+
+        List<MessageResponseDTO> result = messageService.getConversation(1L, 2L, 2L);
+        assertThat(result).hasSize(1);
+        verify(messageRepository).markMessagesAsReadInConversation(77L, 2L);
+        verify(messageRepository, never()).markMessagesAsReadInConversation(77L, 1L);
+
+        assertThatThrownBy(() -> messageService.getConversation(1L, 2L, 99L))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        Follow blocked = new Follow();
+        blocked.setBlocking(true);
+        when(followRepository.findBetweenUsers(1L, 2L)).thenReturn(List.of(blocked));
+        assertThatThrownBy(() -> messageService.getConversation(1L, 2L, 2L))
+                .isInstanceOf(IdInvalidException.class);
+    }
+
+    @Test
+    void getContactsUsesRepositoryQueryAndOmitsPii() throws IdInvalidException {
+        User contact = new User();
+        contact.setId(2L);
+        contact.setUserFullname("Contact Two");
+        contact.setUserNickname("c2");
+        contact.setUserEmail("c2@example.com");
+        contact.setUserPhone("0999");
+
+        when(userRepository.existsById(1L)).thenReturn(true);
+        when(messageRepository.findContactsByUserId(1L)).thenReturn(List.of(contact));
+
+        List<ChatUserSummaryDTO> contacts = messageService.getContacts(1L);
+        assertThat(contacts).hasSize(1);
+        assertThat(contacts.get(0).getUserNickname()).isEqualTo("c2");
+        assertThat(ChatUserSummaryDTO.class.getDeclaredFields())
+                .extracting(java.lang.reflect.Field::getName)
+                .doesNotContain("userEmail", "userPhone", "userPassword", "refreshToken", "socketId");
     }
 }

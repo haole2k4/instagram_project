@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
+import i18n from "../Utils/i88n";
 
 export const btnPrimary =
   "inline-flex h-9 items-center justify-center rounded-[4px] bg-[#0095f6] px-4 text-[14px] font-medium text-white transition-colors duration-150 hover:bg-[#1877f2] disabled:cursor-not-allowed disabled:opacity-40";
@@ -9,10 +10,10 @@ export const btnSecondary =
 export const btnDanger =
   "inline-flex h-9 items-center justify-center rounded-[4px] border border-[#ff3040]/50 px-4 text-[14px] font-medium text-[#ff3040] transition-colors duration-150 hover:bg-[#ff3040]/10 disabled:cursor-not-allowed disabled:opacity-40";
 export const inputClass =
-  "h-9 w-full rounded-[4px] border border-[#2a2a2a] bg-[#0a0a0a] px-3 text-[14px] text-white outline-none transition-colors placeholder:text-[#6f6f6f] focus:border-[#0095f6]";
+  "h-9 w-full rounded-[4px] border border-[#2a2a2a] bg-[#0a0a0a] px-3 text-[14px] text-white outline-none transition-colors placeholder:text-ig-faint focus:border-[#0095f6]";
 export const selectClass = inputClass + " pr-8";
 export const textareaClass =
-  "min-h-[88px] w-full rounded-[4px] border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-[14px] text-white outline-none transition-colors placeholder:text-[#6f6f6f] focus:border-[#0095f6]";
+  "min-h-[88px] w-full rounded-[4px] border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-[14px] text-white outline-none transition-colors placeholder:text-ig-faint focus:border-[#0095f6]";
 
 export const REASONS = [
   "SPAM",
@@ -122,12 +123,12 @@ export const Modal = ({ open, title, onClose, children, footer }) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 py-6">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-full w-full max-w-[520px] overflow-y-auto border border-[#2a2a2a] bg-[#0a0a0a]"
+        className="max-h-full w-full max-w-[520px] overflow-y-auto rounded-panel border border-ig-border bg-ig-raised shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-[#161616] px-5 py-4">
           <h2 className="text-[16px] font-medium text-white">{title}</h2>
@@ -160,7 +161,7 @@ export const Field = ({ label, hint, children, htmlFor }) => (
       {label}
     </label>
     {children}
-    {hint ? <p className="mt-1 text-[12px] text-[#6f6f6f]">{hint}</p> : null}
+    {hint ? <p className="mt-1 text-[12px] text-ig-faint">{hint}</p> : null}
   </div>
 );
 
@@ -197,17 +198,35 @@ export const Pagination = ({ page, totalPages, totalElements, onChange }) => {
   );
 };
 
-export const formatDate = (value) => {
+export const formatDate = (value, language) => {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("vi-VN", {
+  const activeLang = language || i18n?.language || "vi";
+  const locale = activeLang.startsWith("en") ? "en-US" : "vi-VN";
+  return date.toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+export const formatReportAge = (value, t) => {
+  if (!value) return "—";
+  const ms = Date.now() - new Date(value).getTime();
+  if (Number.isNaN(ms) || ms < 0) return "—";
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 60) {
+    return t("admin.ageMinutes", { count: Math.max(1, minutes) });
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return t("admin.ageHours", { count: hours });
+  }
+  const days = Math.floor(hours / 24);
+  return t("admin.ageDays", { count: days });
 };
 
 export const shorten = (value, length = 90) => {

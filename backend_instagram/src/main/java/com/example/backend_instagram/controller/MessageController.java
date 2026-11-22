@@ -1,5 +1,6 @@
 package com.example.backend_instagram.controller;
 
+import com.example.backend_instagram.dto.message.ChatUserSummaryDTO;
 import com.example.backend_instagram.dto.message.MessageDTO;
 import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.entity.User;
@@ -53,15 +54,15 @@ public class MessageController {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN",
                     "Không thể xem cuộc trò chuyện của người khác.");
         }
-        List<MessageResponseDTO> messages = messageService.getConversation(user1Id, user2Id);
+        List<MessageResponseDTO> messages = messageService.getConversation(user1Id, user2Id, current);
         return ResponseEntity.ok(messages);
     }
 
     @GetMapping("/contacts/{userId}")
     @ApiMessage("Lấy danh sách liên hệ thành công")
-    public ResponseEntity<List<User>> getContacts(@PathVariable Long userId) throws IdInvalidException {
+    public ResponseEntity<List<ChatUserSummaryDTO>> getContacts(@PathVariable Long userId) throws IdInvalidException {
         requireSelf(userId);
-        List<User> contacts = messageService.getContacts(userId);
+        List<ChatUserSummaryDTO> contacts = messageService.getContacts(userId);
         return ResponseEntity.ok(contacts);
     }
 

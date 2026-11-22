@@ -1,12 +1,16 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.message.ChatSendRequest;
+import com.example.backend_instagram.entity.Follow;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.ConversationParticipantRepository;
+import com.example.backend_instagram.repository.ConversationRepository;
+import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.ChatRealtimePublisher;
 import com.example.backend_instagram.service.MessageService;
+import com.example.backend_instagram.service.UserPrivacyService;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -33,17 +37,26 @@ public class MessageWebSocketController {
     private final UserRepository userRepository;
     private final AccountStatusService accountStatusService;
     private final ConversationParticipantRepository conversationParticipantRepository;
+    private final FollowRepository followRepository;
+    private final ConversationRepository conversationRepository;
+    private final UserPrivacyService userPrivacyService;
 
     public MessageWebSocketController(MessageService messageService,
             ChatRealtimePublisher realtimePublisher,
             UserRepository userRepository,
             AccountStatusService accountStatusService,
-            ConversationParticipantRepository conversationParticipantRepository) {
+            ConversationParticipantRepository conversationParticipantRepository,
+            FollowRepository followRepository,
+            ConversationRepository conversationRepository,
+            UserPrivacyService userPrivacyService) {
         this.messageService = messageService;
         this.realtimePublisher = realtimePublisher;
         this.userRepository = userRepository;
         this.accountStatusService = accountStatusService;
         this.conversationParticipantRepository = conversationParticipantRepository;
+        this.followRepository = followRepository;
+        this.conversationRepository = conversationRepository;
+        this.userPrivacyService = userPrivacyService;
     }
 
     /**
@@ -60,7 +73,7 @@ public class MessageWebSocketController {
     @MessageMapping("/chat/{conversationId}/read")
     public void markAsRead(@DestinationVariable Long conversationId,
             Principal principal) throws IdInvalidException {
-        messageService.markMessagesAsRead(conversationId, currentUserId(principal));
+        messageService.markMessagesAsRead(conversationId, writableUserId(principal));
     }
 
     /**
@@ -75,6 +88,24 @@ public class MessageWebSocketController {
         if (toUserId == null || toUserId.equals(fromUserId) || payload == null) {
             return;
         }
+
+        List<Follow> relations = followRepository.findBetweenUsers(fromUserId, toUserId);
+        if (relations.stream().anyMatch(Follow::isBlocking)) {
+            throw new MessagingException("Một trong hai người đã chặn, không thể thực hiện cuộc gọi.");
+        }
+
+        boolean recipientAllowsStrangers = userPrivacyService.allowsStrangerMessages(toUserId);
+        boolean recipientFollowsCaller = relations.stream()
+                .anyMatch(f -> f.getFollower().getId().equals(toUserId)
+                        && f.getFollowing().getId().equals(fromUserId));
+        boolean hasExistingConversation = conversationRepository
+                .findConversationBetweenUsers(fromUserId, toUserId)
+                .isPresent();
+
+        if (!recipientAllowsStrangers && !recipientFollowsCaller && !hasExistingConversation) {
+            throw new MessagingException(UserPrivacyService.RESTRICTION_MESSAGE);
+        }
+
         Map<String, Object> safePayload = new HashMap<>();
         safePayload.put("from", fromUserId.toString());
         safePayload.put("to", toUserId.toString());
@@ -130,8 +161,8 @@ public class MessageWebSocketController {
     }
 
     /**
-     * Follow notification gửi từ client. Server chỉ giữ các trường hiển thị cần
-     * thiết và ghi đè fromUserId bằng Principal.
+     * Follow notification gửi từ client. Server xác minh quan hệ follow và luôn
+     * ghi đè fromUserId bằng Principal.
      */
     @MessageMapping("/notifications/{toUserId}")
     public void forwardNotification(@DestinationVariable Long toUserId,
@@ -140,6 +171,9 @@ public class MessageWebSocketController {
         Long fromUserId = writableUserId(principal);
         if (toUserId == null || toUserId.equals(fromUserId) || payload == null) {
             return;
+        }
+        if (!followRepository.existsByFollowerIdAndFollowingId(fromUserId, toUserId)) {
+            throw new MessagingException("Bạn chưa theo dõi người dùng này.");
         }
         Map<String, Object> safePayload = new HashMap<>();
         safePayload.put("type", "FOLLOW");

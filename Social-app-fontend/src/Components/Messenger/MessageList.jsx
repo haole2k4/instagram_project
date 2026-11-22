@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Play } from "lucide-react";
+import { Image as ImageIcon, Play } from "lucide-react";
 import { MessageListSkeleton } from "../Common/FlatSkeleton";
 import EmptyState from "../Common/EmptyState";
 
@@ -91,7 +91,7 @@ const PostShareCard = ({
     >
       <div
         onClick={() => navigate("/user/home")}
-        className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#1c1c1c] shadow-lg transition-transform hover:scale-[1.01]"
+        className="group cursor-pointer overflow-hidden rounded-panel border border-ig-border bg-ig-surface"
       >
         {/* Author header */}
         <div className="flex items-center gap-2.5 p-3">
@@ -100,33 +100,42 @@ const PostShareCard = ({
             alt=""
             className="h-7 w-7 rounded-full object-cover"
             onError={(e) => {
+              e.currentTarget.onerror = null;
               e.currentTarget.src = "/default-avatar.png";
             }}
           />
-          <span className="truncate text-[13px] font-semibold text-white">
+          <span className="truncate text-[13px] font-semibold text-ig-text">
             {authorName}
           </span>
         </div>
 
         {/* Media Preview */}
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-neutral-900">
+        <div className="relative aspect-[4/5] w-full overflow-hidden bg-ig-ground">
           {isVideo ? (
             <video
               src={mediaUrl}
               className="h-full w-full object-cover"
               muted
             />
-          ) : (
+          ) : mediaUrl ? (
             <img
-              src={mediaUrl || "/default-placeholder.png"}
+              src={mediaUrl}
               alt=""
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "/default-avatar.png";
+              }}
               className="h-full w-full object-cover"
             />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-ig-faint">
+              <ImageIcon size={24} strokeWidth={1.5} aria-hidden="true" />
+            </div>
           )}
 
           {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-ig-ground/80 text-ig-text">
                 <Play size={20} fill="currentColor" />
               </div>
             </div>
@@ -134,8 +143,8 @@ const PostShareCard = ({
 
           {/* Caption overlay */}
           {caption && (
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-6">
-              <p className="line-clamp-2 text-[12px] leading-snug text-white font-medium">
+            <div className="absolute inset-x-0 bottom-0 bg-black/75 p-3">
+              <p className="line-clamp-2 text-[12px] font-medium leading-snug text-ig-text">
                 {caption}
               </p>
             </div>
@@ -182,40 +191,44 @@ const StoryReplyCard = ({
           onClick={() => {
             if (storyId) navigate(`/user/story/${storyId}`);
           }}
-          className="relative h-[95px] w-[145px] sm:h-[105px] sm:w-[165px] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#1c1c1c] shadow-md select-none group"
+          className="group relative h-[95px] w-[145px] cursor-pointer select-none overflow-hidden rounded-panel border border-ig-border bg-ig-surface sm:h-[105px] sm:w-[165px]"
           title="Xem tin"
         >
           {storyMedia ? (
             storyType === "VIDEO" || storyMedia.endsWith(".mp4") ? (
               <video
                 src={storyMedia}
-                className="h-full w-full object-cover filter blur-[2px] scale-110 transition-transform duration-300 group-hover:scale-115"
+                className="h-full w-full object-cover opacity-70"
                 muted
               />
             ) : (
               <img
                 src={storyMedia}
                 alt={storyAuthor || "Story"}
-                className="h-full w-full object-cover filter blur-[2px] scale-110 transition-transform duration-300 group-hover:scale-115"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
+                className="h-full w-full object-cover opacity-70"
               />
             )
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-neutral-900 text-neutral-500 text-xs">
+            <div className="flex h-full w-full items-center justify-center bg-ig-ground text-[12px] text-ig-faint">
               Tin
             </div>
           )}
 
-          {/* Lớp phủ thông tin âm thanh / tác giả tin (Chuẩn Hình 4) */}
-          <div className="absolute inset-0 flex flex-col justify-between bg-black/45 p-2.5 backdrop-blur-[1px]">
-            <div className="flex items-center gap-1.5 text-white/90">
-              <span className="font-mono text-[11px] font-bold tracking-tighter">
+          {/* Lớp phủ thông tin âm thanh / tác giả tin */}
+          <div className="absolute inset-0 flex flex-col justify-between bg-black/55 p-2.5">
+            <div className="flex items-center gap-1.5 text-ig-text">
+              <span className="font-mono text-[11px] font-semibold tracking-tighter">
                 |||
               </span>
               <span className="truncate text-[12px] font-semibold">
                 {storyAuthor || "Tin"}
               </span>
             </div>
-            <p className="text-[11px] text-neutral-300/90 font-medium">
+            <p className="text-[11px] font-medium text-ig-muted">
               Tin đã trả lời
             </p>
           </div>
@@ -489,6 +502,10 @@ const MessageList = ({
                               : selectedUser?.image || "/default-avatar.png"
                           }
                           alt=""
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "/default-avatar.png";
+                          }}
                           className="mr-2 h-8 w-8 rounded-full bg-ig-surface object-cover"
                         />
                       </div>

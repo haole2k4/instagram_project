@@ -1,15 +1,25 @@
 package com.example.backend_instagram.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.backend_instagram.entity.Follow;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.repository.ConversationParticipantRepository;
+import com.example.backend_instagram.repository.ConversationRepository;
+import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.ChatRealtimePublisher;
 import com.example.backend_instagram.service.MessageService;
+import com.example.backend_instagram.service.UserPrivacyService;
+import com.example.backend_instagram.utils.error.ApiException;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
@@ -22,8 +32,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.springframework.http.HttpStatus;
+import org.springframework.messaging.MessagingException;
 
 @ExtendWith(MockitoExtension.class)
 class MessageWebSocketControllerTest {
@@ -43,6 +53,15 @@ class MessageWebSocketControllerTest {
     @Mock
     private ConversationParticipantRepository conversationParticipantRepository;
 
+    @Mock
+    private FollowRepository followRepository;
+
+    @Mock
+    private ConversationRepository conversationRepository;
+
+    @Mock
+    private UserPrivacyService userPrivacyService;
+
     @InjectMocks
     private MessageWebSocketController controller;
 
@@ -59,6 +78,9 @@ class MessageWebSocketControllerTest {
 
     @Test
     void testForwardVideoCall() {
+        when(followRepository.findBetweenUsers(100L, 200L)).thenReturn(List.of());
+        when(userPrivacyService.allowsStrangerMessages(200L)).thenReturn(true);
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("action", "offer");
         payload.put("signal", "dummy-sdp");
@@ -79,6 +101,27 @@ class MessageWebSocketControllerTest {
         assertEquals("dummy-sdp", sent.get("signal"));
         assertEquals("42", sent.get("conversationId"));
         assertEquals(true, sent.get("hasVideo"));
+    }
+
+    @Test
+    void rejectsVideoCallWhenBlockedOrStrangersDisallowed() {
+        Follow blocked = new Follow();
+        blocked.setBlocking(true);
+        when(followRepository.findBetweenUsers(100L, 200L)).thenReturn(List.of(blocked));
+
+        assertThrows(
+                MessagingException.class,
+                () -> controller.forwardVideoCall(200L, Map.of("action", "offer"), principal));
+        verify(realtimePublisher, never()).sendVideoCallSignal(any(), any());
+
+        when(followRepository.findBetweenUsers(100L, 201L)).thenReturn(List.of());
+        when(userPrivacyService.allowsStrangerMessages(201L)).thenReturn(false);
+        when(conversationRepository.findConversationBetweenUsers(100L, 201L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                MessagingException.class,
+                () -> controller.forwardVideoCall(201L, Map.of("action", "offer"), principal));
+        verify(realtimePublisher, never()).sendVideoCallSignal(eq(201L), any());
     }
 
     @Test
@@ -108,5 +151,28 @@ class MessageWebSocketControllerTest {
         assertEquals("Team Dev", sent.get("groupName"));
         assertEquals(false, sent.get("hasVideo"));
         assertEquals(true, sent.get("isGroup"));
+    }
+
+    @Test
+    void forwardNotificationRequiresFollowRelationship() {
+        when(followRepository.existsByFollowerIdAndFollowingId(100L, 200L)).thenReturn(false);
+
+        assertThrows(
+                MessagingException.class,
+                () -> controller.forwardNotification(200L, Map.of("message", "hi"), principal));
+        verify(realtimePublisher, never()).sendNotification(any(), any());
+
+        when(followRepository.existsByFollowerIdAndFollowingId(100L, 200L)).thenReturn(true);
+        controller.forwardNotification(200L, Map.of("fromUserName", "u100"), principal);
+        verify(realtimePublisher).sendNotification(eq(200L), any());
+    }
+
+    @Test
+    void markAsReadEnforcesWritableAccount() throws Exception {
+        doThrow(new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_RESTRICTED", "restricted"))
+                .when(accountStatusService).requireWritable(user);
+
+        assertThrows(ApiException.class, () -> controller.markAsRead(10L, principal));
+        verify(messageService, never()).markMessagesAsRead(any(), any());
     }
 }

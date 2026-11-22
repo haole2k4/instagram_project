@@ -27,6 +27,9 @@ public interface ReportRepository
 
   long countByStatus(ReportStatus status);
 
+  @Query("SELECT r.status, COUNT(r) FROM Report r GROUP BY r.status")
+  List<Object[]> countGroupedByStatus();
+
   long countByTargetTypeAndTargetId(ReportTargetType targetType, Long targetId);
 
   List<Report> findByTargetTypeAndTargetIdOrderByCreatedAtDesc(

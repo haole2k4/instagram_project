@@ -1,28 +1,32 @@
 import { playOutgoingRingtone, playIncomingRingtone, playEndCallSound, playTestSound } from "../Utils/callSounds";
 
+const sharedMockCtx = {
+  state: "running",
+  currentTime: 0,
+  resume: jest.fn(),
+  createOscillator: jest.fn(),
+  createGain: jest.fn(),
+  destination: {},
+};
+
 describe("callSounds utility", () => {
-  beforeAll(() => {
-    // Mock Web Audio API
-    window.AudioContext = jest.fn().mockImplementation(() => ({
-      state: "running",
-      currentTime: 0,
-      resume: jest.fn().mockResolvedValue(),
-      createOscillator: jest.fn().mockReturnValue({
-        type: "sine",
-        frequency: { setValueAtTime: jest.fn() },
-        connect: jest.fn(),
-        start: jest.fn(),
-        stop: jest.fn(),
-      }),
-      createGain: jest.fn().mockReturnValue({
-        gain: {
-          setValueAtTime: jest.fn(),
-          exponentialRampToValueAtTime: jest.fn(),
-        },
-        connect: jest.fn(),
-      }),
-      destination: {},
+  beforeEach(() => {
+    sharedMockCtx.resume.mockResolvedValue();
+    sharedMockCtx.createOscillator.mockImplementation(() => ({
+      type: "sine",
+      frequency: { setValueAtTime: jest.fn() },
+      connect: jest.fn(),
+      start: jest.fn(),
+      stop: jest.fn(),
     }));
+    sharedMockCtx.createGain.mockImplementation(() => ({
+      gain: {
+        setValueAtTime: jest.fn(),
+        exponentialRampToValueAtTime: jest.fn(),
+      },
+      connect: jest.fn(),
+    }));
+    window.AudioContext = jest.fn(() => sharedMockCtx);
   });
 
   test("playOutgoingRingtone plays and stops without error", () => {

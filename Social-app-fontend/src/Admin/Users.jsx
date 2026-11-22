@@ -71,7 +71,7 @@ const Users = () => {
           }}
         >
           <div>
-            <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="user-search">
+            <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="user-search">
               {t("admin.search")}
             </label>
             <input
@@ -87,7 +87,7 @@ const Users = () => {
           </button>
         </form>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="user-status">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="user-status">
             {t("admin.filters.status")}
           </label>
           <select
@@ -104,7 +104,7 @@ const Users = () => {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="user-role">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="user-role">
             {t("admin.filters.role")}
           </label>
           <select
@@ -158,6 +158,10 @@ const Users = () => {
                             src={user.image}
                             alt=""
                             className="h-7 w-7 rounded-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = "/default-avatar.png";
+                            }}
                           />
                         ) : (
                           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#161616] text-[11px] text-[#b4b4b4]">

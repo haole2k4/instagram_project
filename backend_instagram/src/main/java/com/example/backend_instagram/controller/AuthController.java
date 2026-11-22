@@ -1,6 +1,7 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.user.LoginDTO;
+import com.example.backend_instagram.dto.user.RegisterDTO;
 import com.example.backend_instagram.dto.user.ResCreateUserDTO;
 import com.example.backend_instagram.dto.user.RestLogin;
 import com.example.backend_instagram.entity.User;
@@ -13,8 +14,10 @@ import com.example.backend_instagram.utils.constant.ApiMessage;
 import com.example.backend_instagram.utils.error.IdInvalidException;
 import jakarta.validation.Valid;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,7 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -67,16 +71,6 @@ public class AuthController {
   @PostMapping("/auth/login")
   public ResponseEntity<RestLogin> login(@Valid @RequestBody LoginDTO loginDTO)
     throws IdInvalidException {
-    User currentuserDb = this.userService.handleGetUserByUserNawm(loginDTO.getUsername());
-
-    if (currentuserDb == null) {
-      throw new IdInvalidException("Người dùng không tồn tại trong hệ thống");
-    }
-
-    if (!passwordEncoder.matches(loginDTO.getPassword(), currentuserDb.getUserPassword())) {
-      throw new IdInvalidException("Mật khẩu người dùng không đúng");
-    }
-
     UsernamePasswordAuthenticationToken authenticationToken =
       new UsernamePasswordAuthenticationToken(
         loginDTO.getUsername(),
@@ -86,6 +80,11 @@ public class AuthController {
       .getObject()
       .authenticate(authenticationToken);
     SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    User currentuserDb = this.userService.handleGetUserByUserNawm(loginDTO.getUsername());
+    if (currentuserDb == null) {
+      throw new IdInvalidException("Người dùng không tồn tại trong hệ thống");
+    }
 
     currentuserDb.setIsOnline(true);
     userService.updateUser(currentuserDb);
@@ -109,7 +108,7 @@ public class AuthController {
     return ResponseEntity
       .ok()
       .header(
-        org.springframework.http.HttpHeaders.SET_COOKIE,
+        HttpHeaders.SET_COOKIE,
         refreshCookie(refreshToken, Duration.ofSeconds(refreshCookieMaxAge)).toString()
       )
       .body(restLogin);
@@ -136,8 +135,7 @@ public class AuthController {
   public ResponseEntity<RestLogin> getRefreshLogin(
     @CookieValue(name = "refresh_token") String refreshToken
   ) throws IdInvalidException {
-    org.springframework.security.oauth2.jwt.Jwt decoded =
-      this.securityUtils.checkValidRefreshToken(refreshToken);
+    Jwt decoded = this.securityUtils.checkValidRefreshToken(refreshToken);
     String email = decoded.getSubject();
 
     User currentuserDb = this.userService.handleGetUserByUserNawm(email);
@@ -162,7 +160,7 @@ public class AuthController {
     return ResponseEntity
       .ok()
       .header(
-        org.springframework.http.HttpHeaders.SET_COOKIE,
+        HttpHeaders.SET_COOKIE,
         refreshCookie(newRefreshToken, Duration.ofSeconds(refreshCookieMaxAge)).toString()
       )
       .body(restLogin);
@@ -175,39 +173,47 @@ public class AuthController {
     if (email.isBlank()) {
       throw new IdInvalidException("Access Token khong hop le");
     }
-    this.userService.updateUserToken(null, email);
+    User currentUser = this.userService.handleGetUserByUserNawm(email);
+    if (currentUser != null) {
+      currentUser.setIsOnline(false);
+      currentUser.setRefreshToken(null);
+      this.userService.updateUser(currentUser);
+    }
     return ResponseEntity
       .ok()
-      .header(
-        org.springframework.http.HttpHeaders.SET_COOKIE,
-        refreshCookie("", Duration.ZERO).toString()
-      )
+      .header(HttpHeaders.SET_COOKIE, refreshCookie("", Duration.ZERO).toString())
       .body(null);
   }
 
   @PostMapping("/auth/register")
   @ApiMessage("User Register")
   public ResponseEntity<ResCreateUserDTO> userRegister(
-    @Valid @RequestBody User bodyUser
+    @Valid @RequestBody RegisterDTO registerDTO
   ) throws IdInvalidException {
-    User currentDb = this.userService.handleGetUserByUserNawm(bodyUser.getUserEmail());
+    String email = registerDTO.getUserEmail().trim();
+    String nickname = registerDTO.getUserNickname().trim();
+
+    User currentDb = this.userService.handleGetUserByUserNawm(email);
     if (currentDb != null) {
       throw new IdInvalidException("Người dùng đã tồn tại trong hệ thống");
     }
-    if (this.userService.isNikNameExsit(bodyUser.getUserNickname())) {
+    if (this.userService.isNikNameExsit(nickname)) {
       throw new IdInvalidException("Nickname đã tồn tại. Vui lòng chọn nickname khác!");
     }
 
-    bodyUser.setId(null);
-    bodyUser.setUserPassword(passwordEncoder.encode(bodyUser.getUserPassword()));
-    bodyUser.setStatus(UserStatus.ACTIVE);
-    bodyUser.setSuspendedUntil(null);
-    bodyUser.setStatusReason(null);
-    bodyUser.setStatusReasonCode(null);
-    bodyUser.setRoles(new java.util.HashSet<>());
-    this.roleService.ensureDefaultRole(bodyUser);
+    User newUser = new User();
+    newUser.setUserEmail(email);
+    newUser.setUserFullname(registerDTO.getUserFullname().trim());
+    newUser.setUserNickname(nickname);
+    newUser.setUserPassword(passwordEncoder.encode(registerDTO.getUserPassword()));
+    newUser.setStatus(UserStatus.ACTIVE);
+    newUser.setSuspendedUntil(null);
+    newUser.setStatusReason(null);
+    newUser.setStatusReasonCode(null);
+    newUser.setRoles(new HashSet<>());
+    this.roleService.ensureDefaultRole(newUser);
 
-    User saved = this.userService.createUser(bodyUser);
+    User saved = this.userService.createUser(newUser);
     return ResponseEntity
       .status(HttpStatus.CREATED)
       .body(this.userService.convertToResCreateUserDTO(saved));

@@ -77,10 +77,19 @@ class StompAuthChannelInterceptorTest {
     }
 
     @Test
-    void subscribeToResolvedUserQueueIsAllowed() {
-        Message<?> result = interceptor.preSend(
-                subscribeMessage("/queue/messages-user1a2b3c"), channel);
-        assertThat(result).isNotNull();
+    void subscribeToResolvedUserQueueIsRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribeMessage("/queue/messages-user1a2b3c"), channel))
+                .isInstanceOf(MessagingException.class)
+                .hasMessageContaining("not allowed");
+    }
+
+    @Test
+    void subscribeToPublicQueueIsRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribeMessage("/queue/public"), channel))
+                .isInstanceOf(MessagingException.class)
+                .hasMessageContaining("not allowed");
     }
 
     private Message<byte[]> connectMessage(String authorization) {

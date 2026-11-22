@@ -11,18 +11,6 @@ import { useWebSocket } from "../../Utils/configCallVideo/websocket";
 import { useTranslation } from "react-i18next";
 import { RowListSkeleton } from "../Common/FlatSkeleton";
 
-const FOOTER_LINKS = [
-  "About",
-  "Help",
-  "Press",
-  "API",
-  "Jobs",
-  "Privacy",
-  "Terms",
-  "Locations",
-  "Language",
-];
-
 const RecommendUser = () => {
   const [userList, setUserList] = useState([]);
   const [followedUsers, setFollowedUsers] = useState(new Set());
@@ -112,6 +100,7 @@ const RecommendUser = () => {
           alt={currentUserNickname}
           className="h-11 w-11 shrink-0 rounded-full bg-ig-surface object-cover"
           onError={(e) => {
+            e.currentTarget.onerror = null;
             e.currentTarget.src = "/default-avatar.png";
           }}
         />
@@ -165,6 +154,7 @@ const RecommendUser = () => {
                     alt={item.userNickname || ""}
                     className="h-10 w-10 shrink-0 rounded-full bg-ig-surface object-cover"
                     onError={(e) => {
+                      e.currentTarget.onerror = null;
                       e.currentTarget.src = "/default-avatar.png";
                     }}
                   />
@@ -179,7 +169,7 @@ const RecommendUser = () => {
                 </Link>
                 {followedUsers.has(item.id) ? (
                   <span className="shrink-0 text-[12px] font-semibold text-ig-muted">
-                    {t("profile.following")}
+                    {t("userProfile.following")}
                   </span>
                 ) : (
                   <button
@@ -195,23 +185,6 @@ const RecommendUser = () => {
           </div>
         )}
       </section>
-
-      {/* Meta Footer */}
-      <footer className="mt-8 px-2 text-[11px] text-ig-faint select-none">
-        <nav className="flex flex-wrap gap-x-2 gap-y-1">
-          {FOOTER_LINKS.map((link, idx) => (
-            <span key={link} className="cursor-pointer hover:underline">
-              {link}
-              {idx < FOOTER_LINKS.length - 1 && (
-                <span className="ml-2 text-ig-faint">·</span>
-              )}
-            </span>
-          ))}
-        </nav>
-        <p className="mt-4 text-[11px] uppercase tracking-wide text-ig-faint">
-          © 2026 INSTAGRAM FROM META
-        </p>
-      </footer>
     </aside>
   );
 };

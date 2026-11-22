@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { Send, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Image as ImageIcon, Send } from "lucide-react";
 import instance from "../../Utils/AxiosApi/Axios";
 import {
   handleGetUserById,
@@ -13,8 +14,9 @@ import { handleGetAllPostByUserId } from "../../Service/postApi";
 import { openMiniChatWithConversation } from "../../Redux/Reducer/chatSlice";
 import Route from "../Routes/index";
 
-// In-memory cache to make re-hovering instant
+// In-memory cache to make re-hovering instant; reset when active user changes.
 const cardCache = new Map();
+let cachedForUserId = null;
 
 export const formatCompactNumber = (num) => {
   if (!num && num !== 0) return "0";
@@ -32,7 +34,8 @@ export const formatCompactNumber = (num) => {
 };
 
 const UserHoverCard = ({ user, children, onSelectPost }) => {
-  const currentUser = useSelector((state) => state.user.user);
+  const { t } = useTranslation();
+  const currentUser = useSelector((state) => state.login?.userInfo);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -47,6 +50,23 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
   const triggerRef = useRef(null);
 
   const targetUserId = user?.id;
+
+  useEffect(() => {
+    const nextUserId = currentUser?.id ?? null;
+    if (cachedForUserId !== nextUserId) {
+      cardCache.clear();
+      cachedForUserId = nextUserId;
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   const loadUserData = async () => {
     if (!targetUserId) return;
@@ -139,7 +159,6 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
     const nextState = !isFollowing;
     setIsFollowing(nextState);
 
-    // Optimistically update followersCount in stats
     setStats((prev) => {
       if (!prev) return prev;
       const cur = Number(prev.followersCount || 0);
@@ -155,14 +174,12 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
       } else {
         await handlePostUnfollower(currentUser.id, targetUserId);
       }
-      // Update cache
       if (cardCache.has(targetUserId)) {
         const cached = cardCache.get(targetUserId);
         cached.isFollowing = nextState;
       }
     } catch (err) {
       console.error("Follow error:", err);
-      // Revert on error
       setIsFollowing(!nextState);
     }
   };
@@ -175,7 +192,7 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
       const res = await instance.post(
         `/chat/conversation/user/${targetUserId}?currentUserId=${currentUser.id}`
       );
-      if (res.data) {
+      if (res?.data) {
         dispatch(openMiniChatWithConversation(res.data));
       }
     } catch (err) {
@@ -202,84 +219,73 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
         <div
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          className={`absolute ${
+          className={`ig-modal-panel absolute ${
             positionAbove ? "bottom-full mb-2" : "top-full mt-2"
-          } left-0 z-50 w-[350px] rounded-2xl border border-white/10 bg-[#1c1c1c] p-4 text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none`}
+          } left-0 z-50 w-[350px] rounded-panel border border-ig-border bg-ig-raised p-4 text-ig-text shadow-2xl select-none`}
         >
           {/* Top section: Avatar, names, handles */}
-          <div className="flex items-center gap-3.5 mb-3.5">
-            <Link to={profileUrl} className="shrink-0 group">
-              <div className="rounded-full bg-gradient-to-tr from-yellow-500 via-pink-500 to-purple-600 p-[2px]">
-                <img
-                  src={
-                    stats?.avatar ||
-                    user?.userImage ||
-                    "/default-avatar.png"
-                  }
-                  alt={user?.userNickname || ""}
-                  className="h-14 w-14 rounded-full border-2 border-black object-cover transition-transform group-hover:scale-105"
-                />
-              </div>
+          <div className="mb-3.5 flex items-center gap-3.5">
+            <Link to={profileUrl} className="shrink-0">
+              <img
+                src={
+                  stats?.avatar ||
+                  user?.userImage ||
+                  "/default-avatar.png"
+                }
+                alt={user?.userNickname || ""}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
+                className="h-14 w-14 rounded-full border border-ig-border bg-ig-surface object-cover"
+              />
             </Link>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <Link
-                  to={profileUrl}
-                  className="truncate text-[15px] font-bold text-white hover:underline"
-                >
-                  {stats?.userNickname || user?.userNickname}
-                </Link>
-                {/* Verified badge */}
-                <div
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#0095f6] text-white"
-                  title="Verified"
-                >
-                  <Check size={10} strokeWidth={3} />
-                </div>
-              </div>
+              <Link
+                to={profileUrl}
+                className="block truncate text-[14px] font-semibold text-ig-text hover:underline"
+              >
+                {stats?.userNickname || user?.userNickname}
+              </Link>
 
-              <p className="truncate text-[13px] text-neutral-400">
+              <p className="truncate text-[13px] text-ig-muted">
                 {stats?.userFullname ||
                   user?.userFullname ||
                   user?.userNickname}
               </p>
-
-              {/* Threads badge */}
-              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/90">
-                <span>@</span>
-                <span className="truncate max-w-[120px]">
-                  {stats?.userNickname || user?.userNickname}
-                </span>
-              </div>
             </div>
           </div>
 
           {/* Stats section */}
-          <div className="grid grid-cols-3 border-y border-white/10 py-2.5 text-center my-3">
+          <div className="my-3 grid grid-cols-3 border-y border-ig-border py-2.5 text-center">
             <div>
-              <p className="text-[15px] font-bold text-white tabular-nums">
+              <p className="text-[14px] font-semibold text-ig-text tabular-nums">
                 {formatCompactNumber(stats?.postsCount ?? posts.length)}
               </p>
-              <p className="text-[12px] text-neutral-400">posts</p>
+              <p className="text-[12px] text-ig-muted">{t("userProfile.posts")}</p>
             </div>
             <div>
-              <p className="text-[15px] font-bold text-white tabular-nums">
+              <p className="text-[14px] font-semibold text-ig-text tabular-nums">
                 {formatCompactNumber(stats?.followersCount ?? 0)}
               </p>
-              <p className="text-[12px] text-neutral-400">followers</p>
+              <p className="text-[12px] text-ig-muted">
+                {t("userProfile.followers")}
+              </p>
             </div>
             <div>
-              <p className="text-[15px] font-bold text-white tabular-nums">
+              <p className="text-[14px] font-semibold text-ig-text tabular-nums">
                 {formatCompactNumber(stats?.followingCount ?? 0)}
               </p>
-              <p className="text-[12px] text-neutral-400">following</p>
+              <p className="text-[12px] text-ig-muted">
+                {t("userProfile.following")}
+              </p>
             </div>
           </div>
 
           {/* 3 latest posts thumbnails */}
           {posts.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1.5 h-24 overflow-hidden rounded-lg mb-3.5">
+            <div className="mb-3.5 grid h-24 grid-cols-3 gap-1.5 overflow-hidden rounded-media">
               {posts.map((post, idx) => {
                 const mediaUrl = post.media?.[0]?.url;
                 const isVideo = mediaUrl?.endsWith(".mp4");
@@ -293,29 +299,37 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
                         navigate(profileUrl);
                       }
                     }}
-                    className="group relative h-full w-full cursor-pointer overflow-hidden bg-neutral-900"
+                    className="group relative h-full w-full cursor-pointer overflow-hidden bg-ig-surface"
                   >
                     {isVideo ? (
                       <video
                         src={mediaUrl}
-                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        className="h-full w-full object-cover"
                         muted
                       />
-                    ) : (
+                    ) : mediaUrl ? (
                       <img
-                        src={mediaUrl || "/default-placeholder.png"}
+                        src={mediaUrl}
                         alt=""
-                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-avatar.png";
+                        }}
+                        className="h-full w-full object-cover"
                       />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-ig-faint">
+                        <ImageIcon size={18} strokeWidth={1.5} aria-hidden="true" />
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity duration-120 group-hover:opacity-100" />
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="flex h-20 items-center justify-center rounded-lg bg-neutral-900/50 text-[12px] text-neutral-500 mb-3.5">
-              {loading ? "Đang tải..." : "Chưa có bài viết nào"}
+            <div className="mb-3.5 flex h-20 items-center justify-center rounded-lg bg-ig-surface text-[12px] text-ig-faint">
+              {loading ? t("common.loading") : t("post.emptyFeedTitle")}
             </div>
           )}
 
@@ -326,22 +340,24 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
                 <button
                   type="button"
                   onClick={handleMessage}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#0095f6] py-1.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75"
+                  className="ig-press flex flex-1 items-center justify-center gap-1.5 rounded-control bg-ig-accent py-1.5 text-[14px] font-semibold text-ig-text hover:opacity-90"
                 >
-                  <Send size={14} strokeWidth={2} />
-                  <span>Message</span>
+                  <Send size={14} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{t("userProfile.message")}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleToggleFollow}
-                  className={`flex-1 rounded-lg py-1.5 text-[13px] font-semibold transition-colors ${
+                  className={`ig-press flex-1 rounded-control py-1.5 text-[14px] font-semibold ${
                     isFollowing
-                      ? "bg-[#363636] text-white hover:bg-[#2e2e2e]"
-                      : "bg-[#0095f6] text-white hover:opacity-90"
+                      ? "border border-ig-border bg-ig-surface text-ig-text hover:bg-ig-ground"
+                      : "bg-ig-accent text-ig-text hover:opacity-90"
                   }`}
                 >
-                  {isFollowing ? "Following" : "Follow"}
+                  {isFollowing
+                    ? t("userProfile.following")
+                    : t("userProfile.follow")}
                 </button>
               </>
             )}
@@ -349,9 +365,9 @@ const UserHoverCard = ({ user, children, onSelectPost }) => {
             {isSelf && (
               <Link
                 to={Route.profile}
-                className="w-full rounded-lg bg-[#363636] py-1.5 text-center text-[13px] font-semibold text-white hover:bg-[#2e2e2e]"
+                className="ig-press w-full rounded-control border border-ig-border bg-ig-surface py-1.5 text-center text-[14px] font-semibold text-ig-text hover:bg-ig-ground"
               >
-                Trang cá nhân
+                {t("LargeNav.profile")}
               </Link>
             )}
           </div>
