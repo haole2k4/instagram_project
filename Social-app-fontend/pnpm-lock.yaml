@@ -68,9 +68,6 @@ importers:
       simple-peer:
         specifier: ^9.11.1
         version: 9.11.1
-      sockjs-client:
-        specifier: ^1.6.1
-        version: 1.6.1
       yup:
         specifier: ^1.6.1
         version: 1.7.1
@@ -9012,7 +9009,8 @@ snapshots:
 
   events@3.3.0: {}
 
-  eventsource@2.0.2: {}
+  eventsource@2.0.2:
+    optional: true
 
   execa@5.1.1:
     dependencies:
@@ -11772,6 +11770,7 @@ snapshots:
       url-parse: 1.5.10
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   sockjs@0.3.24:
     dependencies:
