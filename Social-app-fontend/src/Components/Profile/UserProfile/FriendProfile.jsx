@@ -15,7 +15,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ModalCart from "../../NewsFeed/NewsFeedCart/ModalCart/ModalCart";
 import EmptyState from "../../Common/EmptyState";
-import { Camera, Heart, MessageCircle } from "lucide-react";
+import ReportModal from "../../Common/ReportModal";
+import { Camera, Flag, Heart, MessageCircle } from "lucide-react";
 import {
   getOrCreateConversation,
   openMiniChatWithConversation,
@@ -31,6 +32,7 @@ const FriendProfile = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [likedPostIds, setLikedPostIds] = useState([]);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -205,6 +207,7 @@ const FriendProfile = () => {
               alt={dataUser.username || "Avatar"}
               className="h-full w-full rounded-full object-cover"
               onError={(e) => {
+                e.currentTarget.onerror = null;
                 e.currentTarget.src = "/default-avatar.png";
               }}
             />
@@ -236,6 +239,15 @@ const FriendProfile = () => {
                   className="rounded-lg border border-ig-border bg-ig-surface px-4 py-1.5 text-[14px] font-semibold text-ig-text transition-colors hover:bg-ig-raised active:scale-[.97]"
                 >
                   {t("userProfile.message")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  aria-label={t("report.reportUser")}
+                  title={t("report.reportUser")}
+                  className="ig-press flex h-8 w-8 items-center justify-center rounded-lg border border-ig-border bg-ig-surface text-ig-muted transition-colors hover:bg-ig-raised hover:text-ig-text"
+                >
+                  <Flag size={16} strokeWidth={1.5} aria-hidden="true" />
                 </button>
               </div>
             )}
@@ -301,15 +313,9 @@ const FriendProfile = () => {
       <div className="mt-6 flex justify-center border-t border-ig-rule">
         <button
           type="button"
-          className="mx-4 -mt-px border-t border-ig-text py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-text"
+          className="mx-4 -mt-px border-t border-ig-text py-3 text-[12px] font-semibold text-ig-text"
         >
           {t("userProfile.posts")}
-        </button>
-        <button
-          type="button"
-          className="mx-4 py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-muted"
-        >
-          {t("userProfile.tagged")}
         </button>
       </div>
 
@@ -383,6 +389,14 @@ const FriendProfile = () => {
         post={selectedPost}
         isLiked={selectedPost ? likedPostIds.includes(selectedPost.id) : false}
         onToggleLikePost={handleToggleLikePost}
+      />
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="USER"
+        targetId={Number(id)}
+        targetLabel={dataUser.username || dataUser.userNickname || dataUser.nikName || ""}
       />
     </div>
   );

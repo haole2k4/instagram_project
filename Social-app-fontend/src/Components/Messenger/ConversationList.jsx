@@ -262,6 +262,10 @@ const ConversationList = ({
                       <img
                         src={displayInfo.image}
                         alt={displayInfo.name || ""}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-avatar.png";
+                        }}
                         className="h-11 w-11 rounded-full bg-ig-surface object-cover"
                       />
                     )}
@@ -359,6 +363,10 @@ const ConversationList = ({
                       <img
                         src={user.userImage || "/default-avatar.png"}
                         alt={user.userFullname || ""}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-avatar.png";
+                        }}
                         className="mr-3 h-11 w-11 shrink-0 rounded-full bg-ig-surface object-cover"
                       />
                       <div className="min-w-0 flex-1">

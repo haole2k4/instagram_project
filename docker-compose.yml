@@ -36,8 +36,8 @@ services:
       # Image community 4.14.0 không hỗ trợ snapshot persistence (endpoint state trả 404),
       # nên không mount volume: bucket được tạo lại mỗi lần khởi động bởi localstack-init.
     ports:
-      # Trình duyệt cần truy cập S3 qua S3_PUBLIC_ENDPOINT nên vẫn bind ra ngoài.
-      - "4566:4566"
+      # Chỉ bind localhost theo mặc định để tránh lộ LocalStack ra mạng ngoài.
+      - "127.0.0.1:4566:4566"
     volumes:
       - ./localstack-init:/etc/localstack/init/ready.d:ro
     healthcheck:
@@ -93,20 +93,26 @@ services:
       DB_NAME: ${DB_NAME:-backend_instagram}
       DB_USERNAME: ${DB_USERNAME:-instagram_user}
       DB_PASSWORD: ${DB_PASSWORD:-instagram_pass}
+      DDL_AUTO: ${DDL_AUTO:-update}
+      SHOW_SQL: ${SHOW_SQL:-false}
       JWT_BASE64_SECRET: ${JWT_BASE64_SECRET:?Set JWT_BASE64_SECRET in the root .env file}
       JWT_TOKEN_VALIDITY_SECONDS: ${JWT_TOKEN_VALIDITY_SECONDS:-1800}
       JWT_REFRESH_TOKEN_VALIDITY_SECONDS: ${JWT_REFRESH_TOKEN_VALIDITY_SECONDS:-604800}
-      AUTH_COOKIE_SECURE: "false"
-      AUTH_COOKIE_SAME_SITE: Lax
-      ACCESS_KEY: test
-      SECRET_KEY: test
-      REGION: ap-southeast-1
-      BUCKET_NAME: instagram-media
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-Lax}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      APP_WEBSOCKET_ALLOWED_ORIGINS: ${APP_WEBSOCKET_ALLOWED_ORIGINS:-http://localhost:3000}
+      ACCESS_KEY: ${ACCESS_KEY:-test}
+      SECRET_KEY: ${SECRET_KEY:-test}
+      REGION: ${REGION:-ap-southeast-1}
+      BUCKET_NAME: ${BUCKET_NAME:-instagram-media}
       S3_ENDPOINT: http://localstack:4566
-      S3_PUBLIC_ENDPOINT: http://localhost:4566
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:4566}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       CACHE_TTL_POSTS: ${CACHE_TTL_POSTS:-60}
       CACHE_TTL_COMMENTS: ${CACHE_TTL_COMMENTS:-60}
       CACHE_TTL_USER_STATS: ${CACHE_TTL_USER_STATS:-120}
@@ -121,7 +127,7 @@ services:
       MQ_NOTIFICATION_RETRY_INITIAL_MS: ${MQ_NOTIFICATION_RETRY_INITIAL_MS:-1000}
       MQ_NOTIFICATION_RETRY_MULTIPLIER: ${MQ_NOTIFICATION_RETRY_MULTIPLIER:-2}
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     depends_on:
       mysql:
         condition: service_healthy
@@ -160,16 +166,16 @@ services:
     build:
       context: ./Social-app-fontend
       args:
-        REACT_APP_API_URL: http://localhost:8081
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8081}
     restart: unless-stopped
     logging: *default-logging
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null"]
       interval: 10s
       timeout: 3s
       retries: 5

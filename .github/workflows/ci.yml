@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
     branches: [master]
-    paths-ignore:
-      - '**.md'
   push:
     branches: [master]
     paths-ignore:
@@ -25,7 +23,10 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      infra: ${{ steps.filter.outputs.infra }}
+      docker_backend: ${{ steps.filter.outputs.docker_backend }}
+      docker_frontend: ${{ steps.filter.outputs.docker_frontend }}
+      compose: ${{ steps.filter.outputs.compose }}
+      scripts: ${{ steps.filter.outputs.scripts }}
       k8s: ${{ steps.filter.outputs.k8s }}
       workflow: ${{ steps.filter.outputs.workflow }}
     steps:
@@ -38,13 +39,21 @@ jobs:
               - 'backend_instagram/**'
             frontend:
               - 'Social-app-fontend/**'
-            infra:
+            docker_backend:
               - 'backend_instagram/Dockerfile'
+              - 'backend_instagram/.dockerignore'
+            docker_frontend:
               - 'Social-app-fontend/Dockerfile'
+              - 'Social-app-fontend/.dockerignore'
               - 'Social-app-fontend/nginx.conf'
+            compose:
               - 'docker-compose.yml'
-              - 'k8s/**'
-              - '.github/workflows/ci.yml'
+              - '.env.example'
+              - 'localstack-init/**'
+            scripts:
+              - 'scripts/**'
+              - 'k8s/create-secrets.sh'
+              - 'localstack-init/**'
             k8s:
               - 'k8s/**'
               - 'backend_instagram/seed-demo.sql'
@@ -114,9 +123,11 @@ jobs:
     name: Docker build (${{ matrix.target.name }})
     needs: changes
     if: >-
-      needs.changes.outputs.infra == 'true' ||
+      needs.changes.outputs.docker_backend == 'true' ||
+      needs.changes.outputs.docker_frontend == 'true' ||
       needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.frontend == 'true'
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -135,11 +146,11 @@ jobs:
       - name: Check if target should build
         id: should_build
         run: |
-          if [[ "${{ needs.changes.outputs.infra }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.workflow }}" == "true" ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ matrix.target.name }}" == "backend" && "${{ needs.changes.outputs.backend }}" == "true" ]]; then
+          elif [[ "${{ matrix.target.name }}" == "backend" && ( "${{ needs.changes.outputs.backend }}" == "true" || "${{ needs.changes.outputs.docker_backend }}" == "true" ) ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ matrix.target.name }}" == "frontend" && "${{ needs.changes.outputs.frontend }}" == "true" ]]; then
+          elif [[ "${{ matrix.target.name }}" == "frontend" && ( "${{ needs.changes.outputs.frontend }}" == "true" || "${{ needs.changes.outputs.docker_frontend }}" == "true" ) ]]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -159,18 +170,41 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.target.scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target.scope }}
 
+  compose-and-scripts:
+    name: Validate Compose & shell scripts
+    needs: changes
+    if: >-
+      needs.changes.outputs.compose == 'true' ||
+      needs.changes.outputs.scripts == 'true' ||
+      needs.changes.outputs.k8s == 'true' ||
+      needs.changes.outputs.workflow == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose.yml
+        run: JWT_BASE64_SECRET=dummy docker compose config -q
+      - name: Syntax-check shell scripts
+        run: bash -n scripts/agent/*.sh scripts/githooks/* k8s/create-secrets.sh localstack-init/*.sh
+
   k8s-validate:
     name: Validate Kubernetes manifests
     needs: changes
-    if: needs.changes.outputs.infra == 'true' || needs.changes.outputs.k8s == 'true'
+    if: needs.changes.outputs.k8s == 'true' || needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: v0.6.7
+          KUBECONFORM_SHA256: 95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73
         run: |
-          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin kubeconform
+          curl -fsSL --proto '=https' --tlsv1.2 -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          sudo tar -xz -C /usr/local/bin -f kubeconform.tar.gz kubeconform
+          rm -f kubeconform.tar.gz
       - name: Render kustomize and validate with kubeconform
         # Note: k8s/kustomization.yaml references ../backend_instagram/seed-demo.sql via configMapGenerator
         # (requires --load-restrictor LoadRestrictionsNone).
@@ -189,6 +223,7 @@ jobs:
       - backend
       - frontend
       - docker-build
+      - compose-and-scripts
       - k8s-validate
     runs-on: ubuntu-latest
     timeout-minutes: 5

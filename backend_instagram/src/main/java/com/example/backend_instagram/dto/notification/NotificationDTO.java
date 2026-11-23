@@ -18,6 +18,7 @@ public class NotificationDTO {
     private String type;
     private String message; 
     private boolean isRead;
+    private Integer likesCount;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime sentAt;

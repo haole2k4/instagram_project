@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -42,8 +43,15 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     """
     SELECT u FROM User u JOIN u.roles r
     WHERE r.code = com.example.backend_instagram.entity.RoleCode.ADMIN
-    AND u.status = com.example.backend_instagram.entity.UserStatus.ACTIVE
+    AND (
+      u.status = com.example.backend_instagram.entity.UserStatus.ACTIVE
+      OR (
+        u.status = com.example.backend_instagram.entity.UserStatus.SUSPENDED
+        AND u.suspendedUntil IS NOT NULL
+        AND u.suspendedUntil <= :now
+      )
+    )
     """
   )
-  List<User> findActiveAdminsForUpdate();
+  List<User> findActiveAdminsForUpdate(@Param("now") Instant now);
 }

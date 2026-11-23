@@ -46,7 +46,14 @@ const RouterApp = () => {
         <Route path="users" element={<Users />} />
         <Route path="users/:id" element={<UserDetail />} />
         <Route path="content" element={<Content />} />
-        <Route path="audit-logs" element={<AuditLogs />} />
+        <Route
+          path="audit-logs"
+          element={
+            <AdminRoute requireAdmin>
+              <AuditLogs />
+            </AdminRoute>
+          }
+        />
       </Route>
 
       {/* ROUTE FOR USER APP */}

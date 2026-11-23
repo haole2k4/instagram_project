@@ -5,6 +5,7 @@ import com.example.backend_instagram.entity.FollowId;
 import com.example.backend_instagram.entity.User;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,9 +13,19 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FollowRepository extends JpaRepository<Follow, FollowId> {
+    @Override
+    @EntityGraph(attributePaths = { "follower", "following" })
+    List<Follow> findAll();
+
+    @EntityGraph(attributePaths = { "follower", "following" })
     List<Follow> findByFollowerId(Long userId);
+
+    @EntityGraph(attributePaths = { "follower", "following" })
     List<Follow> findByFollowingId(Long userId);
+
     Optional<Follow> findByFollowerAndFollowing(User follower, User following);
+
+    boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
 
     /**
      * Lấy cả 2 chiều follow trong 1 query thay vì 2 query riêng.

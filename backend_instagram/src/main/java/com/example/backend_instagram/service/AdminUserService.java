@@ -32,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminUserService {
   private static final Set<Integer> SUSPEND_PRESETS = Set.of(1, 3, 7, 30);
+  private static final int MAX_STATUS_REASON_LENGTH = 500;
+  private static final int MAX_AUDIT_REASON_LENGTH = 1000;
 
   private final UserRepository userRepository;
   private final PostRepository postRepository;
@@ -67,18 +69,28 @@ public class AdminUserService {
     int page,
     int size
   ) {
+    boolean admin = SecurityUtils.hasRole("ADMIN");
     Specification<User> spec = (root, query, cb) -> {
       query.distinct(true);
       List<Predicate> predicates = new ArrayList<>();
       if (q != null && !q.isBlank()) {
         String like = "%" + q.trim().toLowerCase() + "%";
-        predicates.add(
-          cb.or(
-            cb.like(cb.lower(root.get("userNickname")), like),
-            cb.like(cb.lower(root.get("userFullname")), like),
-            cb.like(cb.lower(root.get("userEmail")), like)
-          )
-        );
+        if (admin) {
+          predicates.add(
+            cb.or(
+              cb.like(cb.lower(root.get("userNickname")), like),
+              cb.like(cb.lower(root.get("userFullname")), like),
+              cb.like(cb.lower(root.get("userEmail")), like)
+            )
+          );
+        } else {
+          predicates.add(
+            cb.or(
+              cb.like(cb.lower(root.get("userNickname")), like),
+              cb.like(cb.lower(root.get("userFullname")), like)
+            )
+          );
+        }
       }
       if (status != null && !status.isBlank()) {
         String normalized = status.toUpperCase();
@@ -114,7 +126,6 @@ public class AdminUserService {
         Sort.by(Sort.Direction.DESC, "createdAt")
       )
     );
-    boolean admin = SecurityUtils.hasRole("ADMIN");
     return users.map(user -> toSummary(user, admin));
   }
 
@@ -192,7 +203,7 @@ public class AdminUserService {
     target.setStatus(UserStatus.SUSPENDED);
     target.setSuspendedUntil(Instant.now().plus(request.durationDays(), ChronoUnit.DAYS));
     target.setStatusReasonCode(request.reasonCode());
-    target.setStatusReason(trim(request.note()));
+    target.setStatusReason(trimMax(request.note(), MAX_STATUS_REASON_LENGTH));
     target.setStatusChangedAt(Instant.now());
     target.setStatusChangedBy(actor.getId());
     userRepository.save(target);
@@ -204,7 +215,7 @@ public class AdminUserService {
       target.getId(),
       null,
       request.reasonCode().name(),
-      trim(request.note()),
+      trimMax(request.note(), MAX_AUDIT_REASON_LENGTH),
       java.util.Map.of("durationDays", request.durationDays())
     );
     notify(target, actor, "Tài khoản của bạn đã bị đình chỉ tạm thời " + request.durationDays() + " ngày.");
@@ -235,7 +246,7 @@ public class AdminUserService {
     target.setStatus(UserStatus.BANNED);
     target.setSuspendedUntil(null);
     target.setStatusReasonCode(request.reasonCode());
-    target.setStatusReason(trim(request.note()));
+    target.setStatusReason(trimMax(request.note(), MAX_STATUS_REASON_LENGTH));
     target.setStatusChangedAt(Instant.now());
     target.setStatusChangedBy(actor.getId());
     userRepository.save(target);
@@ -247,7 +258,7 @@ public class AdminUserService {
       target.getId(),
       null,
       request.reasonCode().name(),
-      trim(request.note()),
+      trimMax(request.note(), MAX_AUDIT_REASON_LENGTH),
       null
     );
     notify(target, actor, "Tài khoản của bạn đã bị khóa vĩnh viễn.");
@@ -278,7 +289,7 @@ public class AdminUserService {
     target.setStatus(UserStatus.ACTIVE);
     target.setSuspendedUntil(null);
     target.setStatusReasonCode(request.reasonCode());
-    target.setStatusReason(trim(request.note()));
+    target.setStatusReason(trimMax(request.note(), MAX_STATUS_REASON_LENGTH));
     target.setStatusChangedAt(Instant.now());
     target.setStatusChangedBy(actor.getId());
     userRepository.save(target);
@@ -290,7 +301,7 @@ public class AdminUserService {
       target.getId(),
       null,
       request.reasonCode().name(),
-      trim(request.note()),
+      trimMax(request.note(), MAX_AUDIT_REASON_LENGTH),
       null
     );
     notify(target, actor, "Tài khoản của bạn đã được khôi phục.");
@@ -306,7 +317,7 @@ public class AdminUserService {
     if (accountStatusService.effectiveStatus(target) != UserStatus.ACTIVE) {
       return;
     }
-    if (userRepository.findActiveAdminsForUpdate().size() <= 1) {
+    if (userRepository.findActiveAdminsForUpdate(Instant.now()).size() <= 1) {
       throw new ApiException(
         HttpStatus.CONFLICT,
         "LAST_ADMIN",
@@ -380,8 +391,12 @@ public class AdminUserService {
     return email.substring(0, 1) + "***" + email.substring(at);
   }
 
-  private String trim(String value) {
-    return value == null ? null : value.trim();
+  private String trimMax(String value, int maxLength) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
   }
 
   private void notify(User target, User actor, String message) {

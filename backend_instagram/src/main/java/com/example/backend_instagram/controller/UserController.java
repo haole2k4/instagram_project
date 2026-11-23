@@ -1,11 +1,14 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.user.RestUpdateUser;
+import com.example.backend_instagram.dto.user.UpdateUserDTO;
+import com.example.backend_instagram.dto.user.UserProfileDTO;
 import com.example.backend_instagram.dto.user.UserStatsDTO;
 import com.example.backend_instagram.entity.User;
 import com.example.backend_instagram.service.AccountStatusService;
-import com.example.backend_instagram.service.UserService;
 import com.example.backend_instagram.service.AwsS3Service;
+import com.example.backend_instagram.service.UserPrivacyService;
+import com.example.backend_instagram.service.UserService;
 import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
@@ -14,7 +17,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import com.example.backend_instagram.service.UserPrivacyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,36 +47,53 @@ public class UserController {
   }
 
   @GetMapping("/user/all")
-  public ResponseEntity<List<User>> getUser() {
-    return ResponseEntity.ok(this.userService.getAllUser());
+  public ResponseEntity<List<UserProfileDTO>> getUser() {
+    List<UserProfileDTO> users = this.userService
+      .getAllUser()
+      .stream()
+      .map(user -> UserProfileDTO.from(user, false))
+      .toList();
+    return ResponseEntity.ok(users);
   }
 
   @PutMapping("/user")
   public ResponseEntity<RestUpdateUser> updateUser(
-    @Valid @RequestBody User postUser
+    @Valid @RequestBody UpdateUserDTO request
   ) throws IdInvalidException {
     Long currentId = SecurityUtils
       .getCurrentUserId()
       .orElseThrow(() ->
         new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required")
       );
-    postUser.setId(currentId);
 
-    if (postUser.getUserImage() != null && !postUser.getUserImage().isEmpty()) {
-      String base64Image = postUser.getUserImage();
-      if (base64Image.contains(",")) {
-        base64Image = base64Image.split(",")[1];
-      }
-      try {
-        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-        String fileName = "avatars/" + UUID.randomUUID() + ".png";
-        postUser.setUserImage(awsS3Service.uploadFile(fileName, imageBytes));
-      } catch (IllegalArgumentException e) {
-        throw new IdInvalidException("Ảnh đại diện không hợp lệ");
+    User patch = new User();
+    patch.setId(currentId);
+    patch.setUserNickname(request.getUserNickname());
+    patch.setUserFullname(request.getUserFullname());
+    patch.setUserBio(request.getUserBio());
+    patch.setUserPhone(request.getUserPhone());
+    patch.setUserGender(request.getUserGender());
+    patch.setUserBday(request.getUserBday());
+
+    String rawImage = request.getUserImage();
+    if (rawImage != null && !rawImage.isBlank()) {
+      String trimmed = rawImage.trim();
+      String lower = trimmed.toLowerCase();
+      if (lower.startsWith("http://") || lower.startsWith("https://")) {
+        patch.setUserImage(trimmed);
+      } else {
+        String base64Image = trimmed.contains(",") ? trimmed.split(",", 2)[1] : trimmed;
+        try {
+          byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+          String fileName = "avatars/" + UUID.randomUUID() + ".png";
+          patch.setUserImage(awsS3Service.uploadFile(fileName, imageBytes));
+        } catch (IllegalArgumentException e) {
+          throw new IdInvalidException("Ảnh đại diện không hợp lệ");
+        }
       }
     }
 
-    User user = this.userService.handleUpdateUser(postUser);
+    User user = this.userService.handleUpdateUser(patch);
     if (user == null) {
       throw new IdInvalidException("Người dùng không tồn tại");
     }
@@ -83,11 +102,19 @@ public class UserController {
 
   @GetMapping("/stats/{userId}")
   public ResponseEntity<UserStatsDTO> getUserStats(@PathVariable Long userId) {
+    findVisibleUserOrThrow(userId);
     return ResponseEntity.ok(userService.getUserStats(userId));
   }
 
   @GetMapping("/user/{userId}")
-  public ResponseEntity<User> getUserById(@PathVariable Long userId) {
+  public ResponseEntity<UserProfileDTO> getUserById(@PathVariable Long userId) {
+    User user = findVisibleUserOrThrow(userId);
+    Long currentId = SecurityUtils.getCurrentUserId().orElse(null);
+    boolean isSelf = currentId != null && currentId.equals(userId);
+    return ResponseEntity.ok(UserProfileDTO.from(user, isSelf));
+  }
+
+  private User findVisibleUserOrThrow(Long userId) {
     User user = userService.getUserById(userId);
     if (user == null) {
       throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
@@ -101,7 +128,7 @@ public class UserController {
     ) {
       throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Người dùng không tồn tại.");
     }
-    return ResponseEntity.ok(user);
+    return user;
   }
 
   @GetMapping("/user/privacy-settings")

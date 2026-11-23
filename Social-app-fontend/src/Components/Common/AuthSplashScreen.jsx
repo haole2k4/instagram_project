@@ -67,7 +67,7 @@ const AuthSplashScreen = ({ isVisible = true }) => {
       className="fixed inset-0 z-[99999] flex flex-col items-center justify-between bg-black px-6 py-12 transition-opacity duration-300"
     >
       <div className="h-6" aria-hidden="true" />
-      <div className="flex flex-col items-center justify-center animate-pulse">
+      <div className="flex flex-col items-center justify-center">
         <InstagramGradientGlyph size={76} />
       </div>
       <div className="pb-6">

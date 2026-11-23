@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { ChevronLeft, Eye, EyeOff, Heart } from "lucide-react";
+import {
+  Camera,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
@@ -11,8 +18,8 @@ import { toast } from "react-toastify";
 import { userLogin } from "../../Service/authApi";
 import { userLoginData } from "../../Redux/Reducer/UserAppDeucer";
 import AuthSplashScreen, {
-  InstagramGradientGlyph,
   BrandLogo,
+  InstagramGradientGlyph,
 } from "../Common/AuthSplashScreen";
 
 const Login = () => {
@@ -21,6 +28,15 @@ const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const redirectTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   const userSchema = yup.object().shape({
     email: yup
@@ -60,7 +76,7 @@ const Login = () => {
         const isStaff =
           res.data.roles?.includes("ADMIN") ||
           res.data.roles?.includes("MODERATOR");
-        setTimeout(() => {
+        redirectTimerRef.current = setTimeout(() => {
           navigate(isStaff ? "/admin" : "/user/home");
         }, 900);
       }
@@ -78,118 +94,74 @@ const Login = () => {
     <>
       <AuthSplashScreen isVisible={isLoggingIn} />
 
-      <div className="flex min-h-screen flex-col justify-between bg-black text-white selection:bg-[#0095f6]/30">
+      <div className="flex min-h-screen flex-col justify-between bg-ig-ground text-ig-text">
         <main className="flex flex-1 items-center justify-center px-4 py-8 md:px-8 lg:px-12">
-          <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Cột trái: Slogan & Mockup Stories */}
+          <div className="mx-auto grid w-full max-w-[1040px] grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            {/* Editorial showcase (true-black, no gradients/emojis/blur) */}
             <div className="hidden flex-col items-start justify-center lg:flex">
               <div className="mb-6">
-                <InstagramGradientGlyph size={48} />
+                <InstagramGradientGlyph size={44} />
               </div>
 
-              <h1 className="mb-10 max-w-[460px] text-[36px] font-bold leading-[1.15] tracking-tight text-white xl:text-[44px]">
-                See everyday moments from your close friends.
+              <h1 className="mb-8 max-w-[440px] text-[24px] font-semibold leading-[1.3] tracking-tight text-ig-text">
+                {t("auth.heroTitle")}
               </h1>
 
-              {/* Visual Mockup Cards */}
-              <div className="relative mt-2 flex h-[390px] w-full max-w-[460px] items-center justify-center select-none">
-                {/* Background Card Left */}
-                <div
-                  className="absolute left-4 top-12 h-[290px] w-[190px] -rotate-12 rounded-[24px] border border-white/10 bg-[#161616] p-1.5 opacity-40 shadow-xl"
-                  aria-hidden="true"
-                >
-                  <div className="h-full w-full rounded-[20px] bg-gradient-to-tr from-[#1a382b] via-[#204a3e] to-[#2ecc71] opacity-60" />
+              <div className="w-full max-w-[360px] rounded-panel border border-ig-border bg-ig-surface p-5">
+                <div className="mb-4 flex items-center justify-between border-b border-ig-rule pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full border border-ig-border bg-ig-ground text-ig-text">
+                      <Camera size={16} strokeWidth={1.5} aria-hidden="true" />
+                    </span>
+                    <span className="text-[14px] font-semibold text-ig-text">
+                      {t("auth.showcaseLabel")}
+                    </span>
+                  </div>
+                  <Heart size={16} strokeWidth={1.5} className="text-ig-like" aria-hidden="true" />
                 </div>
-
-                {/* Background Card Right */}
-                <div
-                  className="absolute right-4 top-10 h-[300px] w-[200px] rotate-12 rounded-[24px] border border-white/10 bg-[#161616] p-1.5 opacity-45 shadow-xl"
-                  aria-hidden="true"
-                >
-                  <div className="h-full w-full rounded-[20px] bg-gradient-to-tr from-[#3a1c28] via-[#7b1fa2] to-[#ff4081] opacity-60" />
-                </div>
-
-                {/* Main Foreground Card */}
-                <div className="relative z-10 flex h-[350px] w-[230px] flex-col justify-between overflow-hidden rounded-[28px] border border-white/15 bg-[#121212] p-2.5 shadow-2xl">
-                  {/* Photo Simulation */}
-                  <div className="relative flex-1 overflow-hidden rounded-[22px] bg-gradient-to-b from-[#2d2217] via-[#5c3a21] to-[#1a1410]">
-                    {/* Top Bars */}
-                    <div className="absolute left-2.5 right-2.5 top-2.5 flex gap-1">
-                      <div className="h-0.5 flex-1 rounded-full bg-white/80" />
-                      <div className="h-0.5 flex-1 rounded-full bg-white/30" />
-                    </div>
-
-                    {/* Floating Reaction Pill */}
-                    <div className="absolute left-3 top-6 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-[14px] shadow-lg backdrop-blur-md">
-                      <span>👀</span>
-                      <span>🤯</span>
-                    </div>
-
-                    {/* Close Friends Star Badge */}
-                    <div className="absolute right-3 top-16 flex h-6 w-6 items-center justify-center rounded-full bg-[#00ba38] text-[13px] font-black text-black shadow-lg">
-                      ★
-                    </div>
-
-                    {/* Close Friend Portrait Graphic */}
-                    <div className="flex h-full w-full flex-col items-center justify-center pt-8 text-center">
-                      <div className="relative mb-2 h-24 w-24 rounded-full border-2 border-white/30 p-1">
-                        <div className="h-full w-full rounded-full bg-gradient-to-tr from-[#f09433] to-[#bc1888] flex items-center justify-center text-[28px]">
-                          ✌️
-                        </div>
-                      </div>
-                      <span className="text-[12px] font-semibold text-white/90">
-                        @close_friends
-                      </span>
-                    </div>
-
-                    {/* Floating Heart Icon Left Bottom */}
-                    <div className="absolute bottom-10 left-3 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white shadow-lg">
-                      <Heart size={16} fill="currentColor" strokeWidth={0} />
-                    </div>
-
-                    {/* Bottom Action Bar */}
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                      <div className="h-6 flex-1 rounded-full border border-white/30 bg-black/40 px-3" />
-                      <div className="ml-2 text-white/80">
-                        <Heart size={18} strokeWidth={1.5} />
-                      </div>
-                    </div>
+                <div className="flex aspect-[4/3] items-center justify-center rounded-media border border-ig-border bg-ig-ground">
+                  <div className="flex flex-col items-center gap-2 text-ig-muted">
+                    <MessageCircle size={28} strokeWidth={1.5} aria-hidden="true" />
+                    <span className="text-[13px]">{t("auth.showcaseCaption")}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Cột phải: Form Đăng nhập phong cách Instagram */}
-            <div className="mx-auto w-full max-w-[390px] lg:ml-auto">
-              <div className="mb-4 flex items-center gap-2 lg:hidden">
-                <InstagramGradientGlyph size={36} />
-                <span className="text-[20px] font-bold">Instagram</span>
+            {/* Login Form */}
+            <div className="mx-auto w-full max-w-[390px] rounded-xl border border-ig-border bg-ig-surface p-8 lg:ml-auto">
+              <div className="mb-4 flex items-center gap-2.5 lg:hidden">
+                <InstagramGradientGlyph size={32} />
+                <span className="text-[20px] font-semibold tracking-tight text-ig-text">
+                  Instagram
+                </span>
               </div>
 
               <div className="mb-6 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate(-1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#1a1a1a] hover:text-white"
-                  aria-label="Back"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ig-muted hover:bg-ig-raised hover:text-ig-text"
+                  aria-label={t("messenger.back")}
                 >
                   <ChevronLeft size={20} strokeWidth={1.5} />
                 </button>
-                <h2 className="text-[18px] font-semibold tracking-tight text-white sm:text-[20px]">
-                  {t("auth.loginTitle") || "Log into Instagram"}
+                <h2 className="text-[20px] font-semibold tracking-tight text-ig-text">
+                  {t("auth.loginTitle")}
                 </h2>
               </div>
 
               <form
-                className="space-y-3"
+                className="space-y-3.5"
                 onSubmit={handleSubmit(handleSaveData)}
                 noValidate
               >
                 <div>
                   <input
                     type="email"
-                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3.5 text-[14px] text-white placeholder-[#737373] outline-none transition-colors focus:border-[#0095f6]"
-                    placeholder="Mobile number, username or email"
+                    className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
+                    placeholder={t("auth.email")}
+                    aria-label={t("auth.email")}
                     {...register("email")}
                     autoComplete="username"
                   />
@@ -200,26 +172,33 @@ const Login = () => {
                   )}
                 </div>
 
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="w-full rounded-xl border border-[#262626] bg-[#121212] px-4 py-3.5 pr-11 text-[14px] text-white placeholder-[#737373] outline-none transition-colors focus:border-[#0095f6]"
-                    placeholder="Password"
-                    {...register("password")}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#737373] hover:text-white"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} strokeWidth={1.5} />
-                    ) : (
-                      <Eye size={18} strokeWidth={1.5} />
-                    )}
-                  </button>
+                <div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className="w-full rounded-lg border border-ig-border bg-ig-ground px-3.5 py-2.5 pr-11 text-[14px] text-ig-text placeholder-ig-faint outline-none transition-colors focus:border-ig-accent"
+                      placeholder={t("auth.password")}
+                      aria-label={t("auth.password")}
+                      {...register("password")}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ig-faint hover:text-ig-text"
+                      aria-label={
+                        showPassword
+                          ? t("auth.hidePassword")
+                          : t("auth.showPassword")
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} strokeWidth={1.5} />
+                      ) : (
+                        <Eye size={18} strokeWidth={1.5} />
+                      )}
+                    </button>
+                  </div>
                   {errors.password && (
                     <span className="mt-1 block text-left text-[12px] text-ig-like">
                       {errors.password.message}
@@ -230,38 +209,33 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || isLoggingIn}
-                  className="ig-press mt-2 w-full rounded-xl bg-[#0095f6] py-3 text-[14px] font-semibold text-white transition hover:bg-[#1877f2] disabled:opacity-50"
+                  className="ig-press mt-2 w-full rounded-lg bg-ig-accent py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
                   {isSubmitting || isLoggingIn
-                    ? t("common.submitting") || "Logging in..."
-                    : "Log in"}
+                    ? t("common.submitting")
+                    : t("auth.login")}
                 </button>
 
                 <div className="pt-2 text-center">
-                  <a
-                    href="#forgot"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toast.info("Vui lòng liên hệ quản trị viên để khôi phục mật khẩu.");
-                    }}
-                    className="text-[13px] text-neutral-300 hover:text-white hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => toast.info(t("auth.forgotPasswordInfo"))}
+                    className="text-[13px] text-ig-muted hover:text-ig-text hover:underline"
                   >
-                    Forgot password?
-                  </a>
+                    {t("auth.forgotPassword")}
+                  </button>
                 </div>
 
-                {/* Create Account Outline Button */}
-                <div className="pt-6">
+                <div className="pt-4">
                   <Link
                     to="/register"
-                    className="ig-press block w-full rounded-xl border border-[#0095f6] py-2.5 text-center text-[14px] font-semibold text-[#0095f6] hover:bg-[#0095f6]/10"
+                    className="ig-press block w-full rounded-lg border border-ig-accent py-2.5 text-center text-[14px] font-semibold text-ig-accent hover:bg-ig-accent/10"
                   >
-                    Create new account
+                    {t("auth.createAccount")}
                   </Link>
                 </div>
               </form>
 
-              {/* Brand Logo */}
               <div className="mt-8 flex justify-center">
                 <BrandLogo />
               </div>

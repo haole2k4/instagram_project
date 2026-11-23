@@ -166,7 +166,7 @@ Admin là bề mặt vận hành, không phải feed. Giữ palette true-black v
 - Cột 630 / bài 470 / rail phải 320; đúng ba breakpoint ở trên.
 - Gradient chỉ tồn tại ở vòng story và thanh tiến trình chuyển trang trên cùng (`TopLoadingBar`).
 - Loading là bar phẳng, không shimmer; không entrance animation.
-- AI chat đầy đủ nằm trong khung chat (`/user/chat/ai`); widget chat thu gọn (`MiniChatFloating`) được phép ở góc dưới bên phải trên desktop (ẩn trên mobile); history ghép ở client, backend `/chat` không đổi.
+- AI chat đầy đủ nằm trong khung chat (`/user/chat/ai`); widget chat thu gọn (`MiniChatFloating`) được phép ở góc dưới bên phải trên desktop (ẩn trên mobile); history ghép ở client, backend `/api/v1/chat` không đổi.
 - Không thêm Reels, lưới Khám phá thật, account switcher hay link chết.
 - Ngôn ngữ mặc định là tiếng Việt; mọi label mới phải có key ở cả `vi` và `en`.
 - Admin dùng sidebar 240px mở / 64px thu gọn / drawer mobile; đây là ngoại lệ có chủ đích so với rail 72px của app.

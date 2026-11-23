@@ -12,12 +12,13 @@ import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.MediaRepository;
 import com.example.backend_instagram.repository.PostRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.service.AwsS3Service;
+import com.example.backend_instagram.utils.SecurityUtils;
 import com.example.backend_instagram.utils.constant.CacheNames;
 import com.example.backend_instagram.utils.error.ApiException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -66,6 +67,12 @@ public class PostService {
       );
     accountStatusService.requireWritable(user);
 
+    List<MultipartFile> validFiles = filterNonEmptyFiles(request.getMedia());
+    List<AwsS3Service.ValidatedMedia> validatedMedias = validFiles
+      .stream()
+      .map(awsS3Service::validateMediaFile)
+      .toList();
+
     Post post = new Post();
     post.setTitle(request.getTitle());
     post.setUser(user);
@@ -76,33 +83,7 @@ public class PostService {
     post.setModerationState(ModerationState.VISIBLE);
     post = postRepository.save(post);
 
-    List<Media> mediaList = new ArrayList<>();
-    if (request.getMedia() != null) {
-      for (MultipartFile file : request.getMedia()) {
-        if (file == null || file.isEmpty()) {
-          continue;
-        }
-        try {
-          String originalFilename = file.getOriginalFilename();
-          String extension = originalFilename == null || !originalFilename.contains(".")
-            ? ""
-            : originalFilename.substring(originalFilename.lastIndexOf("."));
-          String mediaType = file.getContentType() != null && file.getContentType().startsWith("image/")
-            ? "IMAGE"
-            : "VIDEO";
-          String fileName = System.currentTimeMillis() + "_" + mediaType.toLowerCase() + extension;
-          String url = awsS3Service.uploadFile(fileName, file.getBytes());
-
-          Media media = new Media();
-          media.setUrl(url);
-          media.setType(mediaType);
-          media.setPost(post);
-          mediaList.add(mediaRepository.save(media));
-        } catch (IOException e) {
-          throw new IllegalStateException("Không thể xử lý tệp: " + e.getMessage());
-        }
-      }
-    }
+    List<Media> mediaList = uploadAndSaveMedia(post, validFiles, validatedMedias);
     post.setMedia(mediaList);
     return postRepository.save(post);
   }
@@ -153,35 +134,24 @@ public class PostService {
       );
     }
 
+    List<MultipartFile> validFiles = filterNonEmptyFiles(request.getMedia());
+    List<AwsS3Service.ValidatedMedia> validatedMedias = validFiles
+      .stream()
+      .map(awsS3Service::validateMediaFile)
+      .toList();
+
     post.setTitle(request.getTitle());
     post.setStatus(request.getStatus() == null ? post.getStatus() : request.getStatus());
     post.setAccess(request.getAccess() == null ? post.getAccess() : request.getAccess());
 
-    if (request.getMedia() != null && !request.getMedia().isEmpty()) {
-      post.getMedia().clear();
-      List<Media> mediaList = new ArrayList<>();
-      for (MultipartFile file : request.getMedia()) {
-        try {
-          String originalFilename = file.getOriginalFilename();
-          String extension = originalFilename == null || !originalFilename.contains(".")
-            ? ""
-            : originalFilename.substring(originalFilename.lastIndexOf("."));
-          String mediaType = file.getContentType() != null && file.getContentType().startsWith("image/")
-            ? "IMAGE"
-            : "VIDEO";
-          String fileName = System.currentTimeMillis() + "_" + mediaType.toLowerCase() + extension;
-          String url = awsS3Service.uploadFile(fileName, file.getBytes());
-
-          Media media = new Media();
-          media.setUrl(url);
-          media.setType(mediaType);
-          media.setPost(post);
-          mediaList.add(mediaRepository.save(media));
-        } catch (IOException e) {
-          throw new IllegalStateException("Không thể xử lý tệp: " + e.getMessage());
-        }
+    if (!validFiles.isEmpty()) {
+      if (post.getMedia() == null) {
+        post.setMedia(new ArrayList<>());
+      } else {
+        post.getMedia().clear();
       }
-      post.setMedia(mediaList);
+      List<Media> mediaList = uploadAndSaveMedia(post, validFiles, validatedMedias);
+      post.getMedia().addAll(mediaList);
     }
 
     return postRepository.save(post);
@@ -206,19 +176,34 @@ public class PostService {
     return findPost(postId);
   }
 
-  /** Chỉ trả về bài viết mà người dùng thường được phép tương tác. */
+  /** Chỉ trả về bài viết mà người dùng hiện tại được phép xem/tương tác. */
   public Post getVisiblePost(Long postId) {
+    return getVisiblePost(postId, SecurityUtils.getCurrentUserId().orElse(null));
+  }
+
+  /** Chỉ trả về bài viết mà {@code viewerId} được phép xem/tương tác (kiểm tra status, moderation, access). */
+  public Post getVisiblePost(Long postId, Long viewerId) {
     Post post = findPost(postId);
     if (
       !"True".equals(post.getStatus()) ||
       post.getModerationState() != ModerationState.VISIBLE ||
       accountStatusService.effectiveStatus(post.getUser()) != UserStatus.ACTIVE
     ) {
-      throw new ApiException(
-        HttpStatus.NOT_FOUND,
-        "TARGET_NOT_FOUND",
-        "Bài viết không tồn tại."
-      );
+      throw notFound();
+    }
+
+    String access = post.getAccess();
+    Long authorId = post.getUser() == null ? null : post.getUser().getId();
+    boolean isAuthor = viewerId != null && viewerId.equals(authorId);
+
+    if ("PRIVATE".equalsIgnoreCase(access)) {
+      if (!isAuthor) {
+        throw notFound();
+      }
+    } else if ("ONLY_FRIEND".equalsIgnoreCase(access)) {
+      if (!isAuthor && !isMutualFriend(authorId, viewerId)) {
+        throw notFound();
+      }
     }
     return post;
   }
@@ -240,12 +225,56 @@ public class PostService {
       .toList();
   }
 
+  private List<MultipartFile> filterNonEmptyFiles(List<MultipartFile> files) {
+    if (files == null || files.isEmpty()) {
+      return List.of();
+    }
+    return files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+  }
+
+  private List<Media> uploadAndSaveMedia(
+    Post post,
+    List<MultipartFile> files,
+    List<AwsS3Service.ValidatedMedia> validatedMedias
+  ) {
+    List<Media> mediaList = new ArrayList<>();
+    for (int i = 0; i < files.size(); i++) {
+      MultipartFile file = files.get(i);
+      AwsS3Service.ValidatedMedia validated = validatedMedias.get(i);
+      try {
+        String fileName =
+          UUID.randomUUID() + "_" + validated.mediaType().toLowerCase() + validated.extension();
+        String url = awsS3Service.uploadFile(fileName, file.getBytes());
+
+        Media media = new Media();
+        media.setUrl(url);
+        media.setType(validated.mediaType());
+        media.setPost(post);
+        mediaList.add(mediaRepository.save(media));
+      } catch (IOException e) {
+        throw new IllegalStateException("Không thể xử lý tệp: " + e.getMessage());
+      }
+    }
+    return mediaList;
+  }
+
+  private boolean isMutualFriend(Long authorId, Long viewerId) {
+    if (authorId == null || viewerId == null) {
+      return false;
+    }
+    List<Follow> relations = followRepository.findBetweenUsers(authorId, viewerId);
+    return (
+      relations.size() == 2 &&
+      relations.stream().allMatch(f -> Boolean.TRUE.equals(f.getFriend()) && !f.isBlocking())
+    );
+  }
+
   private Post findPost(Long postId) {
-    return postRepository
-      .findById(postId)
-      .orElseThrow(() ->
-        new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", "Bài viết không tồn tại.")
-      );
+    return postRepository.findById(postId).orElseThrow(this::notFound);
+  }
+
+  private ApiException notFound() {
+    return new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", "Bài viết không tồn tại.");
   }
 
   private void assertOwner(Post post, Long actorId) {

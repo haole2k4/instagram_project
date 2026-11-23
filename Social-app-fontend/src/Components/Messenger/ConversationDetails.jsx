@@ -370,6 +370,10 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
                         participant.userNickname ||
                         ""
                       }
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/default-avatar.png";
+                      }}
                       className="h-10 w-10 shrink-0 rounded-full bg-ig-surface object-cover"
                     />
                     <div className="min-w-0">
@@ -431,60 +435,35 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
       </div>
 
       {/* Footer actions */}
-      <div className="border-t border-ig-border p-4 space-y-3">
-        <button
-          type="button"
-          onClick={() => toast.info("Tính năng đổi biệt danh sẽ sớm khả dụng.")}
-          className="ig-press block w-full text-left text-[14px] font-medium text-ig-text hover:text-ig-muted"
-        >
-          Nicknames
-        </button>
+      {(conversation.isGroupChat || !conversation.isGroupChat) && (
+        <div className="space-y-3 border-t border-ig-border p-4">
+          {!conversation.isGroupChat && (
+            <button
+              type="button"
+              onClick={handleBlockUser}
+              className={`ig-press block w-full text-left text-[14px] font-medium ${
+                blockStatus
+                  ? "text-ig-accent"
+                  : "text-ig-like hover:opacity-85"
+              }`}
+            >
+              {blockStatus
+                ? t("messenger.unblockUser")
+                : t("messenger.blockUser")}
+            </button>
+          )}
 
-        {!conversation.isGroupChat && (
-          <button
-            type="button"
-            onClick={handleBlockUser}
-            className={`ig-press block w-full text-left text-[14px] font-medium ${
-              blockStatus ? "text-ig-accent" : "text-ig-text hover:text-ig-muted"
-            }`}
-          >
-            {blockStatus
-              ? t("messenger.unblockUser")
-              : "Block"}
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => toast.info("Đã gửi báo cáo cuộc trò chuyện.")}
-          className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
-        >
-          Report
-        </button>
-
-        {conversation.isGroupChat ? (
-          <button
-            type="button"
-            onClick={handleLeaveGroup}
-            className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
-          >
-            {t("messenger.leaveGroup")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("Bạn có chắc muốn xoá cuộc trò chuyện này không?")) {
-                toast.success("Đã xoá cuộc trò chuyện.");
-                onClose();
-              }
-            }}
-            className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
-          >
-            Delete chat
-          </button>
-        )}
-      </div>
+          {conversation.isGroupChat && (
+            <button
+              type="button"
+              onClick={handleLeaveGroup}
+              className="ig-press block w-full text-left text-[14px] font-medium text-ig-like hover:opacity-85"
+            >
+              {t("messenger.leaveGroup")}
+            </button>
+          )}
+        </div>
+      )}
 
       {showMuteModal && (
         <div
@@ -492,47 +471,51 @@ const ConversationDetails = ({ conversation, onClose, currentUser }) => {
           onClick={() => setShowMuteModal(false)}
         >
           <div
-            className="w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[#262626] text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            role="dialog"
+            aria-modal="true"
+            className="ig-modal-panel w-full max-w-[360px] overflow-hidden rounded-panel border border-ig-border bg-ig-raised text-ig-text shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="py-4 text-center border-b border-white/10">
-              <h3 className="text-[17px] font-semibold text-white">Mute messages</h3>
+            <div className="border-b border-ig-border py-4 text-center">
+              <h3 className="text-[16px] font-semibold text-ig-text">
+                Mute messages
+              </h3>
             </div>
             <div className="flex flex-col text-[14px]">
               <button
                 type="button"
                 onClick={() => applyMute(1 * 60 * 60 * 1000)}
-                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="border-b border-ig-border py-3.5 text-center font-medium transition-colors hover:bg-ig-surface"
               >
                 For 1 hour
               </button>
               <button
                 type="button"
                 onClick={() => applyMute(8 * 60 * 60 * 1000)}
-                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="border-b border-ig-border py-3.5 text-center font-medium transition-colors hover:bg-ig-surface"
               >
                 For 8 hours
               </button>
               <button
                 type="button"
                 onClick={() => applyMute(24 * 60 * 60 * 1000)}
-                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="border-b border-ig-border py-3.5 text-center font-medium transition-colors hover:bg-ig-surface"
               >
                 For 24 hours
               </button>
               <button
                 type="button"
                 onClick={() => applyMute(-1)}
-                className="py-3.5 border-b border-white/10 text-center font-medium hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="border-b border-ig-border py-3.5 text-center font-medium transition-colors hover:bg-ig-surface"
               >
                 Until I change it
               </button>
               <button
                 type="button"
                 onClick={() => setShowMuteModal(false)}
-                className="py-3.5 text-center font-medium text-neutral-400 hover:bg-white/5 active:bg-white/10 transition-colors"
+                className="py-3.5 text-center font-medium text-ig-muted transition-colors hover:bg-ig-surface"
               >
-                Cancel
+                {t("messenger.cancel")}
               </button>
             </div>
           </div>

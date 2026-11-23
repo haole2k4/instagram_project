@@ -9,6 +9,11 @@ import {
   Users,
 } from "lucide-react";
 
+const handleAvatarError = (e) => {
+  e.currentTarget.onerror = null;
+  e.currentTarget.src = "/default-avatar.png";
+};
+
 const CallLobby = ({
   targetInfo,
   isGroup,
@@ -34,11 +39,10 @@ const CallLobby = ({
   const isFull = isGroup && participantCount > maxParticipants;
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-black p-4 text-white">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-ig-ground p-4 text-ig-text">
       <div className="flex w-full max-w-[920px] flex-col items-center justify-center gap-6 md:flex-row md:items-stretch">
         {/* Left card: Camera & Audio Preview */}
-        <div className="relative flex aspect-[4/3] w-full max-w-[520px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-2xl">
-          {/* Video display */}
+        <div className="relative flex aspect-[4/3] w-full max-w-[520px] flex-col overflow-hidden rounded-panel border border-ig-border bg-ig-surface">
           <div className="relative flex-1">
             {isVideoEnabled && localStream ? (
               <video
@@ -50,29 +54,31 @@ const CallLobby = ({
                 style={{ transform: "scaleX(-1)" }}
               />
             ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center text-white/70">
-                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-white/5">
-                  <VideoOff size={28} strokeWidth={1.5} className="text-white/60" />
+              <div className="flex h-full w-full flex-col items-center justify-center text-ig-muted">
+                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full border border-ig-border bg-ig-raised">
+                  <VideoOff
+                    size={28}
+                    strokeWidth={1.5}
+                    className="text-ig-muted"
+                  />
                 </div>
-                <span className="text-[14px] font-medium text-white/70">
+                <span className="text-[14px] font-medium text-ig-muted">
                   Camera off
                 </span>
               </div>
             )}
           </div>
 
-          {/* Controls Bar */}
-          <div className="flex items-center justify-center gap-3 bg-[#181818]/90 py-3.5 backdrop-blur-md">
-            {/* Video toggle */}
+          <div className="flex items-center justify-center gap-3 border-t border-ig-border bg-ig-surface py-3.5">
             <button
               type="button"
               onClick={onToggleVideo}
               aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
               title={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+              className={`ig-press flex h-11 w-11 items-center justify-center rounded-full ${
                 isVideoEnabled
-                  ? "bg-white/10 text-white hover:bg-white/20"
-                  : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  ? "bg-ig-raised text-ig-text hover:bg-ig-ground"
+                  : "bg-ig-like/20 text-ig-like hover:bg-ig-like/30"
               }`}
             >
               {isVideoEnabled ? (
@@ -82,16 +88,15 @@ const CallLobby = ({
               )}
             </button>
 
-            {/* Mic toggle */}
             <button
               type="button"
               onClick={onToggleAudio}
               aria-label={isAudioEnabled ? "Mute microphone" : "Unmute microphone"}
               title={isAudioEnabled ? "Mute microphone" : "Unmute microphone"}
-              className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+              className={`ig-press flex h-11 w-11 items-center justify-center rounded-full ${
                 isAudioEnabled
-                  ? "bg-white/10 text-white hover:bg-white/20"
-                  : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  ? "bg-ig-raised text-ig-text hover:bg-ig-ground"
+                  : "bg-ig-like/20 text-ig-like hover:bg-ig-like/30"
               }`}
             >
               {isAudioEnabled ? (
@@ -101,24 +106,22 @@ const CallLobby = ({
               )}
             </button>
 
-            {/* Speaker test */}
             <button
               type="button"
               onClick={onTestSpeaker}
               aria-label="Test speaker sound"
               title="Test speaker sound"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              className="ig-press flex h-11 w-11 items-center justify-center rounded-full bg-ig-raised text-ig-text hover:bg-ig-ground"
             >
               <Volume2 size={20} strokeWidth={1.8} />
             </button>
 
-            {/* Settings */}
             <button
               type="button"
               onClick={onOpenSettings}
               aria-label="Settings"
               title="Settings"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              className="ig-press flex h-11 w-11 items-center justify-center rounded-full bg-ig-raised text-ig-text hover:bg-ig-ground"
             >
               <Settings size={20} strokeWidth={1.8} />
             </button>
@@ -126,51 +129,47 @@ const CallLobby = ({
         </div>
 
         {/* Right card: Target & Start Call */}
-        <div className="flex w-full max-w-[360px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#181818] p-8 text-center shadow-2xl">
-          {/* Avatar */}
-          <div className="relative mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-white/10 bg-[#242424] shadow-md">
+        <div className="flex w-full max-w-[360px] flex-col items-center justify-center rounded-panel border border-ig-border bg-ig-surface p-8 text-center">
+          <div className="relative mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-ig-border bg-ig-raised">
             {targetInfo?.image ? (
               <img
                 src={targetInfo.image}
                 alt={targetInfo.name || "User"}
+                onError={handleAvatarError}
                 className="h-full w-full object-cover"
               />
             ) : isGroup ? (
-              <Users size={36} className="text-white/60" />
+              <Users size={36} className="text-ig-muted" />
             ) : (
               <img
                 src="/default-avatar.png"
                 alt="Avatar"
+                onError={handleAvatarError}
                 className="h-full w-full object-cover"
               />
             )}
           </div>
 
-          {/* Name */}
-          <h2 className="mb-1 max-w-[280px] truncate text-[20px] font-bold text-white">
+          <h2 className="mb-1 max-w-[280px] truncate text-[20px] font-semibold text-ig-text">
             {targetInfo?.name || (isGroup ? "Nhóm trò chuyện" : "Người dùng")}
           </h2>
 
-          {/* Subtitle / Limit message */}
           {isFull ? (
-            <p className="mb-6 text-[13px] text-red-400">
+            <p className="mb-6 text-[13px] text-ig-like">
               Nhóm đã đạt giới hạn cuộc gọi (tối đa {maxParticipants} người).
             </p>
           ) : (
-            <p className="mb-6 text-[14px] text-white/70">
-              Ready to call?
-            </p>
+            <p className="mb-6 text-[14px] text-ig-muted">Ready to call?</p>
           )}
 
-          {/* Start call button */}
           <button
             type="button"
             disabled={isFull}
             onClick={onStartCall}
-            className={`w-full max-w-[200px] rounded-full py-2.5 text-[15px] font-semibold text-white shadow-md transition-all ${
+            className={`ig-press w-full max-w-[200px] rounded-control py-2.5 text-[14px] font-semibold text-ig-text ${
               isFull
-                ? "cursor-not-allowed bg-white/20 opacity-50"
-                : "bg-[#0095f6] hover:bg-[#1877f2] hover:shadow-lg active:scale-95"
+                ? "cursor-not-allowed border border-ig-border bg-ig-raised opacity-50"
+                : "bg-ig-accent hover:opacity-90"
             }`}
           >
             Start call

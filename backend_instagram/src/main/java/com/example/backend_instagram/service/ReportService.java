@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,6 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReportService {
   private static final int DAILY_REPORT_LIMIT = 10;
+  private static final int MAX_REASON_LENGTH = 500;
+  private static final int MAX_REPORT_NOTE_LENGTH = 1000;
+  private static final Target DELETED_TARGET = new Target(null, "[Deleted content]");
 
   private final ReportRepository reportRepository;
   private final PostRepository postRepository;
@@ -72,7 +76,7 @@ public class ReportService {
   public AdminDtos.ReportView create(AdminDtos.ReportCreateRequest request) {
     User actor = currentUserService.requireCurrentUser();
     accountStatusService.requireWritable(actor);
-    Target target = resolve(request.targetType(), request.targetId());
+    Target target = resolveOrThrow(request.targetType(), request.targetId());
     if (target.author() != null && target.author().getId().equals(actor.getId())) {
       throw new ApiException(
         HttpStatus.FORBIDDEN,
@@ -110,11 +114,11 @@ public class ReportService {
     report.setTargetType(request.targetType());
     report.setTargetId(request.targetId());
     report.setReasonCode(request.reasonCode());
-    report.setNote(trim(request.note()));
+    report.setNote(trimMax(request.note(), MAX_REPORT_NOTE_LENGTH));
     report.setStatus(ReportStatus.OPEN);
     report.setCreatedAt(Instant.now());
     report = reportRepository.save(report);
-    return toView(report);
+    return toView(report, target);
   }
 
   @Transactional(readOnly = true)
@@ -166,7 +170,8 @@ public class ReportService {
   public AdminDtos.ReportView claim(Long id) {
     User actor = currentUserService.requireCurrentUser();
     Report report = findReport(id);
-    assertNotOwnReport(actor, report);
+    Target target = resolveForView(report.getTargetType(), report.getTargetId());
+    assertNotOwnReport(actor, report, target);
     if (report.getStatus() != ReportStatus.OPEN) {
       throw new ApiException(
         HttpStatus.CONFLICT,
@@ -192,14 +197,16 @@ public class ReportService {
       null,
       null
     );
-    return toView(findReport(id));
+    return toView(findReport(id), target);
   }
 
   @Transactional
   public AdminDtos.ReportView decide(Long id, AdminDtos.DecisionRequest request) {
     User actor = currentUserService.requireCurrentUser();
     Report report = findReport(id);
-    assertNotOwnReport(actor, report);
+    Optional<Target> targetOpt = resolveOptional(report.getTargetType(), report.getTargetId());
+    Target viewTarget = targetOpt.orElse(DELETED_TARGET);
+    assertNotOwnReport(actor, report, viewTarget);
     if (report.getStatus() == ReportStatus.RESOLVED || report.getStatus() == ReportStatus.DISMISSED) {
       throw new ApiException(
         HttpStatus.CONFLICT,
@@ -217,14 +224,14 @@ public class ReportService {
       }
     }
 
-    Target target = resolve(report.getTargetType(), report.getTargetId());
-    applyAction(report, target, request, actor);
+    applyAction(report, targetOpt, request, actor);
 
+    String decisionNote = trimMax(request.note(), MAX_REPORT_NOTE_LENGTH);
     report.setStatus(
       request.action() == ModerationAction.DISMISS ? ReportStatus.DISMISSED : ReportStatus.RESOLVED
     );
     report.setAction(request.action());
-    report.setDecisionNote(trim(request.note()));
+    report.setDecisionNote(decisionNote);
     report.setDecidedBy(actor);
     report.setDecidedAt(Instant.now());
     if (report.getAssignee() == null) {
@@ -240,7 +247,7 @@ public class ReportService {
       report.getId(),
       report.getId(),
       request.reasonCode().name(),
-      trim(request.note()),
+      decisionNote,
       java.util.Map.of("action", request.action().name())
     );
 
@@ -253,15 +260,16 @@ public class ReportService {
     } catch (Exception ignored) {
       // Notification best-effort.
     }
-    return toView(report);
+    return toView(report, viewTarget);
   }
 
   private void applyAction(
     Report report,
-    Target target,
+    Optional<Target> targetOpt,
     AdminDtos.DecisionRequest request,
     User actor
   ) {
+    String boundedReason = trimMax(request.note(), MAX_REASON_LENGTH);
     switch (request.action()) {
       case DISMISS -> {}
       case HIDE_CONTENT -> {
@@ -273,10 +281,13 @@ public class ReportService {
             "Chỉ có thể ẩn bài viết hoặc bình luận."
           );
         }
+        if (targetOpt.isEmpty()) {
+          throw targetNotFound(report.getTargetType());
+        }
         adminContentService.moderate(
           report.getTargetType().name(),
           report.getTargetId(),
-          new AdminDtos.ModerateRequest(ContentAction.HIDE, request.reasonCode(), request.note())
+          new AdminDtos.ModerateRequest(ContentAction.HIDE, request.reasonCode(), boundedReason)
         );
       }
       case SUSPEND_USER -> {
@@ -287,11 +298,12 @@ public class ReportService {
             "Cần chọn thời hạn đình chỉ."
           );
         }
+        Target target = targetOpt.orElseThrow(() -> targetNotFound(report.getTargetType()));
         adminUserService.suspend(
           requireTargetUser(target).getId(),
           new AdminDtos.SuspendRequest(
             request.reasonCode(),
-            request.note(),
+            boundedReason,
             request.durationDays()
           )
         );
@@ -304,9 +316,10 @@ public class ReportService {
             "Chỉ admin được ban vĩnh viễn."
           );
         }
+        Target target = targetOpt.orElseThrow(() -> targetNotFound(report.getTargetType()));
         adminUserService.ban(
           requireTargetUser(target).getId(),
-          new AdminDtos.BanRequest(request.reasonCode(), request.note())
+          new AdminDtos.BanRequest(request.reasonCode(), boundedReason)
         );
       }
     }
@@ -323,41 +336,47 @@ public class ReportService {
     return target.author();
   }
 
-  private Target resolve(ReportTargetType type, Long id) {
-    return switch (type) {
-      case POST -> {
-        Post post = postRepository
-          .findById(id)
-          .orElseThrow(() ->
-            new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", "Bài viết không tồn tại.")
-          );
-        yield new Target(post.getUser(), truncate(post.getTitle()));
-      }
-      case COMMENT -> {
-        Comment comment = commentRepository
-          .findById(id)
-          .orElseThrow(() ->
-            new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", "Bình luận không tồn tại.")
-          );
-        yield new Target(comment.getUser(), truncate(comment.getContent()));
-      }
-      case USER -> {
-        User user = userRepository
-          .findById(id)
-          .orElseThrow(() ->
-            new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", "Người dùng không tồn tại.")
-          );
-        yield new Target(user, user.getUserNickname());
-      }
-      case STORY -> throw new ApiException(
+  private Target resolveOrThrow(ReportTargetType type, Long id) {
+    if (type == ReportTargetType.STORY) {
+      throw new ApiException(
         HttpStatus.BAD_REQUEST,
         "INVALID_TARGET_TYPE",
         "Báo cáo story chưa được hỗ trợ trong phiên bản này."
       );
+    }
+    return resolveOptional(type, id).orElseThrow(() -> targetNotFound(type));
+  }
+
+  private Target resolveForView(ReportTargetType type, Long id) {
+    return resolveOptional(type, id).orElse(DELETED_TARGET);
+  }
+
+  private Optional<Target> resolveOptional(ReportTargetType type, Long id) {
+    return switch (type) {
+      case POST -> postRepository
+        .findById(id)
+        .map(post -> new Target(post.getUser(), truncate(post.getTitle())));
+      case COMMENT -> commentRepository
+        .findById(id)
+        .map(comment -> new Target(comment.getUser(), truncate(comment.getContent())));
+      case USER -> userRepository
+        .findById(id)
+        .map(user -> new Target(user, user.getUserNickname()));
+      case STORY -> Optional.empty();
     };
   }
 
-  private void assertNotOwnReport(User actor, Report report) {
+  private ApiException targetNotFound(ReportTargetType type) {
+    String message = switch (type) {
+      case POST -> "Bài viết không tồn tại.";
+      case COMMENT -> "Bình luận không tồn tại.";
+      case USER -> "Người dùng không tồn tại.";
+      case STORY -> "Story không tồn tại.";
+    };
+    return new ApiException(HttpStatus.NOT_FOUND, "TARGET_NOT_FOUND", message);
+  }
+
+  private void assertNotOwnReport(User actor, Report report, Target target) {
     if (report.getReporter().getId().equals(actor.getId())) {
       throw new ApiException(
         HttpStatus.FORBIDDEN,
@@ -365,8 +384,7 @@ public class ReportService {
         "Không thể xử lý báo cáo do chính mình gửi."
       );
     }
-    Target target = resolve(report.getTargetType(), report.getTargetId());
-    if (target.author() != null && target.author().getId().equals(actor.getId())) {
+    if (target != null && target.author() != null && target.author().getId().equals(actor.getId())) {
       throw new ApiException(
         HttpStatus.FORBIDDEN,
         "FORBIDDEN",
@@ -384,7 +402,10 @@ public class ReportService {
   }
 
   private AdminDtos.ReportView toView(Report report) {
-    Target target = resolve(report.getTargetType(), report.getTargetId());
+    return toView(report, resolveForView(report.getTargetType(), report.getTargetId()));
+  }
+
+  private AdminDtos.ReportView toView(Report report, Target target) {
     return new AdminDtos.ReportView(
       report.getId(),
       report.getTargetType().name(),
@@ -416,8 +437,12 @@ public class ReportService {
     return value.length() <= 160 ? value : value.substring(0, 157) + "...";
   }
 
-  private String trim(String value) {
-    return value == null ? null : value.trim();
+  private String trimMax(String value, int maxLength) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
   }
 
   private record Target(User author, String preview) {}

@@ -10,17 +10,13 @@ module.exports = function override(config) {
     },
   });
 
-  // Thêm fallback và ProvidePlugin
+  // Thêm fallback và ProvidePlugin cho simple-peer
   config.resolve.fallback = {
     ...config.resolve.fallback,
     process: require.resolve("process/browser"),
     stream: require.resolve("stream-browserify"),
-    zlib: require.resolve("browserify-zlib"),
     util: require.resolve("util"),
     buffer: require.resolve("buffer"),
-    assert: require.resolve("assert"),
-    crypto: require.resolve("crypto-browserify"),
-    path: require.resolve("path-browserify"),
   };
   config.resolve.alias = {
     ...config.resolve.alias,
@@ -34,14 +30,8 @@ module.exports = function override(config) {
       Buffer: ["buffer", "Buffer"],
     }),
     new webpack.DefinePlugin({
-      "process.env.NODE_ENV": JSON.stringify(
-        process.env.NODE_ENV || "development"
-      ),
       "process.env.REACT_APP_API_URL": JSON.stringify(
         process.env.REACT_APP_API_URL || "http://localhost:8081"
-      ),
-      "process.env.REACT_APP_SOCKET_URL": JSON.stringify(
-        process.env.REACT_APP_SOCKET_URL || "http://localhost:9092"
       ),
     }),
   ];

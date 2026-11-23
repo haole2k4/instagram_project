@@ -39,7 +39,7 @@ kiểm duyệt nội dung, audit log và dashboard. Phần UI tuân theo [docs/A
 
 - `USER` → `ROLE_USER`
 - `MODERATOR` → `ROLE_USER`, `ROLE_MODERATOR`
-- `ADMIN` → `ROLE_USER`, `ROLE_MODERATOR`, `ROLE_ADMIN`
+- `ADMIN` → `ROLE_USER`, `ROLE_MODERATOR`, `ROLE_ADMIN` (tài khoản `ADMIN` bắt buộc mang đủ cả ba authority trong Spring Security và JWT để vượt qua các guard `@PreAuthorize("hasRole('MODERATOR')")` lẫn `ADMIN`)
 
 JWT chứa identity + roles tại thời điểm phát hành. Status được kiểm tra lại ở
 backend mỗi request.

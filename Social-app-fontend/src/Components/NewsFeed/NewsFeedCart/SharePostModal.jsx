@@ -10,11 +10,11 @@ import {
 import { toast } from "react-toastify";
 
 const SharePostModal = ({ isOpen, onClose, post }) => {
-  const { i18n } = useTranslation();
-  const isEn = i18n.language === "en";
+  const { t, i18n } = useTranslation();
+  const isEn = i18n.language?.startsWith("en");
   const dispatch = useDispatch();
 
-  const currentUser = useSelector((state) => state.user.user);
+  const currentUser = useSelector((state) => state.login?.userInfo);
   const { conversations } = useSelector((state) => state.chat);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,12 +38,10 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
       if (conv.isGroupChat) {
         return {
           id: conv.id,
-          name: conv.name || (isEn ? "Group Chat" : "Nhóm trò chuyện"),
+          name: conv.name || t("messenger.groupChat"),
           image: "/group-avatar.png",
           isGroup: true,
-          subtitle: `${conv.participants?.length || 0} ${
-            isEn ? "members" : "thành viên"
-          }`,
+          subtitle: `${conv.participants?.length || 0} ${t("messenger.members")}`,
         };
       }
       const other = conv.participants?.find(
@@ -51,14 +49,14 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
       );
       return {
         id: conv.id,
-        name: other?.userFullname || other?.userNickname || (isEn ? "User" : "Người dùng"),
+        name: other?.userFullname || other?.userNickname || t("story.user"),
         username: other?.userNickname || "",
         image: other?.userImage || "/default-avatar.png",
         isGroup: false,
         subtitle: other?.userNickname ? `@${other.userNickname}` : "",
       };
     });
-  }, [conversations, currentUser?.id, isEn]);
+  }, [conversations, currentUser?.id, t]);
 
   const filteredConversations = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -139,27 +137,28 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[520px] w-full max-w-[440px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#262626] text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="ig-modal-panel flex h-[520px] w-full max-w-[440px] flex-col overflow-hidden rounded-panel border border-ig-border bg-ig-raised text-ig-text shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-ig-border px-4 py-3">
           <div className="w-6" />
-          <h2 className="text-[16px] font-semibold text-center">
+          <h2 className="text-center text-[16px] font-semibold">
             {isEn ? "Share post" : "Chia sẻ bài viết"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-white/10 hover:text-white transition-colors"
+            aria-label={t("common.close")}
+            className="ig-press flex h-8 w-8 items-center justify-center rounded-lg text-ig-muted hover:bg-ig-surface hover:text-ig-text"
           >
-            <X size={18} strokeWidth={2} />
+            <X size={18} strokeWidth={1.75} />
           </button>
         </div>
 
         {/* Search */}
-        <div className="border-b border-white/10 p-3">
-          <div className="flex items-center gap-2 rounded-xl bg-[#1c1c1c] px-3 py-2 text-[14px]">
-            <Search size={16} className="text-neutral-400 shrink-0" />
+        <div className="border-b border-ig-border p-3">
+          <div className="flex items-center gap-2 rounded-control border border-ig-border bg-ig-surface px-3 py-2 text-[14px]">
+            <Search size={16} className="shrink-0 text-ig-faint" />
             <input
               type="text"
               value={searchTerm}
@@ -169,13 +168,14 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
                   ? "Search people or groups..."
                   : "Tìm kiếm người dùng hoặc nhóm..."
               }
-              className="w-full bg-transparent text-white placeholder-neutral-400 outline-none text-[13px]"
+              className="w-full bg-transparent text-[14px] text-ig-text placeholder-ig-faint outline-none"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="text-neutral-400 hover:text-white"
+                aria-label={t("search.clear")}
+                className="text-ig-muted hover:text-ig-text"
               >
                 <X size={14} />
               </button>
@@ -184,12 +184,14 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
         </div>
 
         {/* Conversation list */}
-        <div className="flex-1 overflow-y-auto divide-y divide-white/5 p-2">
+        <div className="flex-1 divide-y divide-ig-rule overflow-y-auto p-2">
           {filteredConversations.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center p-6 text-center text-neutral-400">
-              <Users size={32} className="mb-2 text-neutral-500" />
+            <div className="flex h-full flex-col items-center justify-center p-6 text-center text-ig-muted">
+              <Users size={32} className="mb-2 text-ig-faint" />
               <p className="text-[14px] font-medium">
-                {isEn ? "No conversations found" : "Không tìm thấy cuộc trò chuyện nào"}
+                {isEn
+                  ? "No conversations found"
+                  : "Không tìm thấy cuộc trò chuyện nào"}
               </p>
             </div>
           ) : (
@@ -200,28 +202,29 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
               return (
                 <div
                   key={conv.id}
-                  className="flex items-center justify-between rounded-xl p-2.5 hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-between rounded-xl p-2.5 transition-colors hover:bg-ig-surface"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     {conv.isGroup ? (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-white">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ig-border bg-ig-surface text-ig-text">
                         <Users size={20} strokeWidth={1.5} />
                       </div>
                     ) : (
                       <img
                         src={conv.image}
                         alt=""
-                        className="h-11 w-11 shrink-0 rounded-full object-cover bg-neutral-800"
+                        className="h-11 w-11 shrink-0 rounded-full bg-ig-surface object-cover"
                         onError={(e) => {
+                          e.currentTarget.onerror = null;
                           e.currentTarget.src = "/default-avatar.png";
                         }}
                       />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-[14px] font-semibold text-white">
+                      <p className="truncate text-[14px] font-semibold text-ig-text">
                         {conv.name}
                       </p>
-                      <p className="truncate text-[12px] text-neutral-400">
+                      <p className="truncate text-[12px] text-ig-muted">
                         {conv.subtitle}
                       </p>
                     </div>
@@ -231,21 +234,21 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
                     type="button"
                     disabled={isSent || isSending}
                     onClick={() => handleSendPost(conv)}
-                    className={`shrink-0 rounded-lg px-4 py-1.5 text-[13px] font-semibold transition-all ${
+                    className={`ig-press shrink-0 rounded-control px-4 py-1.5 text-[14px] font-semibold ${
                       isSent
-                        ? "bg-white/10 text-neutral-300 cursor-default flex items-center gap-1"
-                        : "bg-[#0095f6] text-white hover:opacity-90 active:scale-95"
+                        ? "flex cursor-default items-center gap-1 border border-ig-border bg-ig-surface text-ig-muted"
+                        : "bg-ig-accent text-ig-text hover:opacity-90"
                     }`}
                   >
                     {isSending ? (
                       "..."
                     ) : isSent ? (
                       <>
-                        <Check size={14} strokeWidth={2.5} />
+                        <Check size={14} strokeWidth={2} />
                         <span>{isEn ? "Sent" : "Đã gửi"}</span>
                       </>
                     ) : (
-                      <span>{isEn ? "Send" : "Gửi"}</span>
+                      <span>{t("messenger.send")}</span>
                     )}
                   </button>
                 </div>
@@ -255,7 +258,7 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
         </div>
 
         {/* Optional note input */}
-        <div className="border-t border-white/10 p-3 bg-[#1e1e1e]">
+        <div className="border-t border-ig-border bg-ig-surface p-3">
           <input
             type="text"
             value={extraText}
@@ -263,7 +266,7 @@ const SharePostModal = ({ isOpen, onClose, post }) => {
             placeholder={
               isEn ? "Write a message..." : "Viết tin nhắn kèm theo..."
             }
-            className="w-full rounded-xl bg-[#262626] border border-white/10 px-3 py-2 text-[13px] text-white placeholder-neutral-400 outline-none focus:border-[#0095f6]"
+            className="w-full rounded-xl border border-ig-border bg-ig-ground px-3 py-2 text-[14px] text-ig-text placeholder-ig-faint outline-none focus:border-ig-accent"
           />
         </div>
       </div>

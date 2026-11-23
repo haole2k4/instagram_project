@@ -1,6 +1,7 @@
 # File dùng chung. Mỗi dòng một glob (* khớp cả '/'). Sửa file này cũng là sửa shared.
 # Sửa trực tiếp: commit riêng, AGENT_ALLOW_SHARED=1, message bắt đầu bằng "shared:".
 .gitignore
+.env.example
 README.md
 AGENTS.md
 docs/*

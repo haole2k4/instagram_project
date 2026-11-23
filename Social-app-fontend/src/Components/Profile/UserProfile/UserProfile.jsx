@@ -112,6 +112,7 @@ const UserProfile = () => {
                 alt={dataUser.username || "Avatar"}
                 className="h-full w-full rounded-full object-cover"
                 onError={(e) => {
+                  e.currentTarget.onerror = null;
                   e.currentTarget.src = "/default-avatar.png";
                 }}
               />
@@ -217,15 +218,9 @@ const UserProfile = () => {
       <div className="mt-6 flex justify-center border-t border-ig-rule">
         <button
           type="button"
-          className="mx-4 -mt-px border-t border-ig-text py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-text"
+          className="mx-4 -mt-px border-t border-ig-text py-3 text-[12px] font-semibold text-ig-text"
         >
           {t("userProfile.posts")}
-        </button>
-        <button
-          type="button"
-          className="mx-4 py-3 text-[12px] font-semibold uppercase tracking-[0.04em] text-ig-muted"
-        >
-          {t("userProfile.tagged")}
         </button>
       </div>
 

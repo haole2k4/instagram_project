@@ -189,6 +189,7 @@ const Notification = ({ isOpen = true, onClose, standalone = false }) => {
                 alt=""
                 className="h-11 w-11 shrink-0 rounded-full border border-ig-border object-cover"
                 onError={(e) => {
+                  e.currentTarget.onerror = null;
                   e.currentTarget.src = "/default-avatar.png";
                 }}
               />

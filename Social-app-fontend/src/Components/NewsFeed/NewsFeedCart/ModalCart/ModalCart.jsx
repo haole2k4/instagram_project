@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Bookmark,
   ChevronLeft,
   ChevronRight,
+  Flag,
   Globe,
   Heart,
   Image as ImageIcon,
@@ -24,13 +24,14 @@ import notificationSocket from "../../../../Service/notificationSocket";
 import { useTranslation } from "react-i18next";
 import {
   handleUpdateStatus,
-  handleLike,
+  likePost,
   unlikePost,
   getLikedPostIdsByUser,
 } from "../../../../Service/postApi";
 import { toast } from "react-toastify";
 import { formatTime, cleanMojibake } from "../../../../Utils";
 import SharePostModal from "../SharePostModal";
+import ReportModal from "../../../Common/ReportModal";
 
 const AccessIcon = ({ access, t }) => {
   if (access === "PUBLIC") {
@@ -85,25 +86,20 @@ const ModalCart = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
   const [failedMedia, setFailedMedia] = useState({});
   const [showShareModal, setShowShareModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const commentInputRef = useRef(null);
+  const timersRef = useRef([]);
 
-  // Lưu trạng thái tim bình luận theo user
-  const [commentLikes, setCommentLikes] = useState(() => {
-    try {
-      const stored = localStorage.getItem(
-        `ig_comment_likes_${userInfo?.id || "guest"}`
-      );
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [poppingCommentHeart, setPoppingCommentHeart] = useState(null);
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((timerId) => clearTimeout(timerId));
+    };
+  }, []);
 
   const [localIsLiked, setLocalIsLiked] = useState(Boolean(isLiked));
   const [localLikesCount, setLocalLikesCount] = useState(post?.likesCount || 0);
@@ -130,7 +126,8 @@ const ModalCart = ({
     if (!post?.id || !userInfo?.id || isLikingInProgress) return;
     if (forcedLike && localIsLiked) {
       setDoubleTapHeart(true);
-      setTimeout(() => setDoubleTapHeart(false), 900);
+      const timerId = setTimeout(() => setDoubleTapHeart(false), 900);
+      timersRef.current.push(timerId);
       return;
     }
 
@@ -145,7 +142,8 @@ const ModalCart = ({
     setLocalLikesCount(nextCount);
     if (nextLiked) {
       setDoubleTapHeart(true);
-      setTimeout(() => setDoubleTapHeart(false), 900);
+      const timerId = setTimeout(() => setDoubleTapHeart(false), 900);
+      timersRef.current.push(timerId);
     }
 
     if (onToggleLikePost) {
@@ -155,7 +153,7 @@ const ModalCart = ({
     setIsLikingInProgress(true);
     try {
       if (nextLiked) {
-        await handleLike(post.id, userInfo.id);
+        await likePost(post.id, userInfo.id);
       } else {
         await unlikePost(post.id, userInfo.id);
       }
@@ -251,27 +249,6 @@ const ModalCart = ({
     }
   };
 
-  const toggleCommentLike = (commentId) => {
-    setPoppingCommentHeart(commentId);
-    setTimeout(() => setPoppingCommentHeart(null), 250);
-
-    setCommentLikes((prev) => {
-      const updated = {
-        ...prev,
-        [commentId]: !prev[commentId],
-      };
-      try {
-        localStorage.setItem(
-          `ig_comment_likes_${userInfo?.id || "guest"}`,
-          JSON.stringify(updated)
-        );
-      } catch (err) {
-        console.error("Failed to save comment likes", err);
-      }
-      return updated;
-    });
-  };
-
   const nextImage = () => {
     if (!post?.media?.length) return;
     setCurrentImageIndex((prev) => (prev + 1) % post.media.length);
@@ -317,7 +294,7 @@ const ModalCart = ({
   return (
     <div
       onClick={() => setIsOpen(false)}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 md:p-6"
     >
       <div
         role="dialog"
@@ -380,7 +357,7 @@ const ModalCart = ({
                 aria-label={t("story.previous")}
                 title={t("story.previous")}
                 onClick={prevImage}
-                className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
+                className="ig-press absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-white hover:bg-ig-raised"
               >
                 <ChevronLeft size={20} strokeWidth={1.5} />
               </button>
@@ -389,11 +366,11 @@ const ModalCart = ({
                 aria-label={t("story.next")}
                 title={t("story.next")}
                 onClick={nextImage}
-                className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
+                className="ig-press absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-ig-border bg-ig-ground/80 text-white hover:bg-ig-raised"
               >
                 <ChevronRight size={20} strokeWidth={1.5} />
               </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-white/20 bg-black/60 px-3 py-0.5 text-[12px] font-medium text-white tabular-nums backdrop-blur-md">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-ig-border bg-ig-ground/80 px-3 py-0.5 text-[12px] font-medium text-white tabular-nums">
                 {currentImageIndex + 1} / {post.media.length}
               </div>
             </>
@@ -410,6 +387,10 @@ const ModalCart = ({
                   src={post.user?.userImage || "/default-avatar.png"}
                   className="h-8 w-8 rounded-full bg-ig-surface object-cover"
                   alt={post.user?.userNickname || ""}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/default-avatar.png";
+                  }}
                 />
               </div>
               <div className="min-w-0">
@@ -424,6 +405,23 @@ const ModalCart = ({
             </div>
 
             <div className="flex items-center gap-1">
+              {post.user?.id && String(post.user.id) !== String(userInfo?.id) && (
+                <button
+                  type="button"
+                  aria-label={t("report.reportPost")}
+                  title={t("report.reportPost")}
+                  onClick={() =>
+                    setReportTarget({
+                      targetType: "POST",
+                      targetId: post.id,
+                      targetLabel: post.user?.userNickname || "",
+                    })
+                  }
+                  className="ig-press flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-ig-surface hover:text-white"
+                >
+                  <Flag size={16} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              )}
               {userInfo?.id === post.user?.id && (
                 <div className="relative">
                   <button
@@ -496,6 +494,10 @@ const ModalCart = ({
                   src={post.user?.userImage || "/default-avatar.png"}
                   className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover mt-0.5"
                   alt={post.user?.userNickname || ""}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/default-avatar.png";
+                  }}
                 />
                 <div className="min-w-0 flex-1 text-[14px]">
                   <p className="leading-snug">
@@ -515,83 +517,76 @@ const ModalCart = ({
             {comments.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-[14px] font-semibold text-white">
-                  {t("post.noComments") || "Chưa có bình luận nào."}
+                  {t("post.noComments")}
                 </p>
                 <p className="mt-1 text-[13px] text-neutral-500">
-                  Bắt đầu cuộc trò chuyện.
+                  {t("post.startConversation")}
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment) => {
-                  const hasLikedComment = !!commentLikes[comment.id];
-                  return (
-                    <div
-                      key={comment.id}
-                      className="group flex items-start justify-between gap-3"
-                    >
-                      <div className="flex min-w-0 items-start gap-3 flex-1">
-                        <img
-                          src={comment.userImage || "/default-avatar.png"}
-                          className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover mt-0.5"
-                          alt={comment.userNickname || ""}
-                        />
-                        <div className="min-w-0 flex-1 text-[14px]">
-                          <p className="leading-snug">
-                            <span className="mr-2 font-semibold text-white">
-                              {comment.userNickname}
-                            </span>
-                            <span className="text-neutral-200 break-words">
-                              {cleanMojibake(comment.content)}
-                            </span>
-                          </p>
-                          <div className="mt-1.5 flex items-center gap-3 text-[12px] text-neutral-500 tabular-nums">
-                            <span>{formatTime(comment.createdAt, t)}</span>
-                            {hasLikedComment && (
-                              <span className="font-semibold text-neutral-300">
-                                1 lượt thích
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleReplyClick(comment.userNickname)}
-                              className="font-medium text-neutral-400 hover:text-white"
-                            >
-                              {t("post.reply") || "Trả lời"}
-                            </button>
-                          </div>
+                {comments.map((comment) => (
+                  <div
+                    key={comment.id}
+                    className="group flex items-start justify-between gap-3"
+                  >
+                    <div className="flex min-w-0 items-start gap-3 flex-1">
+                      <img
+                        src={comment.userImage || "/default-avatar.png"}
+                        className="h-8 w-8 shrink-0 rounded-full bg-ig-surface object-cover mt-0.5"
+                        alt={comment.userNickname || ""}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "/default-avatar.png";
+                        }}
+                      />
+                      <div className="min-w-0 flex-1 text-[14px]">
+                        <p className="leading-snug">
+                          <span className="mr-2 font-semibold text-white">
+                            {comment.userNickname}
+                          </span>
+                          <span className="text-neutral-200 break-words">
+                            {cleanMojibake(comment.content)}
+                          </span>
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-3 text-[12px] text-neutral-500 tabular-nums">
+                          <span>{formatTime(comment.createdAt, t)}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleReplyClick(comment.userNickname)}
+                            className="font-medium text-neutral-400 hover:text-white"
+                          >
+                            {t("post.reply")}
+                          </button>
                         </div>
                       </div>
-
-                      {/* NÚT TIM CHO BÌNH LUẬN (Requirement 5) */}
-                      <button
-                        type="button"
-                        aria-label="Thích bình luận"
-                        onClick={() => toggleCommentLike(comment.id)}
-                        className={`ig-press flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-transform ${
-                          hasLikedComment
-                            ? "text-ig-like"
-                            : "text-neutral-500 hover:text-neutral-300"
-                        } ${
-                          poppingCommentHeart === comment.id
-                            ? "ig-heart-pop"
-                            : ""
-                        }`}
-                      >
-                        <Heart
-                          size={15}
-                          strokeWidth={1.5}
-                          className={hasLikedComment ? "fill-current" : ""}
-                        />
-                      </button>
                     </div>
-                  );
-                })}
+
+                    {comment.userId &&
+                      String(comment.userId) !== String(userInfo?.id) && (
+                        <button
+                          type="button"
+                          aria-label={t("report.reportComment")}
+                          title={t("report.reportComment")}
+                          onClick={() =>
+                            setReportTarget({
+                              targetType: "COMMENT",
+                              targetId: comment.id,
+                              targetLabel: comment.userNickname || "",
+                            })
+                          }
+                          className="ig-press flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-colors hover:text-neutral-300"
+                        >
+                          <Flag size={14} strokeWidth={1.5} aria-hidden="true" />
+                        </button>
+                      )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Action Bar (Like post, Comment, Save, Likes count, Time) */}
+          {/* Action Bar */}
           <div className="border-t border-ig-rule px-4 py-3 shrink-0">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -619,7 +614,8 @@ const ModalCart = ({
                 </button>
                 <button
                   type="button"
-                  aria-label="Chia sẻ"
+                  aria-label={t("post.share")}
+                  title={t("post.share")}
                   onClick={() => {
                     if (onSharePost) {
                       onSharePost(post);
@@ -632,27 +628,12 @@ const ModalCart = ({
                   <Send size={22} strokeWidth={1.5} />
                 </button>
               </div>
-
-              <button
-                type="button"
-                aria-label={t("post.save")}
-                onClick={() => setIsSaved((prev) => !prev)}
-                className={`ig-press flex items-center justify-center ${
-                  isSaved ? "text-white fill-white" : "text-white hover:text-neutral-400"
-                }`}
-              >
-                <Bookmark
-                  size={24}
-                  strokeWidth={1.5}
-                  className={isSaved ? "fill-current" : ""}
-                />
-              </button>
             </div>
 
             <p className="text-[14px] font-semibold text-white tabular-nums">
               {localLikesCount || 0} {t("newFed.like")}
             </p>
-            <p className="text-[11px] uppercase tracking-wide text-neutral-500 mt-1">
+            <p className="mt-1 text-[11px] text-neutral-500">
               {formatTime(post.createdAt, t)}
             </p>
           </div>
@@ -666,7 +647,8 @@ const ModalCart = ({
                 setNewComment((prev) => `${prev} ❤️ `);
                 commentInputRef.current?.focus();
               }}
-              aria-label="Thêm biểu tượng cảm xúc"
+              aria-label={t("post.addEmoji")}
+              title={t("post.addEmoji")}
             >
               <Smile size={22} strokeWidth={1.5} />
             </button>
@@ -674,7 +656,7 @@ const ModalCart = ({
               ref={commentInputRef}
               type="text"
               aria-label={t("post.commentPlaceholder")}
-              placeholder={t("post.commentPlaceholder") || "Thêm bình luận..."}
+              placeholder={t("post.commentPlaceholder")}
               className="flex-1 bg-transparent py-1 text-[14px] text-white placeholder-neutral-500 focus:outline-none"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -690,7 +672,7 @@ const ModalCart = ({
               className="ig-press text-[14px] font-semibold text-[#0095f6] hover:text-[#1877f2] disabled:opacity-40"
               onClick={handleCommentSubmit}
             >
-              {t("post.postComment") || "Đăng"}
+              {t("post.postComment")}
             </button>
           </div>
         </div>
@@ -703,6 +685,14 @@ const ModalCart = ({
           post={post}
         />
       )}
+
+      <ReportModal
+        open={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+        targetType={reportTarget?.targetType}
+        targetId={reportTarget?.targetId}
+        targetLabel={reportTarget?.targetLabel}
+      />
     </div>
   );
 };

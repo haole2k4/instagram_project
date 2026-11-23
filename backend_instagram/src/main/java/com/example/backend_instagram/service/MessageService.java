@@ -1,5 +1,6 @@
 package com.example.backend_instagram.service;
 
+import com.example.backend_instagram.dto.message.ChatUserSummaryDTO;
 import com.example.backend_instagram.dto.message.MessageDTO;
 import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.dto.message.ReadReceiptDTO;
@@ -14,17 +15,19 @@ import com.example.backend_instagram.repository.ConversationRepository;
 import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.MessageRepository;
 import com.example.backend_instagram.repository.UserRepository;
+import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class MessageService {
@@ -154,10 +157,17 @@ public class MessageService {
     }
 
     /**
-     * Lấy cuộc trò chuyện giữa 2 người dùng.
+     * Lấy cuộc trò chuyện giữa 2 người dùng và đánh dấu đã đọc cho {@code currentUserId}.
      */
     @Transactional
-    public List<MessageResponseDTO> getConversation(Long user1Id, Long user2Id) throws IdInvalidException {
+    public List<MessageResponseDTO> getConversation(Long user1Id, Long user2Id, Long currentUserId)
+            throws IdInvalidException {
+        if (currentUserId == null || (!currentUserId.equals(user1Id) && !currentUserId.equals(user2Id))) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "Không thể xem cuộc trò chuyện của người khác.");
+        }
         if (!userRepository.existsById(user1Id)) {
             throw new IdInvalidException("Người dùng 1 không tồn tại");
         }
@@ -165,11 +175,16 @@ public class MessageService {
             throw new IdInvalidException("Người dùng 2 không tồn tại");
         }
 
+        List<Follow> relations = followRepository.findBetweenUsers(user1Id, user2Id);
+        if (relations.stream().anyMatch(Follow::isBlocking)) {
+            throw new IdInvalidException("Một trong hai người đã chặn, không thể xem tin nhắn");
+        }
+
         Conversation conversation = conversationRepository.findConversationBetweenUsers(user1Id, user2Id)
                 .orElseThrow(() -> new IdInvalidException("Cuộc trò chuyện không tồn tại"));
 
         List<Message> messages = messageRepository.findByConversationId(conversation.getId());
-        messageRepository.markMessagesAsReadInConversation(conversation.getId(), user1Id);
+        messageRepository.markMessagesAsReadInConversation(conversation.getId(), currentUserId);
 
         return messages.stream()
                 .map(this::convertToMessageResponseDTO)
@@ -191,36 +206,37 @@ public class MessageService {
         messageRepository.markMessagesAsReadInConversation(conversationId, userId);
 
         ReadReceiptDTO receipt = new ReadReceiptDTO(conversationId, userId);
-        participantRepository.findUserIdsByConversationId(conversationId).stream()
+        List<Long> recipientIds = participantRepository.findUserIdsByConversationId(conversationId).stream()
                 .filter(participantId -> !participantId.equals(userId))
-                .forEach(participantId -> realtimePublisher.sendReadReceipt(participantId, receipt));
+                .toList();
+
+        Runnable publishReceipts = () -> recipientIds.forEach(
+                participantId -> realtimePublisher.sendReadReceipt(participantId, receipt));
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    publishReceipts.run();
+                }
+            });
+        } else {
+            publishReceipts.run();
+        }
     }
 
     /**
      * Lấy danh sách người liên hệ của user.
      */
-    public List<User> getContacts(Long userId) throws IdInvalidException {
+    @Transactional(readOnly = true)
+    public List<ChatUserSummaryDTO> getContacts(Long userId) throws IdInvalidException {
         if (!userRepository.existsById(userId)) {
             throw new IdInvalidException("Người dùng không tồn tại");
         }
 
-        List<Long> conversationIds = participantRepository.findByUserId(userId).stream()
-                .map(cp -> cp.getConversation().getId())
-                .collect(Collectors.toList());
-
-        if (conversationIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        Set<User> contacts = new HashSet<>();
-        for (Long conversationId : conversationIds) {
-            participantRepository.findByConversationId(conversationId).stream()
-                    .map(ConversationParticipant::getUser)
-                    .filter(user -> !user.getId().equals(userId))
-                    .forEach(contacts::add);
-        }
-
-        return new ArrayList<>(contacts);
+        return messageRepository.findContactsByUserId(userId).stream()
+                .map(ChatUserSummaryDTO::from)
+                .toList();
     }
 
     /**

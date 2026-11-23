@@ -1,9 +1,9 @@
 package com.example.backend_instagram.controller;
 
 import com.example.backend_instagram.dto.follow.FollowResponseDTO;
-import com.example.backend_instagram.entity.Follow;
+import com.example.backend_instagram.dto.follow.FollowSummaryDTO;
+import com.example.backend_instagram.dto.follow.FollowUserSummaryDTO;
 import com.example.backend_instagram.entity.User;
-import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.service.CurrentUserService;
 import com.example.backend_instagram.service.FollowService;
 import com.example.backend_instagram.service.UserService;
@@ -25,44 +25,35 @@ public class FollowController {
   private final FollowService followService;
   private final UserService userService;
   private final CurrentUserService currentUserService;
-  private final AccountStatusService accountStatusService;
 
   public FollowController(
     FollowService followService,
     UserService userService,
-    CurrentUserService currentUserService,
-    AccountStatusService accountStatusService
+    CurrentUserService currentUserService
   ) {
     this.followService = followService;
     this.userService = userService;
     this.currentUserService = currentUserService;
-    this.accountStatusService = accountStatusService;
   }
 
   @GetMapping("/all")
-  public ResponseEntity<List<Follow>> getFollow() {
-    return ResponseEntity.ok(this.followService.getAllPairOfFollow());
+  public ResponseEntity<List<FollowSummaryDTO>> getFollow() {
+    return ResponseEntity.ok(this.followService.getAllFollowSummaries());
   }
 
   @GetMapping("/followers/{userId}")
-  public List<Follow> getFollowers(@PathVariable Long userId) {
-    return followService.getFollowersOfUser(userId);
+  public List<FollowSummaryDTO> getFollowers(@PathVariable Long userId) {
+    return followService.getFollowerSummariesOfUser(userId);
   }
 
   @GetMapping("/following/{userId}")
-  public List<Follow> getFollowing(@PathVariable Long userId) {
-    return followService.getFollowingOfUser(userId);
+  public List<FollowSummaryDTO> getFollowing(@PathVariable Long userId) {
+    return followService.getFollowingSummariesOfUser(userId);
   }
 
   @GetMapping("/following/users/{userId}")
-  public ResponseEntity<List<User>> getFollowingUsers(@PathVariable Long userId) {
-    List<Follow> follows = followService.getFollowingOfUser(userId);
-    List<User> followingUsers = follows
-      .stream()
-      .map(Follow::getFollowing)
-      .filter(user -> !accountStatusService.isRestricted(user))
-      .toList();
-    return ResponseEntity.ok(followingUsers);
+  public ResponseEntity<List<FollowUserSummaryDTO>> getFollowingUsers(@PathVariable Long userId) {
+    return ResponseEntity.ok(followService.getFollowingUserSummaries(userId));
   }
 
   @PostMapping("/create")

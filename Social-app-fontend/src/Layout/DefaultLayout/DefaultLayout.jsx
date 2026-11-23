@@ -9,15 +9,16 @@ import ChatPage from "../../Components/Messenger/ChatPage.jsx";
 import MiniChatFloating from "../../Components/Messenger/MiniChatFloating.jsx";
 import Route from "../../Components/Routes/index";
 
-const DefaultLayout = ({ socketData }) => {
-  const { t } = useTranslation();
+const DefaultLayout = () => {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const { status, suspendedUntil } = useSelector((state) => state.login);
   const isChatPage = location.pathname.includes("/chat");
   const isHomePage = location.pathname === Route.default_session;
   const restricted = status === "SUSPENDED" || status === "BANNED";
+  const locale = i18n.language?.startsWith("en") ? "en-US" : "vi-VN";
   const until = suspendedUntil
-    ? new Date(suspendedUntil).toLocaleString("vi-VN")
+    ? new Date(suspendedUntil).toLocaleString(locale)
     : "";
 
   const banner = restricted ? (
@@ -38,7 +39,7 @@ const DefaultLayout = ({ socketData }) => {
 
       {isChatPage ? (
         <div className="ml-0 min-h-dvh flex-1 md:ml-rail">
-          <ChatPage socketData={socketData} />
+          <ChatPage />
         </div>
       ) : (
         <div className="ml-0 flex min-h-dvh flex-1 justify-center px-4 pb-16 pt-4 md:ml-rail md:px-6 md:pb-8 md:pt-6">

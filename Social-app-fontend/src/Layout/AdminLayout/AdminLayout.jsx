@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { UserLogOut } from "../../Service/authApi";
+import webSocketService from "../../Service/webSocketService";
 import { userLogoutALL } from "../../Redux/Reducer/UserAppDeucer";
 
 const NAV = [
@@ -93,10 +94,9 @@ const AdminLayout = () => {
     } catch {
       // Cookie/token cleanup on the client still applies.
     }
+    webSocketService.disconnect();
     dispatch(userLogoutALL());
-    setTimeout(() => {
-      navigate("/login", { replace: true });
-    }, 850);
+    navigate("/login", { replace: true });
   };
 
   const nav = (mobile = false) => (

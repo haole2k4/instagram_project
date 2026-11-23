@@ -20,7 +20,8 @@ RUN java -Djarmode=tools -jar target/*.jar extract --layers --destination extrac
 # ---- Runtime Stage ----
 FROM eclipse-temurin:25-jre-alpine
 
-RUN addgroup -g 1000 -S appgroup && \
+RUN apk add --no-cache tzdata && \
+    addgroup -g 1000 -S appgroup && \
     adduser -u 1000 -S appuser -G appgroup
 
 WORKDIR /app

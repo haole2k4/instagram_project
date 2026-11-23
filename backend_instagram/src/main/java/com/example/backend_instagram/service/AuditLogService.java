@@ -3,7 +3,6 @@ package com.example.backend_instagram.service;
 import com.example.backend_instagram.dto.admin.AdminDtos;
 import com.example.backend_instagram.entity.AuditLog;
 import com.example.backend_instagram.repository.AuditLogRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,14 +13,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class AuditLogService {
   private final AuditLogRepository auditLogRepository;
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
 
-  public AuditLogService(AuditLogRepository auditLogRepository) {
+  public AuditLogService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
     this.auditLogRepository = auditLogRepository;
+    this.objectMapper = objectMapper;
   }
 
   @Transactional(readOnly = true)

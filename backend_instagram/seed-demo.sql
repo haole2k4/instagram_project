@@ -87,7 +87,7 @@ SELECT u.id, r.id FROM users u CROSS JOIN roles r WHERE r.code = 'USER';
 
 INSERT IGNORE INTO user_roles (user_id, role_id)
 SELECT u.id, r.id FROM users u CROSS JOIN roles r
-WHERE r.code = 'ADMIN' AND u.user_email = 'admin@instagram.local';
+WHERE r.code IN ('ADMIN', 'MODERATOR') AND u.user_email = 'admin@instagram.local';
 
 INSERT IGNORE INTO user_roles (user_id, role_id)
 SELECT u.id, r.id FROM users u CROSS JOIN roles r
@@ -211,7 +211,7 @@ FROM users reporter CROSS JOIN comments c
 JOIN posts p ON p.id = c.post_id
 JOIN users commenter ON commenter.id = c.user_id
 CROSS JOIN users mod_user
-WHERE reporter.user_email = 'admin@instagram.local'
+WHERE reporter.user_email = 'linh@instagram.local'
 AND commenter.user_email = 'admin@instagram.local'
 AND mod_user.user_email = 'moderator@instagram.local'
 AND c.content = 'Adding this place to my list!'
@@ -226,9 +226,9 @@ SET url = 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=1000'
 WHERE url LIKE '%localhost:4566%' OR url LIKE '%1792770830241%';
 
 -- Ensure demo posts are visible
-UPDATE posts SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL OR moderation_state = 'HIDDEN';
-UPDATE stories SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL OR moderation_state = 'HIDDEN';
-UPDATE comments SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL OR moderation_state = 'HIDDEN';
+UPDATE posts SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL;
+UPDATE stories SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL;
+UPDATE comments SET moderation_state = 'VISIBLE' WHERE moderation_state IS NULL;
 
 -- More sample posts with high quality Unsplash photos
 INSERT INTO posts (title, user_id, created_at, likes_count, comments_count, status, access, moderation_state)
@@ -414,7 +414,7 @@ AND NOT EXISTS (SELECT 1 FROM stories s WHERE s.user_id = u.id AND s.url LIKE '%
 INSERT INTO stories (user_id, url, access, status, created_at, moderation_state)
 SELECT u.id, 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=900', 'PUBLIC', 1, NOW(), 'VISIBLE'
 FROM users u WHERE u.user_email = 'duc@instagram.local'
-AND NOT EXISTS (SELECT 1 FROM stories s WHERE s.user_id = u.id AND s.url LIKE '%1555066931436%');
+AND NOT EXISTS (SELECT 1 FROM stories s WHERE s.user_id = u.id AND s.url LIKE '%1555066931-4365%');
 
 INSERT INTO stories (user_id, url, access, status, created_at, moderation_state)
 SELECT u.id, 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900', 'PUBLIC', 1, NOW(), 'VISIBLE'

@@ -12,7 +12,6 @@ resources:
   - localstack.yaml
   - backend.yaml
   - frontend.yaml
-  - seed-job.yaml
   - ingress.yaml
 
 # Secret được tạo riêng từ .env bằng ./k8s/create-secrets.sh (không commit file thật)

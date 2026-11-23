@@ -1,5 +1,4 @@
 import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 import {
   addMessage,
   markMessagesAsRead,
@@ -7,8 +6,14 @@ import {
   setWebSocketConnected,
 } from "../Redux/Reducer/chatSlice";
 
+let injectedStore = null;
+
+export const injectWebSocketStore = (storeInstance) => {
+  injectedStore = storeInstance;
+};
+
 /**
- * Một STOMP client duy nhất cho toàn app.
+ * Một STOMP client duy nhất cho toàn app qua native WebSocket (/ws-native).
  *
  * Server chỉ gửi dữ liệu qua user destination (/user/queue/**). Nhờ đó client
  * không cần subscribe theo từng conversation và không thể nghe dữ liệu của
@@ -22,6 +27,8 @@ class WebSocketService {
     this.subscriptions = new Map();
     this.listeners = new Map();
     this.markReadTimers = new Map();
+    this._waitTimer = null;
+    this._waitReject = null;
     this.dispatch = null;
     this.userId = null;
     this.accessToken = null;
@@ -52,17 +59,32 @@ class WebSocketService {
     }
   }
 
+  getReduxState() {
+    if (this.dispatch && this.dispatch._getState) {
+      return this.dispatch._getState();
+    }
+    return injectedStore?.getState?.() || null;
+  }
+
+  _dispatchAction(action) {
+    if (this.dispatch) {
+      this.dispatch(action);
+    } else if (injectedStore?.dispatch) {
+      injectedStore.dispatch(action);
+    }
+  }
+
   /**
-   * Token nằm trong Redux (persist) chứ không phải localStorage.accessToken.
-   * Hỗ trợ thêm các nguồn cũ để không phá client đang chạy.
+   * Luôn ưu tiên đọc token mới nhất từ Redux store để reconnect sau khi
+   * Axios interceptor refresh JWT không dùng lại token cũ đã hết hạn.
    */
   getAccessToken() {
-    if (this.accessToken) {
-      return this.accessToken;
-    }
     const state = this.getReduxState();
     if (state?.login?.accessToken) {
       return state.login.accessToken;
+    }
+    if (this.accessToken) {
+      return this.accessToken;
     }
     const directToken =
       localStorage.getItem("accessToken") ||
@@ -87,22 +109,34 @@ class WebSocketService {
   }
 
   getUserId() {
-    if (this.userId) {
-      return this.userId;
-    }
     const state = this.getReduxState();
     const reduxUserId =
       state?.chat?.currentUserId || state?.login?.userInfo?.id;
+    if (reduxUserId) {
+      return reduxUserId;
+    }
+    if (this.userId) {
+      return this.userId;
+    }
     const storedUserId =
       localStorage.getItem("userId") || localStorage.getItem("user_id");
-    return reduxUserId || (storedUserId ? parseInt(storedUserId, 10) : null);
+    return storedUserId ? parseInt(storedUserId, 10) : null;
   }
 
-  getReduxState() {
-    if (!this.dispatch || !this.dispatch._getState) {
-      return null;
+  _getBrokerUrl() {
+    const base =
+      this.apiUrl ||
+      (typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost:8081");
+    if (base.startsWith("http")) {
+      return `${base.replace(/^http/, "ws")}/ws-native`;
     }
-    return this.dispatch._getState();
+    if (typeof window !== "undefined") {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return `${proto}//${window.location.host}${base}/ws-native`;
+    }
+    return "ws://localhost:8081/ws-native";
   }
 
   isConnected() {
@@ -136,7 +170,7 @@ class WebSocketService {
 
     if (!this.client) {
       this.client = new Client({
-        webSocketFactory: () => new SockJS(`${this.apiUrl}/ws`),
+        brokerURL: this._getBrokerUrl(),
         connectHeaders: { Authorization: `Bearer ${token}` },
         reconnectDelay: 5000,
         heartbeatIncoming: 10000,
@@ -156,23 +190,17 @@ class WebSocketService {
           this.connected = true;
           this.subscriptions.clear();
           this._subscribeToUserQueues();
-          if (this.dispatch) {
-            this.dispatch(setWebSocketConnected(true));
-          }
+          this._dispatchAction(setWebSocketConnected(true));
         },
         onDisconnect: () => {
           this.connected = false;
           this.subscriptions.clear();
-          if (this.dispatch) {
-            this.dispatch(setWebSocketConnected(false));
-          }
+          this._dispatchAction(setWebSocketConnected(false));
         },
         onWebSocketClose: () => {
           this.connected = false;
           this.subscriptions.clear();
-          if (this.dispatch) {
-            this.dispatch(setWebSocketConnected(false));
-          }
+          this._dispatchAction(setWebSocketConnected(false));
         },
         onStompError: (frame) => {
           console.error(
@@ -180,9 +208,7 @@ class WebSocketService {
             frame.headers?.message || frame.body
           );
           this.connected = false;
-          if (this.dispatch) {
-            this.dispatch(setWebSocketConnected(false));
-          }
+          this._dispatchAction(setWebSocketConnected(false));
         },
       });
     }
@@ -194,19 +220,32 @@ class WebSocketService {
     return this.connectingPromise;
   }
 
+  _clearWaitTimer() {
+    if (this._waitTimer) {
+      clearTimeout(this._waitTimer);
+      this._waitTimer = null;
+    }
+  }
+
   _waitForConnection(timeoutMs) {
+    this._clearWaitTimer();
     return new Promise((resolve, reject) => {
+      this._waitReject = reject;
       const startedAt = Date.now();
       const check = () => {
         if (this.isConnected()) {
+          this._clearWaitTimer();
+          this._waitReject = null;
           resolve();
           return;
         }
         if (Date.now() - startedAt >= timeoutMs) {
+          this._clearWaitTimer();
+          this._waitReject = null;
           reject(new Error("WebSocket connection timeout"));
           return;
         }
-        setTimeout(check, 100);
+        this._waitTimer = setTimeout(check, 100);
       };
       check();
     });
@@ -225,14 +264,12 @@ class WebSocketService {
     this._subscribe("read-receipts", "/user/queue/read-receipts", (frame) => {
       const receipt = this._parse(frame);
       if (receipt?.conversationId && receipt?.userId) {
-        if (this.dispatch) {
-          this.dispatch(
-            markMessagesAsReadByOther({
-              conversationId: receipt.conversationId,
-              readerId: receipt.userId,
-            })
-          );
-        }
+        this._dispatchAction(
+          markMessagesAsReadByOther({
+            conversationId: receipt.conversationId,
+            readerId: receipt.userId,
+          })
+        );
         this._emit("read-receipt", receipt);
       }
     });
@@ -276,20 +313,20 @@ class WebSocketService {
       return;
     }
 
-    if (this.dispatch) {
-      this.dispatch(
-        addMessage({
-          ...receivedMessage,
-          fromWebSocket: true,
-          receivedAt: new Date().toISOString(),
-        })
-      );
-    }
+    this._dispatchAction(
+      addMessage({
+        ...receivedMessage,
+        fromWebSocket: true,
+        receivedAt: new Date().toISOString(),
+      })
+    );
 
     const currentState = this.getReduxState();
+    const activeConvId =
+      currentState?.chat?.currentConversation?.id ||
+      currentState?.chat?.activeMiniConversation?.id;
     if (
-      currentState?.chat?.currentConversation?.id ===
-        receivedMessage.conversationId &&
+      activeConvId === receivedMessage.conversationId &&
       receivedMessage.senderId !== this.getUserId()
     ) {
       this._scheduleMarkAsRead(receivedMessage.conversationId);
@@ -349,8 +386,8 @@ class WebSocketService {
         body: "",
       });
       const userId = this.getUserId();
-      if (userId && this.dispatch) {
-        this.dispatch(markMessagesAsRead({ conversationId, userId }));
+      if (userId) {
+        this._dispatchAction(markMessagesAsRead({ conversationId, userId }));
       }
     };
     if (!this.isConnected()) {
@@ -450,6 +487,11 @@ class WebSocketService {
   }
 
   disconnect() {
+    this._clearWaitTimer();
+    if (this._waitReject) {
+      this._waitReject(new Error("WebSocket disconnected"));
+      this._waitReject = null;
+    }
     this.markReadTimers.forEach((timer) => clearTimeout(timer));
     this.markReadTimers.clear();
     this.subscriptions.clear();
@@ -466,9 +508,8 @@ class WebSocketService {
 
     this.connected = false;
     this.accessToken = null;
-    if (this.dispatch) {
-      this.dispatch(setWebSocketConnected(false));
-    }
+    this.userId = null;
+    this._dispatchAction(setWebSocketConnected(false));
   }
 }
 

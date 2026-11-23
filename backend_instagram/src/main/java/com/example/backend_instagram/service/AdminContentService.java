@@ -21,6 +21,8 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
@@ -30,9 +32,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class AdminContentService {
+  private static final int MAX_MODERATION_REASON_LENGTH = 500;
+  private static final int MAX_AUDIT_REASON_LENGTH = 1000;
+
   private final PostRepository postRepository;
   private final CommentRepository commentRepository;
   private final StoryRepository storyRepository;
@@ -41,6 +48,29 @@ public class AdminContentService {
   private final AuditService auditService;
   private final NotificationService notificationService;
   private final CacheManager cacheManager;
+
+  @Autowired
+  public AdminContentService(
+    PostRepository postRepository,
+    CommentRepository commentRepository,
+    StoryRepository storyRepository,
+    ReportRepository reportRepository,
+    CurrentUserService currentUserService,
+    AuditService auditService,
+    NotificationService notificationService,
+    ObjectProvider<CacheManager> cacheManagerProvider
+  ) {
+    this(
+      postRepository,
+      commentRepository,
+      storyRepository,
+      reportRepository,
+      currentUserService,
+      auditService,
+      notificationService,
+      cacheManagerProvider.getIfAvailable()
+    );
+  }
 
   public AdminContentService(
     PostRepository postRepository,
@@ -84,7 +114,7 @@ public class AdminContentService {
         .findAll(commentSpec(q, state), pageable)
         .map(this::commentItem);
       case "STORY" -> storyRepository
-        .findAll(storySpec(state), pageable)
+        .findAll(storySpec(q, state), pageable)
         .map(this::storyItem);
       default -> throw new ApiException(
         HttpStatus.BAD_REQUEST,
@@ -173,7 +203,7 @@ public class AdminContentService {
     post.setModerationState(toState(request.action()));
     applyReason(post, request, actor);
     postRepository.save(post);
-    evictContentCaches();
+    evictContentCachesAfterCommit();
     audit(actor, request, "POST", id, post.getUser());
     notify(post.getUser(), actor, request, "bài viết");
     return postItem(post);
@@ -189,7 +219,7 @@ public class AdminContentService {
     assertStateChange(comment.getModerationState(), request.action(), "Bình luận");
     comment.setModerationState(toState(request.action()));
     comment.setModerationReasonCode(request.reasonCode());
-    comment.setModerationReason(trim(request.note()));
+    comment.setModerationReason(trimMax(request.note(), MAX_MODERATION_REASON_LENGTH));
     comment.setModeratedAt(LocalDateTime.now());
     comment.setModeratedBy(actor.getId());
     commentRepository.save(comment);
@@ -198,7 +228,7 @@ public class AdminContentService {
     post.setCommentsCount(commentRepository.countPublicByPost(post));
     postRepository.save(post);
 
-    evictContentCaches();
+    evictContentCachesAfterCommit();
     audit(actor, request, "COMMENT", id, comment.getUser());
     notify(comment.getUser(), actor, request, "bình luận");
     return commentItem(comment);
@@ -214,10 +244,11 @@ public class AdminContentService {
     assertStateChange(story.getModerationState(), request.action(), "Story");
     story.setModerationState(toState(request.action()));
     story.setModerationReasonCode(request.reasonCode());
-    story.setModerationReason(trim(request.note()));
+    story.setModerationReason(trimMax(request.note(), MAX_MODERATION_REASON_LENGTH));
     story.setModeratedAt(LocalDateTime.now());
     story.setModeratedBy(actor.getId());
     storyRepository.save(story);
+    evictContentCachesAfterCommit();
     audit(actor, request, "STORY", id, story.getUser());
     notify(story.getUser(), actor, request, "story");
     return storyItem(story);
@@ -229,7 +260,7 @@ public class AdminContentService {
     User actor
   ) {
     post.setModerationReasonCode(request.reasonCode());
-    post.setModerationReason(trim(request.note()));
+    post.setModerationReason(trimMax(request.note(), MAX_MODERATION_REASON_LENGTH));
     post.setModeratedAt(LocalDateTime.now());
     post.setModeratedBy(actor.getId());
   }
@@ -248,7 +279,7 @@ public class AdminContentService {
       id,
       null,
       request.reasonCode().name(),
-      trim(request.note()),
+      trimMax(request.note(), MAX_AUDIT_REASON_LENGTH),
       java.util.Map.of("authorId", author.getId())
     );
   }
@@ -296,14 +327,33 @@ public class AdminContentService {
     return action == ContentAction.HIDE ? ModerationState.HIDDEN : ModerationState.VISIBLE;
   }
 
-  private void evictContentCaches() {
-    Cache posts = cacheManager.getCache(CacheNames.POSTS);
-    if (posts != null) {
-      posts.clear();
+  private void evictContentCachesAfterCommit() {
+    Runnable evictAll = () -> {
+      clearCache(CacheNames.POSTS);
+      clearCache(CacheNames.COMMENTS);
+      clearCache(CacheNames.USER_STATS);
+    };
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            evictAll.run();
+          }
+        }
+      );
+    } else {
+      evictAll.run();
     }
-    Cache comments = cacheManager.getCache(CacheNames.COMMENTS);
-    if (comments != null) {
-      comments.clear();
+  }
+
+  private void clearCache(String cacheName) {
+    if (cacheManager == null) {
+      return;
+    }
+    Cache cache = cacheManager.getCache(cacheName);
+    if (cache != null) {
+      cache.clear();
     }
   }
 
@@ -311,7 +361,7 @@ public class AdminContentService {
     return (root, query, cb) -> {
       List<Predicate> predicates = new ArrayList<>();
       if (q != null && !q.isBlank()) {
-        predicates.add(cb.like(cb.lower(root.get("title")), "%" + q.toLowerCase() + "%"));
+        predicates.add(cb.like(cb.lower(root.get("title")), "%" + q.trim().toLowerCase() + "%"));
       }
       if (state != null && !state.isBlank() && !"ALL".equalsIgnoreCase(state)) {
         predicates.add(cb.equal(root.get("moderationState"), ModerationState.valueOf(state.toUpperCase())));
@@ -324,7 +374,7 @@ public class AdminContentService {
     return (root, query, cb) -> {
       List<Predicate> predicates = new ArrayList<>();
       if (q != null && !q.isBlank()) {
-        predicates.add(cb.like(cb.lower(root.get("content")), "%" + q.toLowerCase() + "%"));
+        predicates.add(cb.like(cb.lower(root.get("content")), "%" + q.trim().toLowerCase() + "%"));
       }
       if (state != null && !state.isBlank() && !"ALL".equalsIgnoreCase(state)) {
         predicates.add(cb.equal(root.get("moderationState"), ModerationState.valueOf(state.toUpperCase())));
@@ -335,12 +385,28 @@ public class AdminContentService {
     };
   }
 
-  private Specification<Story> storySpec(String state) {
+  private Specification<Story> storySpec(String q, String state) {
     return (root, query, cb) -> {
-      if (state != null && !state.isBlank() && !"ALL".equalsIgnoreCase(state)) {
-        return cb.equal(root.get("moderationState"), ModerationState.valueOf(state.toUpperCase()));
+      List<Predicate> predicates = new ArrayList<>();
+      if (q != null && !q.isBlank()) {
+        String trimmed = q.trim();
+        String like = "%" + trimmed.toLowerCase() + "%";
+        Join<Story, User> user = root.join("user");
+        List<Predicate> qPredicates = new ArrayList<>();
+        qPredicates.add(cb.like(cb.lower(user.get("userNickname")), like));
+        qPredicates.add(cb.like(cb.lower(user.get("userFullname")), like));
+        qPredicates.add(cb.like(cb.lower(root.get("url")), like));
+        try {
+          qPredicates.add(cb.equal(root.get("id"), Long.parseLong(trimmed)));
+        } catch (NumberFormatException ignored) {
+          // Non-numeric search terms skip ID match
+        }
+        predicates.add(cb.or(qPredicates.toArray(new Predicate[0])));
       }
-      return cb.conjunction();
+      if (state != null && !state.isBlank() && !"ALL".equalsIgnoreCase(state)) {
+        predicates.add(cb.equal(root.get("moderationState"), ModerationState.valueOf(state.toUpperCase())));
+      }
+      return cb.and(predicates.toArray(new Predicate[0]));
     };
   }
 
@@ -429,7 +495,11 @@ public class AdminContentService {
     return value.length() <= 160 ? value : value.substring(0, 157) + "...";
   }
 
-  private String trim(String value) {
-    return value == null ? null : value.trim();
+  private String trimMax(String value, int maxLength) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
   }
 }

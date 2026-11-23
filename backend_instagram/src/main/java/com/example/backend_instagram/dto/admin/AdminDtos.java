@@ -174,6 +174,6 @@ public final class AdminDtos {
   public record ModerateRequest(
     @NotNull ContentAction action,
     @NotNull ReasonCode reasonCode,
-    @Size(max = 1000) String note
+    @Size(max = 500) String note
   ) {}
 }

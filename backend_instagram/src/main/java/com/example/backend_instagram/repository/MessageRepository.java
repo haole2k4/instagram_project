@@ -30,16 +30,20 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
            "AND u.id != :userId")
     List<User> findContactsByUserId(@Param("userId") Long userId);
 
-    // Lấy tin nhắn mới nhất cho mỗi cuộc trò chuyện của user
+    // Lấy tin nhắn mới nhất cho mỗi cuộc trò chuyện của user (dùng MAX(id) để phá hòa cùng timestamp)
     @Query(value = "SELECT m.* FROM messages m " +
-           "JOIN (SELECT c.id, MAX(msg.created_at) as latest " +
+           "JOIN (SELECT msg.conversation_id, MAX(msg.id) AS latest_id " +
            "      FROM messages msg " +
-           "      JOIN conversation_participants cp ON cp.conversation_id = msg.conversation_id " +
-           "      JOIN conversations c ON c.id = cp.conversation_id " +
-           "      WHERE cp.user_id = :userId " +
-           "      GROUP BY c.id) latest_msgs " +
-           "ON m.conversation_id = latest_msgs.id AND m.created_at = latest_msgs.latest " +
-           "ORDER BY m.created_at DESC", nativeQuery = true)
+           "      JOIN (SELECT msg2.conversation_id, MAX(msg2.created_at) AS latest " +
+           "            FROM messages msg2 " +
+           "            JOIN conversation_participants cp ON cp.conversation_id = msg2.conversation_id " +
+           "            WHERE cp.user_id = :userId " +
+           "            GROUP BY msg2.conversation_id) latest_times " +
+           "        ON msg.conversation_id = latest_times.conversation_id " +
+           "       AND msg.created_at = latest_times.latest " +
+           "      GROUP BY msg.conversation_id) latest_msgs " +
+           "ON m.id = latest_msgs.latest_id " +
+           "ORDER BY m.created_at DESC, m.id DESC", nativeQuery = true)
     List<Message> findLatestMessagesByUserId(@Param("userId") Long userId);
 
     // Đếm số lượng tin nhắn chưa đọc

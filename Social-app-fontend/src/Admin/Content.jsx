@@ -129,7 +129,7 @@ const Content = () => {
           }}
         >
           <div>
-            <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="content-search">
+            <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="content-search">
               {t("admin.search")}
             </label>
             <input
@@ -145,7 +145,7 @@ const Content = () => {
           </button>
         </form>
         <div>
-          <label className="mb-1 block text-[11px] text-[#6f6f6f]" htmlFor="content-state">
+          <label className="mb-1 block text-[11px] text-ig-faint" htmlFor="content-state">
             {t("admin.filters.state")}
           </label>
           <select
@@ -193,7 +193,7 @@ const Content = () => {
                     className="h-[52px] border-b border-[#161616] text-[14px] transition-colors duration-150 last:border-0 hover:bg-[#111]"
                   >
                     <td className="px-4">
-                      <span className="mr-2 text-[11px] text-[#6f6f6f]">
+                      <span className="mr-2 text-[11px] text-ig-faint">
                         #{item.id}
                       </span>
                       <span
@@ -270,7 +270,7 @@ const Content = () => {
             <button
               type="button"
               className={action === "HIDE" ? btnDanger : btnPrimary}
-              disabled={submitting}
+              disabled={!form.reasonCode || submitting}
               onClick={submit}
             >
               {submitting ? t("admin.submitting") : t("admin.confirm")}

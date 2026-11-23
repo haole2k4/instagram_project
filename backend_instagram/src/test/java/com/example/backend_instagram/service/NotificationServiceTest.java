@@ -1,9 +1,11 @@
 package com.example.backend_instagram.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.backend_instagram.entity.Notification;
@@ -14,6 +16,7 @@ import com.example.backend_instagram.repository.NotificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -60,6 +63,7 @@ class NotificationServiceTest {
         post = new Post();
         post.setId(10L);
         post.setUser(owner);
+        post.setLikesCount(5);
     }
 
     @Test
@@ -106,16 +110,20 @@ class NotificationServiceTest {
 
         verify(notificationRepository, org.mockito.Mockito.never()).save(any(Notification.class));
         verify(eventPublisher, org.mockito.Mockito.never()).publishEvent(any());
+        verifyNoInteractions(notificationWebSocketService);
     }
 
     @Test
-    void createsLikeNotificationForOtherUser() {
+    void createsLikeNotificationWithoutPreCommitDuplicateWsPush() {
         when(postService.getPostById(10L)).thenReturn(post);
         when(userService.fetchUserById(2L)).thenReturn(actor);
 
         notificationService.createLikeNotification(10L, 2L);
 
         verify(notificationRepository).save(any(Notification.class));
-        verify(eventPublisher).publishEvent(any(NotificationCreatedEvent.class));
+        ArgumentCaptor<NotificationCreatedEvent> captor = ArgumentCaptor.forClass(NotificationCreatedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().payload().getLikesCount()).isEqualTo(5);
+        verifyNoInteractions(notificationWebSocketService);
     }
 }

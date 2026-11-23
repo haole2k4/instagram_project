@@ -79,8 +79,6 @@
       #cc2366 75%,
       #bc1888 100%
     );
-    background-size: 200% 200%;
-    animation: igStoryRingRotate 4s ease infinite;
   }
 
   .ig-top-gradient-bar {
@@ -189,18 +187,6 @@
   }
   40% {
     opacity: 1;
-  }
-}
-
-@keyframes igStoryRingRotate {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
   }
 }
 

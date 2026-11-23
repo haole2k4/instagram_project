@@ -1,56 +1,62 @@
 package com.example.backend_instagram.service;
 
+import com.example.backend_instagram.dto.message.ChatUserSummaryDTO;
 import com.example.backend_instagram.dto.message.ConversationDTO;
 import com.example.backend_instagram.dto.message.MessageResponseDTO;
 import com.example.backend_instagram.dto.message.ParticipantDTO;
 import com.example.backend_instagram.entity.Conversation;
 import com.example.backend_instagram.entity.ConversationParticipant;
+import com.example.backend_instagram.entity.Follow;
 import com.example.backend_instagram.entity.Message;
 import com.example.backend_instagram.entity.User;
-import com.example.backend_instagram.entity.Follow;
 import com.example.backend_instagram.repository.ConversationParticipantRepository;
 import com.example.backend_instagram.repository.ConversationRepository;
+import com.example.backend_instagram.repository.FollowRepository;
 import com.example.backend_instagram.repository.MessageRepository;
 import com.example.backend_instagram.repository.UserRepository;
-import com.example.backend_instagram.repository.FollowRepository;
+import com.example.backend_instagram.utils.error.ApiException;
 import com.example.backend_instagram.utils.error.IdInvalidException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ChatService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final ConversationParticipantRepository participantRepository;
+    private final MessageService messageService;
+    private final FollowRepository followRepository;
+    private final AccountStatusService accountStatusService;
+    private final UserPrivacyService userPrivacyService;
 
-    @Autowired
-    private ConversationRepository conversationRepository;
-
-    @Autowired
-    private MessageRepository messageRepository;
-
-    @Autowired
-    private ConversationParticipantRepository participantRepository;
-
-    @Autowired
-    private MessageService messageService;
-
-    @Autowired
-    private FollowRepository followRepository;
-
-    @Autowired
-    private AccountStatusService accountStatusService;
-
-    @Autowired
-    private UserPrivacyService userPrivacyService;
+    public ChatService(
+            UserRepository userRepository,
+            ConversationRepository conversationRepository,
+            MessageRepository messageRepository,
+            ConversationParticipantRepository participantRepository,
+            MessageService messageService,
+            FollowRepository followRepository,
+            AccountStatusService accountStatusService,
+            UserPrivacyService userPrivacyService) {
+        this.userRepository = userRepository;
+        this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
+        this.participantRepository = participantRepository;
+        this.messageService = messageService;
+        this.followRepository = followRepository;
+        this.accountStatusService = accountStatusService;
+        this.userPrivacyService = userPrivacyService;
+    }
 
     /**
      * Lấy hoặc tạo mới cuộc trò chuyện giữa hai người dùng
@@ -65,13 +71,9 @@ public class ChatService {
                 .orElseThrow(() -> new IdInvalidException("Người dùng không tồn tại: " + userId));
         User otherUser = userRepository.findById(otherUserId)
                 .orElseThrow(() -> new IdInvalidException("Người dùng không tồn tại: " + otherUserId));
-        accountStatusService.requireWritable(user);
 
-        Optional<Follow> followOpt = followRepository.findByFollowerAndFollowing(user, otherUser);
-        Optional<Follow> reverseFollowOpt = followRepository.findByFollowerAndFollowing(otherUser, user);
-
-        boolean isBlocking = followOpt.map(Follow::isBlocking).orElse(false)
-                || reverseFollowOpt.map(Follow::isBlocking).orElse(false);
+        List<Follow> relations = followRepository.findBetweenUsers(userId, otherUserId);
+        boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
         if (isBlocking) {
             throw new IdInvalidException("Một trong hai người đã chặn, không thể tạo cuộc trò chuyện");
@@ -85,6 +87,9 @@ public class ChatService {
             conversation.setParticipants(participantRepository.findByConversationId(conversation.getId()));
             return conversation;
         }
+
+        accountStatusService.requireWritable(user);
+
         Conversation newConversation = new Conversation();
         newConversation.setName("Chat between " + user.getUserNickname() + " and " + otherUser.getUserNickname());
         newConversation.setIsGroupChat(false);
@@ -101,9 +106,6 @@ public class ChatService {
         return getConversationById(conversation.getId(), userId);
     }
 
-    /**
-     * Thêm người dùng vào cuộc trò chuyện
-     */
     private void addUserToConversation(Conversation conversation, User user) {
         if (participantRepository.existsByConversationIdAndUserId(conversation.getId(), user.getId())) {
             return;
@@ -111,8 +113,6 @@ public class ChatService {
         ConversationParticipant participant = new ConversationParticipant();
         participant.setConversation(conversation);
         participant.setUser(user);
-
-        // Lưu vào database
         participantRepository.save(participant);
     }
 
@@ -129,10 +129,10 @@ public class ChatService {
         List<ConversationDTO> result = new ArrayList<>();
 
         for (Conversation conversation : conversations) {
-            // 1 query/conversation, đã join fetch user.
             List<ConversationParticipant> participants = participantRepository
                     .findByConversationId(conversation.getId());
 
+            List<Follow> directRelations = null;
             if (Boolean.FALSE.equals(conversation.getIsGroupChat()) && participants.size() == 2) {
                 Long otherUserId = participants.stream()
                         .map(cp -> cp.getUser().getId())
@@ -143,19 +143,19 @@ public class ChatService {
                     continue;
                 }
 
-                List<Follow> relations = followRepository.findBetweenUsers(userId, otherUserId);
-                boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
+                directRelations = followRepository.findBetweenUsers(userId, otherUserId);
+                boolean isBlocking = directRelations.stream().anyMatch(Follow::isBlocking);
 
                 if (isBlocking) {
                     continue; // Ẩn conversation nếu bị block
                 }
             }
 
-            ConversationDTO dto = convertToDTO(conversation, userId);
+            ConversationDTO dto = convertToDTO(conversation);
             dto.setParticipants(participants.stream()
                     .map(this::convertToParticipantDTO)
                     .collect(Collectors.toList()));
-            applyPrivacyRestrictions(dto, conversation, participants, userId);
+            applyPrivacyRestrictions(dto, conversation, participants, userId, directRelations);
             result.add(dto);
         }
 
@@ -168,7 +168,6 @@ public class ChatService {
     @Transactional
     public List<MessageResponseDTO> getMessagesPaginated(Long conversationId, Long userId, int page, int size)
             throws IdInvalidException {
-        // 1 query: participants + user + conversation.
         List<ConversationParticipant> participants = participantRepository
                 .findWithConversationAndUsersByConversationId(conversationId);
         if (participants.isEmpty()) {
@@ -183,7 +182,7 @@ public class ChatService {
 
         Conversation conversation = participants.get(0).getConversation();
 
-        // Chỉ kiểm tra với chat 1-1.
+        // Cho phép đọc cuộc trò chuyện đã tồn tại miễn không bị chặn (kể cả chat qua allowStrangerMessages).
         if (Boolean.FALSE.equals(conversation.getIsGroupChat()) && participants.size() == 2) {
             Long otherUserId = participants.stream()
                     .map(cp -> cp.getUser().getId())
@@ -192,13 +191,8 @@ public class ChatService {
 
             if (otherUserId != null) {
                 List<Follow> relations = followRepository.findBetweenUsers(userId, otherUserId);
-                boolean isFriend = relations.size() == 2
-                        && relations.stream().allMatch(f -> Boolean.TRUE.equals(f.getFriend()));
                 boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
-                if (!isFriend) {
-                    throw new IdInvalidException("Hai người không còn là bạn bè, không thể xem tin nhắn");
-                }
                 if (isBlocking) {
                     throw new IdInvalidException("Một trong hai người đã chặn, không thể xem tin nhắn");
                 }
@@ -217,62 +211,10 @@ public class ChatService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lấy cuộc trò chuyện nhóm
-     */
-    public Conversation getGroupConversation() {
-        return conversationRepository.findFirstGroupConversation()
-                .orElseGet(() -> {
-                    Conversation newConversation = new Conversation();
-                    newConversation.setName("Group Chat");
-                    newConversation.setIsGroupChat(true);
-                    return conversationRepository.save(newConversation);
-                });
-    }
-
-    /**
-     * Chuyển đổi từ Entity sang DTO
-     */
-    // private ConversationDTO convertToConversationDTO(Conversation conversation,
-    // Long currentUserId) {
-    // ConversationDTO dto = new ConversationDTO();
-    // dto.setId(conversation.getId());
-    // dto.setName(conversation.getName());
-    // dto.setIsGroupChat(conversation.getIsGroupChat());
-    // dto.setCreatedAt(conversation.getCreatedAt());
-    // dto.setUpdatedAt(conversation.getUpdatedAt());
-
-    // List<ConversationParticipant> participants =
-    // participantRepository.findByConversationId(conversation.getId());
-    // List<ParticipantDTO> participantDTOs = participants.stream()
-    // .map(this::convertToParticipantDTO)
-    // .collect(Collectors.toList());
-    // dto.setParticipants(participantDTOs);
-
-    // Pageable pageable = PageRequest.of(0, 1);
-    // List<Message> lastMessages =
-    // messageRepository.findByConversationIdWithPagination(conversation.getId(),
-    // pageable);
-
-    // if (!lastMessages.isEmpty()) {
-    // dto.setLastMessage(messageService.convertToMessageResponseDTO(lastMessages.get(0)));
-    // }
-
-    // Long unreadCount =
-    // messageRepository.countUnreadMessagesInConversation(conversation.getId(),
-    // currentUserId);
-    // dto.setUnreadCount(unreadCount);
-
-    // return dto;
-    // }
-
-    /**
-     * Chuyển đổi từ ConversationParticipant sang ParticipantDTO
-     */
     private ParticipantDTO convertToParticipantDTO(ConversationParticipant participant) {
         ParticipantDTO dto = new ParticipantDTO();
         dto.setId(participant.getId());
-        dto.setUserId(participant.getUser().getId()); // ID của user
+        dto.setUserId(participant.getUser().getId());
         dto.setUserFullname(participant.getUser().getUserFullname());
         dto.setUserNickname(participant.getUser().getUserNickname());
         dto.setUserImage(participant.getUser().getUserImage());
@@ -280,38 +222,37 @@ public class ChatService {
     }
 
     /**
-     * Lấy thông tin cuộc trò chuyện theo ID
+     * Lấy thông tin cuộc trò chuyện theo ID (chỉ cho thành viên của cuộc trò chuyện).
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public ConversationDTO getConversationById(Long conversationId, Long userId) throws IdInvalidException {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new IdInvalidException("Conversation not found"));
 
-        ConversationDTO dto = convertToDTO(conversation, userId);
-        if (dto.getParticipants() == null) {
-            dto.setParticipants(new ArrayList<>());
-        }
         List<ConversationParticipant> participants = participantRepository.findByConversationId(conversationId);
-        List<ParticipantDTO> participantDTOs = new ArrayList<>();
-
-        for (ConversationParticipant participant : participants) {
-            User user = participant.getUser();
-            ParticipantDTO participantDTO = new ParticipantDTO();
-            participantDTO.setId(participant.getId());
-            participantDTO.setUserId(user.getId());
-            participantDTO.setUserFullname(user.getUserFullname());
-            participantDTO.setUserNickname(user.getUserNickname());
-            participantDTO.setUserImage(user.getUserImage());
-            participantDTOs.add(participantDTO);
+        boolean isMember = userId != null && participants.stream()
+                .anyMatch(p -> p.getUser().getId().equals(userId));
+        if (!isMember) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "Bạn không phải thành viên của cuộc trò chuyện này.");
         }
 
-        dto.setParticipants(participantDTOs);
-        applyPrivacyRestrictions(dto, conversation, participants, userId);
+        ConversationDTO dto = convertToDTO(conversation);
+        dto.setParticipants(participants.stream()
+                .map(this::convertToParticipantDTO)
+                .collect(Collectors.toList()));
+        applyPrivacyRestrictions(dto, conversation, participants, userId, null);
         return dto;
     }
 
-    private void applyPrivacyRestrictions(ConversationDTO dto, Conversation conversation,
-                                          List<ConversationParticipant> participants, Long currentUserId) {
+    private void applyPrivacyRestrictions(
+            ConversationDTO dto,
+            Conversation conversation,
+            List<ConversationParticipant> participants,
+            Long currentUserId,
+            List<Follow> prefetchedRelations) {
         if (Boolean.FALSE.equals(conversation.getIsGroupChat()) && participants.size() == 2) {
             Long otherUserId = participants.stream()
                     .map(cp -> cp.getUser().getId())
@@ -320,7 +261,9 @@ public class ChatService {
                     .orElse(null);
 
             if (otherUserId != null) {
-                List<Follow> relations = followRepository.findBetweenUsers(currentUserId, otherUserId);
+                List<Follow> relations = prefetchedRelations != null
+                        ? prefetchedRelations
+                        : followRepository.findBetweenUsers(currentUserId, otherUserId);
                 boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
                 if (isBlocking) {
@@ -345,7 +288,7 @@ public class ChatService {
         dto.setRestrictionMessage(null);
     }
 
-    private ConversationDTO convertToDTO(Conversation conversation, Long userId) {
+    private ConversationDTO convertToDTO(Conversation conversation) {
         ConversationDTO dto = new ConversationDTO();
         dto.setId(conversation.getId());
         dto.setName(conversation.getName());
@@ -355,15 +298,16 @@ public class ChatService {
         return dto;
     }
 
-    public List<User> getUsersWithConversation(Long userId) {
-        // findByUserId đã join fetch conversation + user.
+    @Transactional(readOnly = true)
+    public List<ChatUserSummaryDTO> getUsersWithConversation(Long userId) {
         List<ConversationParticipant> participations = participantRepository.findByUserId(userId);
-        List<User> users = new ArrayList<>();
+        List<ChatUserSummaryDTO> users = new ArrayList<>();
+        java.util.Set<Long> seenUserIds = new java.util.HashSet<>();
 
         for (ConversationParticipant participation : participations) {
             Conversation conv = participation.getConversation();
-            if (conv.getIsGroupChat()) {
-                continue; // Bỏ qua group chat
+            if (Boolean.TRUE.equals(conv.getIsGroupChat())) {
+                continue;
             }
 
             List<ConversationParticipant> others = participantRepository.findByConversationId(conv.getId())
@@ -373,22 +317,28 @@ public class ChatService {
 
             for (ConversationParticipant other : others) {
                 User otherUser = other.getUser();
+                if (!seenUserIds.add(otherUser.getId())) {
+                    continue;
+                }
 
-                // 1 query cho cả 2 chiều follow.
                 List<Follow> relations = followRepository.findBetweenUsers(userId, otherUser.getId());
                 boolean isBlocking = relations.stream().anyMatch(Follow::isBlocking);
 
                 if (!isBlocking) {
-                    users.add(otherUser);
+                    users.add(ChatUserSummaryDTO.from(otherUser));
                 }
             }
         }
 
-        return users.stream().distinct().collect(Collectors.toList());
+        return users;
     }
 
+    @Transactional
     public Conversation createGroupConversation(String groupName, List<Long> userIds) throws IdInvalidException {
-        if (userIds == null || userIds.size() < 2) {
+        List<Long> distinctUserIds = userIds == null
+                ? List.of()
+                : userIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (distinctUserIds.size() < 2) {
             throw new IdInvalidException("at least 2 mems");
         }
         Conversation group = new Conversation();
@@ -396,30 +346,47 @@ public class ChatService {
         group.setIsGroupChat(true);
         Conversation savedGroup = conversationRepository.save(group);
 
-        for (Long userId : userIds) {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IdInvalidException("not found: " + userId));
+        for (Long memberId : distinctUserIds) {
+            User user = userRepository.findById(memberId)
+                    .orElseThrow(() -> new IdInvalidException("not found: " + memberId));
             addUserToConversation(savedGroup, user);
         }
         savedGroup.setParticipants(participantRepository.findByConversationId(savedGroup.getId()));
         return savedGroup;
     }
 
-    public void addUserToGroup(Long conversationId, Long userId) throws IdInvalidException {
-        Conversation group = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new IdInvalidException("Group not found"));
-        if (!group.getIsGroupChat())
-            throw new IdInvalidException("Not a group chat");
+    @Transactional
+    public void addUserToGroup(Long conversationId, Long userId, Long actorId) throws IdInvalidException {
+        Conversation group = requireGroupMembership(conversationId, actorId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IdInvalidException("User not found"));
         addUserToConversation(group, user);
     }
 
-    public void removeUserFromGroup(Long conversationId, Long userId) throws IdInvalidException {
+    @Transactional
+    public void removeUserFromGroup(Long conversationId, Long userId, Long actorId) throws IdInvalidException {
+        requireGroupMembership(conversationId, actorId);
         ConversationParticipant participant = participantRepository
                 .findByConversationIdAndUserId(conversationId, userId)
                 .orElseThrow(() -> new IdInvalidException("User not in group"));
         participantRepository.delete(participant);
     }
 
+    private Conversation requireGroupMembership(Long conversationId, Long actorId) throws IdInvalidException {
+        Conversation group = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IdInvalidException("Group not found"));
+        if (!Boolean.TRUE.equals(group.getIsGroupChat())) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "Chỉ hỗ trợ thao tác thành viên trên nhóm chat.");
+        }
+        if (actorId == null || !participantRepository.existsByConversationIdAndUserId(conversationId, actorId)) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "FORBIDDEN",
+                    "Bạn không phải thành viên của nhóm chat này.");
+        }
+        return group;
+    }
 }

@@ -5,25 +5,27 @@ import com.example.backend_instagram.entity.UserStatus;
 import com.example.backend_instagram.repository.UserRepository;
 import com.example.backend_instagram.service.AccountStatusService;
 import com.example.backend_instagram.utils.SecurityUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class AccountRestrictionInterceptor implements HandlerInterceptor {
   private final UserRepository userRepository;
   private final AccountStatusService accountStatusService;
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
 
   public AccountRestrictionInterceptor(
     UserRepository userRepository,
-    AccountStatusService accountStatusService
+    AccountStatusService accountStatusService,
+    ObjectMapper objectMapper
   ) {
     this.userRepository = userRepository;
     this.accountStatusService = accountStatusService;
+    this.objectMapper = objectMapper;
   }
 
   @Override

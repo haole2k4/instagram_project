@@ -106,14 +106,6 @@ const ReportDetail = () => {
     }
   };
 
-  const availableActions = ACTIONS.filter((action) => {
-    if (action === "HIDE_CONTENT") {
-      return ["POST", "COMMENT"].includes(report.targetType);
-    }
-    if (action === "BAN_USER") return isAdmin;
-    return true;
-  });
-
   if (loading) {
     return (
       <div>
@@ -140,6 +132,14 @@ const ReportDetail = () => {
     );
   }
 
+  const availableActions = ACTIONS.filter((action) => {
+    if (action === "HIDE_CONTENT") {
+      return ["POST", "COMMENT"].includes(report?.targetType);
+    }
+    if (action === "BAN_USER") return isAdmin;
+    return true;
+  });
+
   return (
     <div>
       <Link
@@ -157,7 +157,7 @@ const ReportDetail = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <div>
           <section className="border border-[#161616] p-5">
-            <p className="mb-2 text-[11px] text-[#6f6f6f]">
+            <p className="mb-2 text-[11px] text-ig-faint">
               {t("admin.targetSnapshot")}
             </p>
             <p className="text-[16px] leading-6 text-white">
@@ -165,25 +165,25 @@ const ReportDetail = () => {
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-2">
               <div>
-                <span className="text-[#6f6f6f]">{t("admin.table.target")}: </span>
+                <span className="text-ig-faint">{t("admin.table.target")}: </span>
                 {report.targetType} #{report.targetId}
               </div>
               <div>
-                <span className="text-[#6f6f6f]">{t("admin.table.author")}: </span>
+                <span className="text-ig-faint">{t("admin.table.author")}: </span>
                 {report.targetAuthorNickname || "—"}
               </div>
               <div>
-                <span className="text-[#6f6f6f]">{t("admin.table.reporter")}: </span>
+                <span className="text-ig-faint">{t("admin.table.reporter")}: </span>
                 {report.reporterNickname || "—"}
               </div>
               <div>
-                <span className="text-[#6f6f6f]">{t("admin.table.reason")}: </span>
+                <span className="text-ig-faint">{t("admin.table.reason")}: </span>
                 {report.reasonCode}
               </div>
             </div>
             {report.note ? (
               <div className="mt-4 border-t border-[#161616] pt-4">
-                <p className="text-[11px] text-[#6f6f6f]">{t("admin.reportNote")}</p>
+                <p className="text-[11px] text-ig-faint">{t("admin.reportNote")}</p>
                 <p className="mt-1 text-[14px] text-[#b4b4b4]">{report.note}</p>
               </div>
             ) : null}
@@ -196,19 +196,19 @@ const ReportDetail = () => {
             {report.decidedAt ? (
               <dl className="grid grid-cols-1 gap-3 text-[13px] sm:grid-cols-2">
                 <div>
-                  <dt className="text-[#6f6f6f]">{t("admin.table.action")}</dt>
+                  <dt className="text-ig-faint">{t("admin.table.action")}</dt>
                   <dd className="mt-1">{report.action || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#6f6f6f]">{t("admin.table.decidedBy")}</dt>
+                  <dt className="text-ig-faint">{t("admin.table.decidedBy")}</dt>
                   <dd className="mt-1">{report.decidedByNickname || "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#6f6f6f]">{t("admin.table.decidedAt")}</dt>
+                  <dt className="text-ig-faint">{t("admin.table.decidedAt")}</dt>
                   <dd className="mt-1">{formatDate(report.decidedAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-[#6f6f6f]">{t("admin.decisionNote")}</dt>
+                  <dt className="text-ig-faint">{t("admin.decisionNote")}</dt>
                   <dd className="mt-1">{report.decisionNote || "—"}</dd>
                 </div>
               </dl>
@@ -225,11 +225,11 @@ const ReportDetail = () => {
             <h2 className="text-[16px] font-medium">{t("admin.decisionPanel")}</h2>
             <dl className="mt-4 space-y-3 text-[13px]">
               <div className="flex justify-between gap-3">
-                <dt className="text-[#6f6f6f]">{t("admin.table.assignee")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.assignee")}</dt>
                 <dd>{report.assigneeNickname || t("admin.unassigned")}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-[#6f6f6f]">{t("admin.table.status")}</dt>
+                <dt className="text-ig-faint">{t("admin.table.status")}</dt>
                 <dd>
                   <StatusDot status={report.status} />
                 </dd>
@@ -288,7 +288,7 @@ const ReportDetail = () => {
             <button
               type="button"
               className={form.action === "BAN_USER" ? btnDanger : btnPrimary}
-              disabled={submitting}
+              disabled={!form.reasonCode || submitting}
               onClick={decide}
             >
               {submitting ? t("admin.submitting") : t("admin.confirm")}

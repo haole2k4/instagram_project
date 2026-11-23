@@ -10,7 +10,6 @@ import {
   Play,
   Volume2,
   VolumeX,
-  Heart,
   Send,
   X,
 } from "lucide-react";
@@ -55,8 +54,6 @@ const StoryViewer = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [message, setMessage] = useState("");
-  const [isLiked, setIsLiked] = useState(false);
-  const [heartPop, setHeartPop] = useState(false);
 
   const videoRef = useRef(null);
   const animationRef = useRef(null);
@@ -284,17 +281,6 @@ const StoryViewer = () => {
     }
   };
 
-  const handleLike = () => {
-    setIsLiked((prev) => {
-      const next = !prev;
-      if (next) {
-        setHeartPop(true);
-        setTimeout(() => setHeartPop(false), 220);
-      }
-      return next;
-    });
-  };
-
   const handleDeleteStory = async () => {
     if (!currentStory) return;
     try {
@@ -381,6 +367,10 @@ const StoryViewer = () => {
                 src={currentStory.user?.userImage || "/default-avatar.png"}
                 alt={currentStory.user?.userNickname || ""}
                 className="h-9 w-9 shrink-0 rounded-full bg-ig-surface object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/default-avatar.png";
+                }}
               />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -489,7 +479,7 @@ const StoryViewer = () => {
             )}
           </div>
 
-          {/* Khu vực trả lời và thích */}
+          {/* Khu vực trả lời */}
           <div className="absolute bottom-4 left-3 right-3 z-20 flex items-center gap-2.5">
             <div className="flex-1">
               <input
@@ -506,21 +496,6 @@ const StoryViewer = () => {
                 }}
               />
             </div>
-            <button
-              type="button"
-              onClick={handleLike}
-              aria-label={t("newFed.like")}
-              title={t("newFed.like")}
-              className={`ig-press flex h-10 w-10 items-center justify-center rounded-full ${
-                isLiked ? "text-ig-like" : "text-ig-text"
-              } ${heartPop ? "ig-heart-pop" : ""}`}
-            >
-              <Heart
-                size={24}
-                strokeWidth={1.5}
-                className={isLiked ? "fill-current" : ""}
-              />
-            </button>
             <button
               type="button"
               onClick={handleSendMessage}

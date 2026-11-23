@@ -64,7 +64,15 @@ public interface PostRepository
   )
   List<Post> findPublicByUserIds(@Param("userIds") List<Long> userIds);
 
-  long countByUserId(Long userId);
+  @Query(
+    """
+    SELECT COUNT(p) FROM Post p
+    WHERE p.user.id = :userId
+      AND p.status = 'True'
+      AND p.moderationState = com.example.backend_instagram.entity.ModerationState.VISIBLE
+    """
+  )
+  long countByUserId(@Param("userId") Long userId);
 
   long countByCreatedAtAfter(LocalDateTime after);
 }
